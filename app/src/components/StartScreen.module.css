@@ -322,3 +322,23 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Short windows (1280x800): tighter vertical rhythm so the recent projects stay above the fold. */
+@media (max-height: 900px) {
+  .inner {
+    gap: var(--space-4);
+    padding-top: var(--space-4);
+  }
+
+  .side .sectionTitle:not(:first-child) {
+    margin-top: var(--space-3);
+  }
+
+  .recovery {
+    margin-bottom: var(--space-3);
+  }
+
+  .recentOpen {
+    padding-block: var(--space-1-5);
+  }
+}

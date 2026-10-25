@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { Activity, BarChart3, Camera, ChevronDown, ChevronUp, Crosshair, Download, FileSpreadsheet, GitCompareArrows, Image, Table2 } from "lucide-react";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -62,11 +62,8 @@ export function ResultsPanel() {
             </button>
           ))}
         </div>
+        {/* Badges first: on a narrow header the name and the count give way before them. */}
         <div className={styles.context}>
-          <span className={styles.contextName} title={o.path ?? o.fileName}>
-            {o.customName ?? o.fileName}
-          </span>
-          <span className="num">{t("results.context.ions", { n: h.ions })}</span>
           <Badge tone={h.precision === "live" ? "info" : "success"}>{t(h.precision === "live" ? "results.mode.live" : "results.mode.precise")}</Badge>
           {h.surface && (
             <Badge
@@ -76,6 +73,10 @@ export function ResultsPanel() {
               {t(h.surface.accuracy === "source" ? "results.surfaces.exact" : "results.surfaces.approximate")}
             </Badge>
           )}
+          <span className={styles.contextName} title={o.path ?? o.fileName}>
+            {o.customName ?? o.fileName}
+          </span>
+          <span className="tnum">{t("results.context.ions", { n: h.ions })}</span>
         </div>
         <div className={styles.headerActions}>
           <ExportMenu o={o} />
@@ -106,18 +107,34 @@ export function ResultsPanel() {
 /** Top-edge drag handle; double-click restores the default height. */
 function HeightResizer({ panel }: { panel: RefObject<HTMLElement | null> }) {
   const { t } = useI18n();
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    const box = panel.current!;
+  const bounds = () => {
     const css = getComputedStyle(document.documentElement);
     const min = parseFloat(css.getPropertyValue("--results-min-h"));
     const keep = parseFloat(css.getPropertyValue("--viewport-min-h"));
-    const parent = box.parentElement!.getBoundingClientRect().height;
+    return [min, panel.current!.parentElement!.getBoundingClientRect().height - keep] as const;
+  };
+  // Keyboard: arrows move the edge by 16px (Shift: 64px), Home restores the default height.
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Home") {
+      e.preventDefault();
+      useResults.getState().setHeight(null);
+      return;
+    }
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    const [min, max] = bounds();
+    const h = panel.current!.getBoundingClientRect().height + (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 64 : 16);
+    useResults.getState().setHeight(Math.round(Math.min(max, Math.max(min, h))));
+  };
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const box = panel.current!;
+    const [min, maxH] = bounds();
     const startY = e.clientY;
     const start = box.getBoundingClientRect().height;
     el.setPointerCapture(e.pointerId);
     const move = (ev: globalThis.PointerEvent) => {
-      useResults.getState().setHeight(Math.round(Math.min(parent - keep, Math.max(min, start - (ev.clientY - startY)))));
+      useResults.getState().setHeight(Math.round(Math.min(maxH, Math.max(min, start - (ev.clientY - startY)))));
     };
     const up = () => {
       el.removeEventListener("pointermove", move);
@@ -135,6 +152,8 @@ function HeightResizer({ panel }: { panel: RefObject<HTMLElement | null> }) {
       aria-orientation="horizontal"
       aria-label={t("results.resize")}
       title={t("results.resize")}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onDoubleClick={() => useResults.getState().setHeight(null)}
     />

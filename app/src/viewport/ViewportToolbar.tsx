@@ -64,7 +64,7 @@ export function ViewportToolbar({
           {t(ortho ? "viewport.orthographic" : "viewport.perspective")}
           <Kbd>P</Kbd>
         </button>
-        <button type="button" className={styles.tool} aria-pressed={gridVisible} title={t("viewport.grid")} onClick={toggleGrid}>
+        <button type="button" className={styles.tool} aria-pressed={gridVisible} aria-label={t("viewport.grid")} title={t("viewport.grid")} onClick={toggleGrid}>
           <Grid3x3 aria-hidden />
           <Kbd>G</Kbd>
         </button>

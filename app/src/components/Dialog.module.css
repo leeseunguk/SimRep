@@ -8,7 +8,6 @@
   padding: var(--space-8);
   background: var(--color-scrim);
   backdrop-filter: blur(4px);
-  animation: fade-in var(--dur-normal) var(--ease-out);
 }
 
 .dialog {
@@ -23,7 +22,6 @@
   border-radius: var(--radius-xl);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
-  animation: rise-in var(--dur-slow) var(--ease-out);
 }
 
 .header {
@@ -150,7 +148,6 @@
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
-  animation: rise-in var(--dur-slow) var(--ease-out);
 }
 
 .busyText {
@@ -164,7 +161,10 @@
   border: calc(var(--border-w) * 2) solid var(--color-accent-soft);
   border-top-color: var(--color-accent);
   border-radius: var(--radius-full);
-  animation: dialog-spin 800ms linear infinite;
+  /* The message shows at once; the spinner only once the wait passes about a second. */
+  animation:
+    dialog-spin 800ms linear infinite,
+    fade-in var(--dur-fast) var(--ease-out) var(--dur-spinner-delay) both;
 }
 
 @keyframes dialog-spin {

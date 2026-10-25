@@ -3,13 +3,15 @@
   padding: var(--space-0-5);
   gap: var(--space-0-5);
   background: var(--color-sunken);
-  border: var(--border-w) solid var(--color-border);
+  border: var(--border-w) solid var(--color-border-control);
   border-radius: var(--radius-md);
 }
 
 .segment {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: var(--control-h-xs);
   gap: var(--space-1);
   border: none;
   border-radius: var(--radius-sm);

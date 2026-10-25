@@ -9,6 +9,7 @@ import { redo, undo } from "../state/history";
 import { openPaths, PROJECT_EXTENSION, projectTitle, saveProject, showStart } from "../state/project";
 import { useApp, type Lang, type ThemePref } from "../state/store";
 import { useExport } from "../state/exportDialog";
+import { useWizard } from "../state/wizard";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { SegmentedControl } from "./ui/SegmentedControl";
@@ -44,6 +45,7 @@ export function TopBar() {
   const history = useApp((s) => s.history);
   const home = useApp((s) => s.home);
   const hasContent = useApp((s) => s.objects.length > 0);
+  const wizardOpen = useWizard((s) => s.wizard !== null);
   // Export the selected array, else the newest one.
   const exportTarget = useApp((s) => {
     const arrays = s.objects.filter((o) => o.kind === "pa");
@@ -93,8 +95,9 @@ export function TopBar() {
         />
       </div>
       <div className={styles.divider} />
+      {/* Prominent only while there is nothing to work on; with a scene or the import wizard, their own action leads. */}
       <Button
-        variant="primary"
+        variant={hasContent || wizardOpen ? "secondary" : "primary"}
         icon={<FolderOpen />}
         title={`${t("topbar.openTitle")} (${MOD}+O)`}
         onClick={() => void pickAndOpen(t("topbar.openTitle"), t("topbar.openFilter"), t("topbar.openAll"), fileInput.current)}

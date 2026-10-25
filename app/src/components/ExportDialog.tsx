@@ -87,10 +87,11 @@ export function ExportDialog() {
   const [error, setError] = useState<Message | null>(null);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !busy && close();
+    // Always dismissible: an export that is running finishes in the background and reports to the log.
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [busy, close]);
+  }, [close]);
   useEffect(() => {
     setDone(null);
     setError(null);
@@ -157,7 +158,6 @@ export function ExportDialog() {
       const outDir = dirname(path);
       setDone({ files, dir: outDir, path, pa: kind === "pa" });
       app.log("success", { key: "log.exportedFiles", params: { files: files.join(", "), dir: outDir } });
-      app.toast("success", { key: "toast.exported.title" }, { key: "toast.exportedFiles.body", params: { files: files.join(", "), dir: outDir } });
     } catch (err) {
       const detail = errorMessage(backendError(err));
       setError(detail);
@@ -200,14 +200,14 @@ export function ExportDialog() {
   );
 
   return (
-    <div className={dialog.scrim} onPointerDown={(e) => e.target === e.currentTarget && !busy && close()}>
+    <div className={dialog.scrim} onPointerDown={(e) => e.target === e.currentTarget && close()}>
       <div className={`${dialog.dialog} ${styles.dialog}`} role="dialog" aria-modal="true" aria-labelledby="export-title">
         <div className={dialog.header}>
           <Download className={dialog.headerIcon} aria-hidden />
           <h2 id="export-title" className={dialog.title}>
             {t("export.title")}
           </h2>
-          <button type="button" className={dialog.close} aria-label={t("export.close")} onClick={close} disabled={busy}>
+          <button type="button" className={dialog.close} aria-label={t("export.close")} onClick={close}>
             <X />
           </button>
         </div>
@@ -325,8 +325,8 @@ export function ExportDialog() {
         </div>
         <div className={styles.footer}>
           <span className={`${sim.hint} ${styles.footerHint}`}>{t("export.footer", { file: target().name })}</span>
-          <Button variant="ghost" onClick={close} disabled={busy}>
-            {t(done ? "export.closeDone" : "export.cancel")}
+          <Button variant="ghost" onClick={close}>
+            {t(done || busy ? "export.closeDone" : "export.cancel")}
           </Button>
           <Button variant="primary" icon={done ? <Check /> : <Download />} onClick={() => void run()} disabled={busy || !!blocked}>
             {t(busy ? "export.working" : "export.run")}

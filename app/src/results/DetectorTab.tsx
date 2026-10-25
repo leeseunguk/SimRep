@@ -130,7 +130,7 @@ export function DetectorTab({ o }: { o: PaObject }) {
           />
         )}
         <span className={styles.toolbarSpacer} />
-        <span className={styles.note}>{t("results.map.pickHint")}</span>
+        <span className={styles.note} title={t("results.map.pickHint")}>{t("results.map.pickHint")}</span>
       </div>
       <div className={styles.main}>
         <div className={styles.plot} ref={plotRef}>

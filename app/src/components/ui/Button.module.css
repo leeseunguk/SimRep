@@ -18,9 +18,10 @@
   transform: translateY(var(--space-px));
 }
 
+/* Disabled: dimmed text (still 4.5:1 on every surface), no fill, no response - not a faded whole. */
 .button:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  color: var(--color-text-subtle);
 }
 
 .sm {
@@ -64,6 +65,10 @@
   color: var(--color-accent-fg);
 }
 
+.primary:disabled {
+  background: var(--color-surface-3);
+}
+
 .primary:hover:not(:disabled) {
   background: var(--color-accent-hover);
 }
@@ -91,6 +96,16 @@
 .ghost:hover:not(:disabled) {
   background: var(--color-surface-2);
   color: var(--color-text);
+}
+
+/* Destructive action that is not a dialog default (e.g. clear the whole log). */
+.danger {
+  background: transparent;
+  color: var(--color-danger);
+}
+
+.danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
 }
 
 .active,

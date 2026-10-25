@@ -85,6 +85,11 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+/* Counts inside a sentence ("삼각형 2,304개"): aligned digits, text face (mono spaces read as gaps). */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -114,12 +119,20 @@ p {
   }
 }
 
+/* Reduced motion: movement becomes a cross-fade; fades and progress spinners keep running. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 1ms !important;
-    animation-delay: 0ms !important;
     transition-duration: 1ms !important;
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }

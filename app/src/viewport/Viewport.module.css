@@ -3,6 +3,8 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  /* Overlays drop out when the view gets short (results panel + log open on a small window). */
+  container: viewport / size;
   background: radial-gradient(ellipse 120% 90% at 50% 40%, var(--vp-bg-center), var(--vp-bg-edge));
 }
 
@@ -69,7 +71,9 @@
 .spin {
   width: var(--icon-md);
   height: var(--icon-md);
-  animation: spin 900ms linear infinite;
+  animation:
+    spin 900ms linear infinite,
+    fade-in var(--dur-fast) var(--ease-out) var(--dur-spinner-delay) both;
 }
 
 @keyframes spin {
@@ -334,17 +338,27 @@
   top: 0;
   left: 0;
   z-index: var(--z-viewport-overlay);
-  width: var(--handle-size);
-  height: var(--handle-size);
-  margin: calc(var(--handle-size) / -2) 0 0 calc(var(--handle-size) / -2);
+  /* Pointer target the size of a small control around the visible dot (the dot is ::before). */
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  margin: calc(var(--control-h-sm) / -2) 0 0 calc(var(--control-h-sm) / -2);
   padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  transition: scale var(--dur-fast) var(--ease-out);
+}
+
+.benchHandle::before {
+  position: absolute;
+  inset: calc((var(--control-h-sm) - var(--handle-size)) / 2);
   border: var(--focus-ring-w) solid var(--color-surface);
   border-radius: var(--radius-full);
   background: var(--vp-bench);
   box-shadow: var(--shadow-sm);
-  cursor: grab;
-  touch-action: none;
-  transition: scale var(--dur-fast) var(--ease-out);
+  content: "";
 }
 
 .benchHandle:hover,
@@ -378,5 +392,22 @@
 @media (max-width: 1180px) {
   .hint {
     display: none;
+  }
+}
+
+/* A short view: the legend keeps its title and colour scale, sized to the view, instead of being cut off. */
+@container viewport (max-height: 300px) {
+  .legend {
+    gap: var(--space-1);
+    padding: var(--space-1-5) var(--space-2);
+  }
+
+  .legendName,
+  .legendItem {
+    display: none;
+  }
+
+  .legendScale {
+    height: max(var(--space-12), calc(100cqh - var(--space-16) - var(--space-10)));
   }
 }

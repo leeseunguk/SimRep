@@ -6,7 +6,6 @@
   height: var(--logdrawer-h);
   border-top: var(--border-w) solid var(--color-border);
   background: var(--color-sunken);
-  animation: fade-in var(--dur-normal) var(--ease-out);
 }
 
 .header {

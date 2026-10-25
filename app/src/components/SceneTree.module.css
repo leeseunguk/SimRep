@@ -89,17 +89,6 @@
   background: var(--color-accent-soft);
 }
 
-.row[aria-selected="true"]::before {
-  position: absolute;
-  top: var(--space-1-5);
-  bottom: var(--space-1-5);
-  left: 0;
-  width: var(--space-0-5);
-  border-radius: var(--radius-full);
-  background: var(--color-accent);
-  content: "";
-}
-
 .row[data-hidden="true"] .name,
 .row[data-hidden="true"] .icon,
 .row[data-hidden="true"] .meta,
@@ -117,6 +106,10 @@
 .icon svg {
   width: var(--icon-md);
   height: var(--icon-md);
+}
+
+.row[aria-selected="true"] .icon {
+  color: var(--color-accent-text);
 }
 
 /* Electrode number chip: potential-coloured dot + SIMION electrode number. */
@@ -255,7 +248,9 @@
 }
 
 .spin {
-  animation: spin 900ms linear infinite;
+  animation:
+    spin 900ms linear infinite,
+    fade-in var(--dur-fast) var(--ease-out) var(--dur-spinner-delay) both;
 }
 
 @keyframes spin {

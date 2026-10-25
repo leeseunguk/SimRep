@@ -53,8 +53,8 @@ export function StatusBar() {
       </span>
       <span className={styles.spacer} />
       <span className={styles.item}>{t("status.objects", { count: objects.length })}</span>
-      <span className={`${styles.item} num`}>{t("status.triangles", { count: triangles })}</span>
-      {ions > 0 && <span className={`${styles.item} num`}>{t("status.trajectories", { count: ions })}</span>}
+      <span className={`${styles.item} tnum`}>{t("status.triangles", { count: triangles })}</span>
+      {ions > 0 && <span className={`${styles.item} tnum`}>{t("status.trajectories", { count: ions })}</span>}
       <span className={styles.item}>{t("status.unitsMm")}</span>
       {flown && (
         <button

@@ -2,21 +2,22 @@
  * SimRep design tokens. Every visual value in the app comes from here.
  *
  * - Spacing: 4px grid (--space-*). Half steps (0-5, 1-5) exist only for dense controls.
- * - Type: desktop-dense scale, 13px body. Sans = IBM Plex Sans (+ KR for Hangul), mono for numbers.
+ * - Type: desktop scale, 14px body, nothing with Hangul below 12px. Sans = IBM Plex Sans (+ KR for Hangul),
+ *   mono for numbers; the mono stack takes Hangul from Plex Sans KR so mixed labels keep normal spacing.
  * - Colour: semantic tokens per theme ([data-theme]). Viewport tokens (--vp-*) are hex because the
  *   WebGPU renderer reads them with getComputedStyle and parses them (see viewport/color.ts).
  */
 :root {
   /* Typography */
   --font-sans: "IBM Plex Sans", "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-mono: "IBM Plex Mono", "IBM Plex Sans KR", ui-monospace, "Cascadia Mono", Consolas, monospace;
 
-  --text-2xs: 10px;
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-md: 13px;
-  --text-lg: 15px;
-  --text-xl: 18px;
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
   --text-2xl: 24px;
 
   --leading-tight: 1.2;
@@ -56,22 +57,23 @@
   /* Sizes */
   --border-w: 1px;
   --focus-ring-w: 2px;
-  --control-h-xs: 20px;
-  --control-h-sm: 24px;
-  --control-h-md: 28px;
-  --control-h-lg: 32px;
-  --icon-xs: 12px;
-  --icon-sm: 14px;
-  --icon-md: 16px;
+  /* Pointer targets: every control is at least 24px (glyph + ~10px). */
+  --control-h-xs: 24px;
+  --control-h-sm: 28px;
+  --control-h-md: 32px;
+  --control-h-lg: 36px;
+  --icon-xs: 14px;
+  --icon-sm: 16px;
+  --icon-md: 18px;
   --icon-lg: 20px;
   --icon-xl: 32px;
   --icon-2xl: 48px;
   --swatch-sm: 8px;
   --topbar-h: 48px;
-  --statusbar-h: 28px;
+  --statusbar-h: 32px;
   --logdrawer-h: 184px;
-  --panel-left-w: 264px;
-  --panel-right-w: 312px;
+  --panel-left-w: 272px;
+  --panel-right-w: 344px;
   --panel-min-w: 200px;
   --panel-max-w: 480px;
   --resizer-w: 6px;
@@ -84,13 +86,13 @@
   --template-art-h: 112px;
   --dialog-max-w: 640px;
   --dialog-wide-w: 760px;
-  --panel-wizard-w: 392px;
+  --panel-wizard-w: 424px;
   --swatch-md: 12px;
   /* Drag handle on a face of the workbench box in the 3D view. */
   --handle-size: 12px;
   --handle-hover-scale: 1.35;
   /* Guided tour coach card (components/Tour.tsx). */
-  --tour-card-w: 320px;
+  --tour-card-w: 344px;
 
   /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -99,6 +101,8 @@
   --dur-normal: 200ms;
   --dur-slow: 360ms;
   --stagger: 60ms;
+  /* Loading indicators appear only once a wait passes about a second (the status text shows at once). */
+  --dur-spinner-delay: 1s;
 
   /* Layers */
   --z-viewport-overlay: 10;
@@ -129,26 +133,57 @@
   --results-h: 360px;
   --results-min-h: 200px;
   --viewport-min-h: 180px;
-  --results-side-w: 232px;
-  --table-row-h: 24px;
+  --results-side-w: 248px;
+  --table-row-h: 28px;
   --table-cols: minmax(var(--space-12), 0.6fr) minmax(var(--space-16), 1.5fr) repeat(6, minmax(var(--space-12), 1fr));
   --menu-min-w: 200px;
-  --plot-font: 10px;
+  --plot-font: 12px;
+  /* Least distance between two axis tick labels (short small multiples skip the ones closer). */
+  --plot-tick-gap: 14px;
   --plot-line-w: 1.5px;
   --plot-select-w: 2px;
   --plot-marker-r: 5px;
   --plot-point: 2px;
-  --plot-chip-h: 22px;
+  --plot-chip-h: 26px;
   /* 3D highlight of the selected ion (screen px) */
+  /* Small multiples (ion tab): narrowest chart before the grid drops a column. */
+  --plot-multiple-min-w: 200px;
   --vp-highlight-w: 3px;
   --vp-highlight-ring: 7px;
+}
+
+/* Hangul needs more pixels than Latin to stay legible: no Korean caption below 12px. */
+:root:lang(ko) {
+  --text-2xs: 12px;
 }
 
 /* Small windows (the desktop minimum is 960 px): give the viewport more room. */
 @media (max-width: 1180px) {
   :root {
-    --panel-left-w: 232px;
-    --panel-right-w: 272px;
+    --panel-left-w: 240px;
+    --panel-right-w: 304px;
+  }
+}
+
+/* Short windows (1280x800 and similar): same type sizes, tighter vertical rhythm so panels keep their
+   above-the-fold content. Every control stays at least 24px tall. */
+@media (max-height: 900px) {
+  :root {
+    --control-h-md: 28px;
+    --control-h-lg: 32px;
+    --table-row-h: 26px;
+    --template-art-h: 88px;
+    /* The narrow results panel adds a context row: give it that room back. */
+    --results-h: 408px;
+  }
+}
+
+/* Large windows: wider side panels instead of an ever larger empty 3D view. */
+@media (min-width: 1600px) {
+  :root {
+    --panel-left-w: 304px;
+    --panel-right-w: 392px;
+    --results-side-w: 280px;
   }
 }
 
@@ -163,11 +198,13 @@
   --color-sunken: #0d1014;
   --color-border: #232831;
   --color-border-strong: #333a46;
+  /* Edge of a form control (input, select, switch, segmented): 3:1 against the surfaces. */
+  --color-border-control: #666c76;
 
   --color-text: #e6e8ec;
   --color-text-muted: #a0a7b4;
-  --color-text-subtle: #6c7482;
-  --color-text-disabled: #4b525d;
+  --color-text-subtle: #8c939f;
+  --color-text-disabled: #868d98;
 
   --color-accent: #ffa630;
   --color-accent-hover: #ffb75a;
@@ -181,7 +218,7 @@
   --color-success-soft: rgb(60 207 145 / 0.14);
   --color-warning: #f5c542;
   --color-warning-soft: rgb(245 197 66 / 0.14);
-  --color-danger: #ff5d68;
+  --color-danger: #ff6d77;
   --color-danger-soft: rgb(255 93 104 / 0.14);
   --color-info: #5cb4ff;
   --color-info-soft: rgb(92 180 255 / 0.14);
@@ -251,27 +288,29 @@
   --color-sunken: #ffffff;
   --color-border: #dcd9d1;
   --color-border-strong: #c4c0b6;
+  --color-border-control: #86827a;
 
   --color-text: #17191d;
   --color-text-muted: #525862;
-  --color-text-subtle: #80858e;
-  --color-text-disabled: #b0b3b8;
+  --color-text-subtle: #60646b;
+  --color-text-disabled: #666a72;
 
   --color-accent: #f59a14;
   --color-accent-hover: #ffab3d;
   --color-accent-active: #e08600;
   --color-accent-fg: #1b1205;
-  --color-accent-text: #9c5400;
+  --color-accent-text: #975100;
   --color-accent-soft: rgb(245 154 20 / 0.14);
   --color-accent-border: rgb(214 122 0 / 0.5);
 
-  --color-success: #12845a;
+  /* Text-safe (4.5:1 on every light surface and on its own soft fill). */
+  --color-success: #0d6745;
   --color-success-soft: rgb(18 132 90 / 0.12);
-  --color-warning: #9a6a00;
+  --color-warning: #845b00;
   --color-warning-soft: rgb(196 140 0 / 0.14);
-  --color-danger: #c92f3f;
+  --color-danger: #ab2635;
   --color-danger-soft: rgb(201 47 63 / 0.1);
-  --color-info: #1d68c4;
+  --color-info: #1b62b8;
   --color-info-soft: rgb(29 104 196 / 0.1);
 
   --color-scrim: rgb(232 230 225 / 0.78);

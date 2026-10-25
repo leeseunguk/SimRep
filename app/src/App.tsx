@@ -91,11 +91,14 @@ export function App() {
         }
         return;
       }
-      if (typing || app.busy) return;
+      // The export dialog is modal and owns Escape; no second modal (help) on top of it.
+      if (typing || app.busy || useExport.getState().objectId !== null) return;
       if (e.key === "?" || e.key === "F1") {
         e.preventDefault();
         app.setHelpOpen(!app.helpOpen);
       } else if (e.key === "Escape") {
+        // An open menu (e.g. results export) takes this Escape for itself.
+        if (document.querySelector('[role="menu"]')) return;
         if (app.helpOpen) app.setHelpOpen(false);
         else if (app.home && app.objects.length) app.setHome(false);
         else if (useResults.getState().ion) useResults.getState().selectIon(null);

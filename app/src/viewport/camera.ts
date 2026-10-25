@@ -177,6 +177,8 @@ export class OrbitCamera {
   }
 
   animateTo(to: Partial<CameraState>, duration = 320) {
+    // Reduced motion: no fly-over, the view simply changes.
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return this.jumpTo(to);
     const from = this.state();
     const target: CameraState = { ...from, ...to };
     // Rotate the short way round.

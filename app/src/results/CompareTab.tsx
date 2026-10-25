@@ -164,6 +164,7 @@ export function CompareTab({ o }: { o: PaObject }) {
                     className={styles.runToggle}
                     disabled={s.current}
                     aria-pressed={s.visible}
+                    aria-label={s.current ? `${t("results.compare.current")}: ${s.label}` : `${t(s.visible ? "results.compare.hide" : "results.compare.show")}: ${s.label}`}
                     title={s.current ? undefined : t(s.visible ? "results.compare.hide" : "results.compare.show")}
                     onClick={() => s.snapshot && useResults.getState().patchSnapshot(s.snapshot, { visible: !s.visible })}
                   >

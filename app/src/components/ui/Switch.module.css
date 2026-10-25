@@ -1,9 +1,10 @@
 .switch {
   position: relative;
-  width: calc(var(--space-8) + var(--space-1));
-  height: var(--space-5);
+  flex: none;
+  width: calc(var(--space-10) + var(--space-1));
+  height: var(--space-6);
   padding: 0;
-  border: var(--border-w) solid var(--color-border-strong);
+  border: var(--border-w) solid var(--color-border-control);
   border-radius: var(--radius-full);
   background: var(--color-surface-3);
   transition:
@@ -15,8 +16,8 @@
   position: absolute;
   top: var(--space-0-5);
   left: var(--space-0-5);
-  width: calc(var(--space-4) - var(--space-px) * 2);
-  height: calc(var(--space-4) - var(--space-px) * 2);
+  width: calc(var(--space-5) - var(--space-px) * 2);
+  height: calc(var(--space-5) - var(--space-px) * 2);
   border-radius: var(--radius-full);
   background: var(--color-text-muted);
   transition:
@@ -30,6 +31,6 @@
 }
 
 .switch[aria-checked="true"] .thumb {
-  transform: translateX(var(--space-4));
+  transform: translateX(var(--space-5));
   background: var(--color-accent-fg);
 }

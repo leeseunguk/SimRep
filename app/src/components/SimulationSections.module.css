@@ -457,16 +457,14 @@
 
 .modeSub {
   color: var(--color-text-subtle);
-  font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
 
 /* Workbench: placement of the array on the bench (.iob instance / imported model origin). */
 .placement {
   padding: var(--space-2) var(--space-3);
-  border-left: calc(var(--border-w) * 2) solid var(--color-info);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
+  background: var(--color-info-soft);
 }
 
 .placementTitle {

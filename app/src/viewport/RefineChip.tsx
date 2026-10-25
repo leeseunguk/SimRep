@@ -24,9 +24,11 @@ export function RefineChip({ children }: { children: ReactNode }) {
   return (
     <div className={styles.chip} data-inset="bottom" role="status" aria-live="polite">
       <Loader2 className={styles.spin} aria-hidden />
-      <span className={styles.chipTitle}>{t("refine.chip.title", { file: o.fileName })}</span>
+      <span className={styles.chipTitle} title={t("refine.chip.title", { file: o.fileName })}>
+        {t("refine.chip.title", { file: o.fileName })}
+      </span>
       {r.stages.length > 0 && <span className={styles.chipMeta}>{tm(stageLabel(r))}</span>}
-      <span className={`${styles.chipMeta} num`}>
+      <span className={`${styles.chipMeta} tnum`}>
         {t("refine.cycle", { n: r.cycle })} · {r.residual === null ? "…" : r.residual.toExponential(1)}
       </span>
       <span className={styles.chipBar} aria-hidden>

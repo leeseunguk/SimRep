@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, Trash2, TriangleAlert, X } from "lucide-react";
 import { useI18n } from "../i18n";
 import { useApp, type LogLevel } from "../state/store";
 import { Button } from "./ui/Button";
@@ -33,7 +33,7 @@ export function LogDrawer() {
     <section className={styles.drawer} aria-label={t("log.title")}>
       <header className={styles.header}>
         <h2 className={styles.title}>{t("log.title")}</h2>
-        <Button size="sm" variant="ghost" onClick={clearLogs} disabled={logs.length === 0}>
+        <Button size="sm" variant="danger" icon={<Trash2 />} onClick={clearLogs} disabled={logs.length === 0}>
           {t("log.clear")}
         </Button>
         <Button size="sm" variant="ghost" iconOnly icon={<X />} aria-label={t("log.close")} title={t("log.close")} onClick={() => setLogOpen(false)} />

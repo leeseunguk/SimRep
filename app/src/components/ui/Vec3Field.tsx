@@ -6,7 +6,7 @@ type Vec3 = [number, number, number];
 const AXES = ["X", "Y", "Z"] as const;
 
 /** One compact numeric input (commit on Enter / blur, Esc reverts, arrows step). */
-function Component({ axis, value, step, onCommit }: { axis: string; value: number; step: number; onCommit(v: number): void }) {
+function Component({ axis, name, value, step, onCommit }: { axis: string; name: string; value: number; step: number; onCommit(v: number): void }) {
   const [text, setText] = useState(String(value));
   const editing = useRef(false);
   useEffect(() => {
@@ -38,7 +38,7 @@ function Component({ axis, value, step, onCommit }: { axis: string; value: numbe
         className={`${styles.input} ${styles.number} ${styles.vecInput}`}
         inputMode="decimal"
         value={text}
-        aria-label={axis}
+        aria-label={name}
         onFocus={(e) => {
           editing.current = true;
           e.currentTarget.select();
@@ -64,6 +64,7 @@ export function Vec3Field({ label, value, onChange, step = 1, unit }: { label: s
           <Component
             key={axis}
             axis={axis}
+            name={`${label} ${axis}`}
             value={value[i]!}
             step={step}
             onCommit={(v) => {

@@ -93,6 +93,11 @@ export function ImportWizard() {
               <Notice tone="warning" title={t("wizard.cad.unavailable.title")} body={t("wizard.cad.unavailable.body")}>
                 <p className={styles.detail}>{tm(w.error)}</p>
               </Notice>
+            ) : w.error.key === "error.technical" ? (
+              // Raw parser / OS text: say what to do first, keep the cause selectable underneath.
+              <Notice tone="danger" title={t("wizard.failed")} body={t("wizard.failedNext")}>
+                <p className={styles.detail}>{tm(w.error).replaceAll("\\\\?\\", "")}</p>
+              </Notice>
             ) : (
               <Notice tone="danger" title={t("wizard.failed")} body={tm(w.error)} />
             )}
@@ -102,32 +107,35 @@ export function ImportWizard() {
         {w.step === "grid" && <GridStep w={w} />}
         {w.step === "refine" && <RefineStep w={w} />}
       </div>
-      <div className={styles.footer}>
-        {block && w.status !== "done" && !started && index === STEPS.length - 1 && <p className={styles.blocker}>{t(block.key, block.params)}</p>}
-        <div className={styles.footerRow}>
-          {index > 0 && !started && (
-            <Button variant="ghost" onClick={() => set({ step: STEPS[index - 1]! })} disabled={busy}>
-              {t("wizard.back")}
-            </Button>
-          )}
-          <span className={styles.spacer} />
-          {w.status === "done" ? (
-            <Button variant="primary" icon={<Check />} onClick={closeWizard}>
-              {t("wizard.finish")}
-            </Button>
-          ) : index < STEPS.length - 1 ? (
-            <Button variant="primary" onClick={() => set({ step: STEPS[index + 1]! })} disabled={!w.info || w.status === "inspecting"}>
-              {t("wizard.next")}
-            </Button>
-          ) : (
-            !started && (
-              <Button variant="primary" icon={<Sparkles />} onClick={() => void runWizard()} disabled={!!block || busy}>
-                {t("wizard.build")}
+      {/* While building/refining the footer has nothing to offer (cancel sits with the progress): give the room to the body. */}
+      {!(started && w.status !== "done") && (
+        <div className={styles.footer}>
+          {block && w.status !== "done" && !started && index === STEPS.length - 1 && <p className={styles.blocker}>{t(block.key, block.params)}</p>}
+          <div className={styles.footerRow}>
+            {index > 0 && !started && (
+              <Button variant="ghost" onClick={() => set({ step: STEPS[index - 1]! })} disabled={busy}>
+                {t("wizard.back")}
               </Button>
-            )
-          )}
+            )}
+            <span className={styles.spacer} />
+            {w.status === "done" ? (
+              <Button variant="primary" icon={<Check />} onClick={closeWizard}>
+                {t("wizard.finish")}
+              </Button>
+            ) : index < STEPS.length - 1 ? (
+              <Button variant="primary" onClick={() => set({ step: STEPS[index + 1]! })} disabled={!w.info || w.status === "inspecting"}>
+                {t("wizard.next")}
+              </Button>
+            ) : (
+              !started && (
+                <Button variant="primary" icon={<Sparkles />} onClick={() => void runWizard()} disabled={!!block || busy}>
+                  {t("wizard.build")}
+                </Button>
+              )
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

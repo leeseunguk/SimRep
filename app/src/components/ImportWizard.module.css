@@ -288,10 +288,10 @@
 /* Technical cause under a translated notice (native error text, not localized). */
 .detail {
   margin-top: var(--space-1);
-  color: var(--color-text-subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
+  user-select: text;
 }
 
 .partIssues[data-tone="warn"] {
@@ -316,9 +316,8 @@
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-left: calc(var(--border-w) * 2) solid var(--color-accent);
   border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
+  background: var(--color-accent-soft);
   font-size: var(--text-xs);
   line-height: var(--leading-normal);
 }
@@ -376,7 +375,10 @@
 .spin {
   width: var(--icon-md);
   height: var(--icon-md);
-  animation: wizard-spin 900ms linear infinite;
+  /* Shown only once the wait passes about a second (the status text is there at once). */
+  animation:
+    wizard-spin 900ms linear infinite,
+    fade-in var(--dur-fast) var(--ease-out) var(--dur-spinner-delay) both;
 }
 
 @keyframes wizard-spin {

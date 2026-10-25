@@ -50,6 +50,7 @@ export interface PlotTheme {
   font: string;
   mono: string;
   fontSize: number;
+  tickGap: number;
   lineW: number;
   selectW: number;
   markerR: number;
@@ -76,6 +77,7 @@ export function readPlotTheme(el: Element = document.documentElement): PlotTheme
     font: v("--font-sans"),
     mono: v("--font-mono"),
     fontSize: px("--plot-font"),
+    tickGap: px("--plot-tick-gap"),
     lineW: px("--plot-line-w"),
     selectW: px("--plot-select-w"),
     markerR: px("--plot-marker-r"),
@@ -217,10 +219,14 @@ export function drawChart(p: Painter, spec: ChartSpec, w: number, h: number, t: 
   const xt = logX ? logTicks(x[0], x[1]) : niceTicks(x[0], x[1], Math.max(2, Math.floor(width / (fs * 7))));
   const xStep = xt.length > 1 ? xt[1]! - xt[0]! : 1;
 
+  // A short plot (small multiples) keeps every grid line but only labels that do not touch the last one.
+  let lastLabelY = Infinity;
   for (const v of yt) {
     if (v < y[0] || v > y[1]) continue;
     const [, py] = toPx(frame, x[0], v);
     p.path([fl, py, fl + width, py], { stroke: t.grid, width: 1 });
+    if (Math.abs(lastLabelY - py) < t.tickGap) continue;
+    lastLabelY = py;
     p.text(logY ? tickText(v, v) : tickText(v, ytStep), fl - fs * 0.5, py, { color: t.text, align: "right", baseline: "middle", mono: true });
   }
   for (const v of xt) {

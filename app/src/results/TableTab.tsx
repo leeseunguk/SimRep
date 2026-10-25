@@ -101,7 +101,7 @@ export function TableTab({ o }: { o: PaObject }) {
       <div className={styles.toolbar}>
         <Select label={t("results.filter")} value={view.filter} options={filters} onChange={(filter) => setView({ filter })} />
         <span className={styles.toolbarSpacer} />
-        <span className={styles.note}>{t("results.table.hint")}</span>
+        <span className={styles.note} title={t("results.table.hint")}>{t("results.table.hint")}</span>
       </div>
       <div className={styles.table} role="table" aria-label={t("results.tab.table")} aria-rowcount={order.length}>
         <div className={styles.thead} role="row">

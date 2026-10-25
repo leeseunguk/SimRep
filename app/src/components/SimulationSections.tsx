@@ -214,7 +214,7 @@ export function RefineProgress({ r, onCancel }: { r: RefineState; onCancel(): vo
       <Sparkline history={r.history} />
       <div className={styles.stats}>
         <span>{t("refine.cycle", { n: r.cycle })}</span>
-        <span className="num" title={t("refine.residualHint")}>
+        <span className="tnum" title={t("refine.residualHint")}>
           {t("refine.residual")} {r.residual === null ? "…" : r.residual.toExponential(2)}
         </span>
         <span className="num">{num(r.elapsedMs / 1000, 2)} s</span>
@@ -655,7 +655,7 @@ function ResultsSection({ o }: { o: PaObject }) {
         </div>
         <div>
           <dt>{t("results.count")}</dt>
-          <dd className="num" title={h.thinned ? t("results.thinned") : undefined}>
+          <dd className="tnum" title={h.thinned ? t("results.thinned") : undefined}>
             {t("results.countValue", { ions: h.ions, drawn: h.drawn })}
           </dd>
         </div>
@@ -665,7 +665,7 @@ function ResultsSection({ o }: { o: PaObject }) {
         </div>
         <div>
           <dt>{t("results.prep")}</dt>
-          <dd className={`num ${styles.subtle} ${styles.metaWrap}`}>{prep}</dd>
+          <dd className={`tnum ${styles.subtle} ${styles.metaWrap}`}>{prep}</dd>
         </div>
       </dl>
       {h.fallback && <p className={styles.warnHint}>{t("results.fallback", { reason: reasonMessage(h.fallback) })}</p>}
