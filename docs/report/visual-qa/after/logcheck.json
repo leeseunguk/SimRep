@@ -1,0 +1,72 @@
+{
+ "1280x800": {
+  "viewport": "1280x800",
+  "logClosed": {
+   "results": {
+    "top": 360,
+    "bottom": 768,
+    "h": 408
+   },
+   "view": {
+    "top": 48,
+    "bottom": 360,
+    "h": 312
+   },
+   "drawer": null,
+   "overlapPx": 0
+  },
+  "logOpen": {
+   "results": {
+    "top": 228,
+    "bottom": 584,
+    "h": 356
+   },
+   "view": {
+    "top": 48,
+    "bottom": 228,
+    "h": 180
+   },
+   "drawer": {
+    "top": 584,
+    "bottom": 768,
+    "h": 184
+   },
+   "overlapPx": 0
+  }
+ },
+ "1920x1080": {
+  "viewport": "1920x1080",
+  "logClosed": {
+   "results": {
+    "top": 688,
+    "bottom": 1048,
+    "h": 360
+   },
+   "view": {
+    "top": 48,
+    "bottom": 688,
+    "h": 640
+   },
+   "drawer": null,
+   "overlapPx": 0
+  },
+  "logOpen": {
+   "results": {
+    "top": 504,
+    "bottom": 864,
+    "h": 360
+   },
+   "view": {
+    "top": 48,
+    "bottom": 504,
+    "h": 456
+   },
+   "drawer": {
+    "top": 864,
+    "bottom": 1048,
+    "h": 184
+   },
+   "overlapPx": 0
+  }
+ }
+}

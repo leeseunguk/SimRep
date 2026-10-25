@@ -1,0 +1,27 @@
+{
+ "normal": {
+  "reducedMotionMatches": false,
+  "spinners": [
+   {
+    "name": "_spin_sj6ga_69",
+    "el": "lucide",
+    "duration": 900,
+    "progress": 0.08296888888581735
+   }
+  ],
+  "riseIn": "@keyframes rise-in { 0% { opacity: 0; transform: translateY(var(--space-2)); } 100% { opacity: 1; transform: none; } }"
+ },
+ "reduce": {
+  "reducedMotionMatches": true,
+  "spinners": [
+   {
+    "name": "_spin_sj6ga_69",
+    "el": "lucide",
+    "duration": 1,
+    "progress": 0.0069999856314098,
+    "progressLater": 0.2729999857292569
+   }
+  ],
+  "riseIn": "@keyframes rise-in { 0% { opacity: 0; transform: translateY(var(--space-2)); } 100% { opacity: 1; transform: none; } }"
+ }
+}

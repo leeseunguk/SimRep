@@ -1,0 +1,16 @@
+{
+ "what": "Export dialog dismissed while an export was running (native save dialog answered via Win32 BM_CLICK; export real)",
+ "watcher": {
+  "busySeen": true,
+  "logs0": 10,
+  "closeEnabled": true,
+  "cancelLabel": "닫기",
+  "closedWhileBusy": true
+ },
+ "exported": [
+  {
+   "files": "einzel-field.vti",
+   "dir": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-132"
+  }
+ ]
+}

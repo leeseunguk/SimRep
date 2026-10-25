@@ -1,0 +1,25 @@
+{
+ "panel": {
+  "focusable": true,
+  "before": 344,
+  "afterLeft": 360,
+  "afterShiftRight": 296
+ },
+ "results": {
+  "focusable": true,
+  "before": 408,
+  "afterUp": 424,
+  "afterHome": 408,
+  "stored": null
+ },
+ "modal": {
+  "helpAfterF1": false,
+  "exportOpenAfterEscape": false,
+  "selectionKept": true
+ },
+ "camera": {
+  "reducedMotion": true,
+  "movedBy60ms": true,
+  "settledBy60ms": true
+ }
+}

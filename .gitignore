@@ -17,3 +17,6 @@ docs/report/manuscript.trial.json
 /docs/report/bench
 /docs/report/crates
 /docs/report/tools
+# Visual QA raw captures (378 MB) stay local; pairs/ comparison sheets are committed
+docs/report/visual-qa/before/*.png
+docs/report/visual-qa/after/*.png

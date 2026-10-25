@@ -1,0 +1,4702 @@
+{
+ "phase": "after",
+ "captures": [
+  {
+   "surface": "start",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "start-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 584880,
+   "prep": null
+  },
+  {
+   "surface": "start",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "start-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 281225,
+   "prep": null
+  },
+  {
+   "surface": "start",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "start-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 535452,
+   "prep": null
+  },
+  {
+   "surface": "start",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "start-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 256756,
+   "prep": null
+  },
+  {
+   "surface": "start-tour-offer",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "start-tour-offer-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 704428,
+   "prep": null
+  },
+  {
+   "surface": "start-tour-offer",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "start-tour-offer-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 324335,
+   "prep": null
+  },
+  {
+   "surface": "start-tour-offer",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "start-tour-offer-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 641365,
+   "prep": null
+  },
+  {
+   "surface": "start-tour-offer",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "start-tour-offer-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 292659,
+   "prep": null
+  },
+  {
+   "surface": "busy",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "busy-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 283267,
+   "prep": null
+  },
+  {
+   "surface": "busy",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "busy-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 134789,
+   "prep": null
+  },
+  {
+   "surface": "busy",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "busy-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 330100,
+   "prep": null
+  },
+  {
+   "surface": "busy",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "busy-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 157701,
+   "prep": null
+  },
+  {
+   "surface": "empty-workspace",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "empty-workspace-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 2263644,
+   "prep": null
+  },
+  {
+   "surface": "empty-workspace",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "empty-workspace-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1606198,
+   "prep": null
+  },
+  {
+   "surface": "empty-workspace",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "empty-workspace-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2401256,
+   "prep": null
+  },
+  {
+   "surface": "empty-workspace",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "empty-workspace-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1776715,
+   "prep": null
+  },
+  {
+   "surface": "template-einzel",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-einzel-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 925165,
+   "prep": null
+  },
+  {
+   "surface": "template-einzel",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-einzel-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 865884,
+   "prep": null
+  },
+  {
+   "surface": "template-einzel",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-einzel-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1030500,
+   "prep": null
+  },
+  {
+   "surface": "template-einzel",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-einzel-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1016334,
+   "prep": null
+  },
+  {
+   "surface": "template-quadrupole",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-quadrupole-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1119442,
+   "prep": null
+  },
+  {
+   "surface": "template-quadrupole",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-quadrupole-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1093495,
+   "prep": null
+  },
+  {
+   "surface": "template-quadrupole",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-quadrupole-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1168155,
+   "prep": null
+  },
+  {
+   "surface": "template-quadrupole",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-quadrupole-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1214748,
+   "prep": null
+  },
+  {
+   "surface": "template-reflectron",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-reflectron-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 952878,
+   "prep": null
+  },
+  {
+   "surface": "template-reflectron",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-reflectron-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 860358,
+   "prep": null
+  },
+  {
+   "surface": "template-reflectron",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-reflectron-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1057730,
+   "prep": null
+  },
+  {
+   "surface": "template-reflectron",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-reflectron-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1012368,
+   "prep": null
+  },
+  {
+   "surface": "template-trap",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-trap-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 925716,
+   "prep": null
+  },
+  {
+   "surface": "template-trap",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-trap-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 872914,
+   "prep": null
+  },
+  {
+   "surface": "template-trap",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "template-trap-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1030429,
+   "prep": null
+  },
+  {
+   "surface": "template-trap",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "template-trap-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1027862,
+   "prep": null
+  },
+  {
+   "surface": "props-ions",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "props-ions-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 906959,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-ions",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "props-ions-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 860084,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-ions",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "props-ions-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1015167,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-ions",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "props-ions-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1011942,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-flight-results",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "props-flight-results-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 940819,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-flight-results",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "props-flight-results-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 869937,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-flight-results",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "props-flight-results-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1048730,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "props-flight-results",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "props-flight-results-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1023328,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "live-slider",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "live-slider-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 898094,
+   "prep": {
+    "drag": [
+     1127.68,
+     159.734375,
+     1115.84,
+     159.734375
+    ],
+    "value": "80",
+    "min": "-500",
+    "max": "500",
+    "target": 40
+   }
+  },
+  {
+   "surface": "live-slider",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "live-slider-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 858083,
+   "prep": {
+    "drag": [
+     1747.52,
+     167.734375,
+     1733.76,
+     167.734375
+    ],
+    "value": "80",
+    "min": "-500",
+    "max": "500",
+    "target": 40
+   }
+  },
+  {
+   "surface": "live-slider",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "live-slider-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1008088,
+   "prep": {
+    "drag": [
+     1127.68,
+     159.734375,
+     1115.84,
+     159.734375
+    ],
+    "value": "80",
+    "min": "-500",
+    "max": "500",
+    "target": 40
+   }
+  },
+  {
+   "surface": "live-slider",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "live-slider-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1010676,
+   "prep": {
+    "drag": [
+     1747.52,
+     167.734375,
+     1733.76,
+     167.734375
+    ],
+    "value": "80",
+    "min": "-500",
+    "max": "500",
+    "target": 40
+   }
+  },
+  {
+   "surface": "results-map",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-map-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 889506,
+   "prep": null
+  },
+  {
+   "surface": "results-map",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-map-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 850806,
+   "prep": null
+  },
+  {
+   "surface": "results-map",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-map-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 998188,
+   "prep": null
+  },
+  {
+   "surface": "results-map",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-map-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1003311,
+   "prep": null
+  },
+  {
+   "surface": "results-ion",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-ion-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 930207,
+   "prep": null
+  },
+  {
+   "surface": "results-ion",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-ion-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 877757,
+   "prep": null
+  },
+  {
+   "surface": "results-ion",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-ion-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1040936,
+   "prep": null
+  },
+  {
+   "surface": "results-ion",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-ion-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1029968,
+   "prep": null
+  },
+  {
+   "surface": "results-table",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-table-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 933137,
+   "prep": null
+  },
+  {
+   "surface": "results-table",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-table-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 853902,
+   "prep": null
+  },
+  {
+   "surface": "results-table",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-table-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1046790,
+   "prep": null
+  },
+  {
+   "surface": "results-table",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-table-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1006907,
+   "prep": null
+  },
+  {
+   "surface": "help",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "help-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 352173,
+   "prep": null
+  },
+  {
+   "surface": "help",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "help-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 238256,
+   "prep": null
+  },
+  {
+   "surface": "help",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "help-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 373109,
+   "prep": null
+  },
+  {
+   "surface": "help",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "help-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 258479,
+   "prep": null
+  },
+  {
+   "surface": "export-dialog",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "export-dialog-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 339775,
+   "prep": null
+  },
+  {
+   "surface": "export-dialog",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "export-dialog-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 227748,
+   "prep": null
+  },
+  {
+   "surface": "export-dialog",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "export-dialog-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 359861,
+   "prep": null
+  },
+  {
+   "surface": "export-dialog",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "export-dialog-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 247506,
+   "prep": null
+  },
+  {
+   "surface": "toasts",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "toasts-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 958484,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "toasts",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "toasts-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 877117,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "toasts",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "toasts-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1060093,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "toasts",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "toasts-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1025078,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "error-unsupported-file",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "error-unsupported-file-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 961270,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "error-unsupported-file",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "error-unsupported-file-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 878418,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "error-unsupported-file",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "error-unsupported-file-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1063087,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "error-unsupported-file",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "error-unsupported-file-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1026435,
+   "prep": {
+    "n": 1
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-on-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1159395,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-on-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1111271,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-on-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1211136,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-on-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1232493,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-off-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1159052,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-off-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1107985,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-off-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1210863,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-off-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1228645,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "wizard-gem-parts",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-parts-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1700661,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-parts",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-parts-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1387424,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-parts",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-parts-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1812317,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-parts",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-parts-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1544017,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-grid",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-grid-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1736501,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-grid",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-grid-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1402804,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-grid",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-grid-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1856958,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-grid",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-grid-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1559981,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-refine",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-refine-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1712175,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-refine",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-refine-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1387848,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-refine",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-refine-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1821266,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-refine",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-refine-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1544403,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-running",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-running-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1874486,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-running",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-running-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1529329,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-running",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-running-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2009351,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-running",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-running-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1680462,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-done",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-done-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1837064,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-done",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-done-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1522187,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-done",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-gem-done-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1958889,
+   "prep": null
+  },
+  {
+   "surface": "wizard-gem-done",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-gem-done-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1675515,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-parts",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-step-parts-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 2076342,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-parts",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-step-parts-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1569650,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-parts",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-step-parts-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2199344,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-parts",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-step-parts-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1749740,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-grid",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-step-grid-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 2125424,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-grid",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-step-grid-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1599910,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-grid",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "wizard-step-grid-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2256297,
+   "prep": null
+  },
+  {
+   "surface": "wizard-step-grid",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "wizard-step-grid-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1781771,
+   "prep": null
+  },
+  {
+   "surface": "error-import-gem",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "error-import-gem-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 2116730,
+   "prep": null
+  },
+  {
+   "surface": "error-import-gem",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "error-import-gem-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1550365,
+   "prep": null
+  },
+  {
+   "surface": "error-import-gem",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "error-import-gem-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2211222,
+   "prep": null
+  },
+  {
+   "surface": "error-import-gem",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "error-import-gem-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1747891,
+   "prep": null
+  },
+  {
+   "surface": "error-import-step",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "error-import-step-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 2099780,
+   "prep": null
+  },
+  {
+   "surface": "error-import-step",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "error-import-step-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1540578,
+   "prep": null
+  },
+  {
+   "surface": "error-import-step",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "error-import-step-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2193637,
+   "prep": null
+  },
+  {
+   "surface": "error-import-step",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "error-import-step-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1737610,
+   "prep": null
+  },
+  {
+   "surface": "tour-1",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-1-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 663781,
+   "prep": null
+  },
+  {
+   "surface": "tour-1",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-1-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 312515,
+   "prep": null
+  },
+  {
+   "surface": "tour-1",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-1-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 596187,
+   "prep": null
+  },
+  {
+   "surface": "tour-1",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-1-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 279423,
+   "prep": null
+  },
+  {
+   "surface": "tour-2",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-2-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1534159,
+   "prep": null
+  },
+  {
+   "surface": "tour-2",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-2-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1165643,
+   "prep": null
+  },
+  {
+   "surface": "tour-2",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-2-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1723135,
+   "prep": null
+  },
+  {
+   "surface": "tour-2",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-2-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1365289,
+   "prep": null
+  },
+  {
+   "surface": "tour-3",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-3-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1524146,
+   "prep": null
+  },
+  {
+   "surface": "tour-3",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-3-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1170055,
+   "prep": null
+  },
+  {
+   "surface": "tour-3",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-3-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1712336,
+   "prep": null
+  },
+  {
+   "surface": "tour-3",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-3-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1368846,
+   "prep": null
+  },
+  {
+   "surface": "tour-4",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-4-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1532091,
+   "prep": null
+  },
+  {
+   "surface": "tour-4",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-4-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1178226,
+   "prep": null
+  },
+  {
+   "surface": "tour-4",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-4-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1715527,
+   "prep": null
+  },
+  {
+   "surface": "tour-4",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-4-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1383236,
+   "prep": null
+  },
+  {
+   "surface": "tour-5",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-5-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 964929,
+   "prep": null
+  },
+  {
+   "surface": "tour-5",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-5-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 877565,
+   "prep": null
+  },
+  {
+   "surface": "tour-5",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-5-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1056562,
+   "prep": null
+  },
+  {
+   "surface": "tour-5",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-5-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1027771,
+   "prep": null
+  },
+  {
+   "surface": "tour-done",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-done-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 970957,
+   "prep": null
+  },
+  {
+   "surface": "tour-done",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-done-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 894664,
+   "prep": null
+  },
+  {
+   "surface": "tour-done",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "tour-done-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1065345,
+   "prep": null
+  },
+  {
+   "surface": "tour-done",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "tour-done-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1042862,
+   "prep": null
+  },
+  {
+   "surface": "start-recent",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "start-recent-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 712426,
+   "prep": null
+  },
+  {
+   "surface": "start-recent",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "start-recent-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 319055,
+   "prep": null
+  },
+  {
+   "surface": "start-recent",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "start-recent-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 657874,
+   "prep": null
+  },
+  {
+   "surface": "start-recent",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "start-recent-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 290291,
+   "prep": null
+  },
+  {
+   "surface": "props-end",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "props-end-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 911434,
+   "prep": {
+    "scrolled": true
+   }
+  },
+  {
+   "surface": "props-end",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "props-end-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 858052,
+   "prep": {
+    "scrolled": true
+   }
+  },
+  {
+   "surface": "props-end",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "props-end-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1014974,
+   "prep": {
+    "scrolled": true
+   }
+  },
+  {
+   "surface": "props-end",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "props-end-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1005072,
+   "prep": {
+    "scrolled": true
+   }
+  },
+  {
+   "surface": "electrode-selected",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "electrode-selected-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 870246,
+   "prep": null
+  },
+  {
+   "surface": "electrode-selected",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "electrode-selected-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 833525,
+   "prep": null
+  },
+  {
+   "surface": "electrode-selected",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "electrode-selected-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 975490,
+   "prep": null
+  },
+  {
+   "surface": "electrode-selected",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "electrode-selected-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 981804,
+   "prep": null
+  },
+  {
+   "surface": "refine-progress",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "refine-progress-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 2057221,
+   "prep": null
+  },
+  {
+   "surface": "refine-progress",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "refine-progress-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1572469,
+   "prep": null
+  },
+  {
+   "surface": "refine-progress",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "refine-progress-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 2206526,
+   "prep": null
+  },
+  {
+   "surface": "refine-progress",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "refine-progress-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1725157,
+   "prep": null
+  },
+  {
+   "surface": "results-compare",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-compare-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 939608,
+   "prep": null
+  },
+  {
+   "surface": "results-compare",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-compare-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 863953,
+   "prep": null
+  },
+  {
+   "surface": "results-compare",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-compare-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1047332,
+   "prep": null
+  },
+  {
+   "surface": "results-compare",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-compare-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1016764,
+   "prep": null
+  },
+  {
+   "surface": "results-export-menu",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-export-menu-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 942683,
+   "prep": {
+    "open": true
+   }
+  },
+  {
+   "surface": "results-export-menu",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-export-menu-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 873025,
+   "prep": {
+    "open": true
+   }
+  },
+  {
+   "surface": "results-export-menu",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "results-export-menu-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1044155,
+   "prep": {
+    "open": true
+   }
+  },
+  {
+   "surface": "results-export-menu",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "results-export-menu-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1023510,
+   "prep": {
+    "open": true
+   }
+  },
+  {
+   "surface": "log-drawer",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "log-drawer-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 743907,
+   "prep": null
+  },
+  {
+   "surface": "log-drawer",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "log-drawer-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 688808,
+   "prep": null
+  },
+  {
+   "surface": "log-drawer",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "log-drawer-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 800869,
+   "prep": null
+  },
+  {
+   "surface": "log-drawer",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "log-drawer-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 799440,
+   "prep": null
+  }
+ ],
+ "surfaces": {
+  "start": {
+   "title": "Start screen: templates and open file (no recent projects)",
+   "info": {
+    "home": true
+   },
+   "ms": 2470,
+   "at": "2026-10-25T09:02:12.843Z"
+  },
+  "start-recent": {
+   "title": "Start screen with recent projects and a recovery offer",
+   "info": {
+    "recent": 3,
+    "recovery": true
+   },
+   "ms": 2501,
+   "at": "2026-10-25T09:27:34.522Z"
+  },
+  "start-tour-offer": {
+   "title": "First-launch tour offer card on the start screen",
+   "info": {
+    "tour": "offer"
+   },
+   "ms": 2457,
+   "at": "2026-10-25T09:02:17.773Z"
+  },
+  "busy": {
+   "title": "Busy overlay while a template is created",
+   "info": {
+    "busy": true
+   },
+   "ms": 2460,
+   "at": "2026-10-25T09:02:20.233Z"
+  },
+  "empty-workspace": {
+   "title": "Empty workspace (no objects, start screen closed)",
+   "info": {
+    "objects": 0
+   },
+   "ms": 2446,
+   "at": "2026-10-25T09:02:22.680Z"
+  },
+  "template-einzel": {
+   "title": "Einzel lens template after refine + fly, results (TOF histogram)",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-137\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 80,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 8.13061239995573,
+     "max": 8.577914171069898,
+     "mean": 8.263054533570292,
+     "std": 0.1339514705924327
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 3287,
+   "at": "2026-10-25T09:02:25.968Z"
+  },
+  "template-quadrupole": {
+   "title": "Quadrupole template after refine + fly, results (TOF histogram)",
+   "info": {
+    "name": "quadrupole.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\quadrupole-73\\quadrupole.pa0",
+    "template": "quadrupole",
+    "dims": [
+     121,
+     37,
+     37
+    ],
+    "voltages": {
+     "1": 2.5,
+     "2": -2.5,
+     "3": 0
+    },
+    "ions": 120,
+    "drawn": 120,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 120,
+     "min": 3.735194439383193,
+     "max": 4.260228060854052,
+     "mean": 4.169464499586206,
+     "std": 0.18663953835106045
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      101
+     ],
+     [
+      {
+       "kind": "electrode",
+       "number": 3,
+       "voltage": null
+      },
+      19
+     ]
+    ]
+   },
+   "ms": 3703,
+   "at": "2026-10-25T09:02:29.672Z"
+  },
+  "template-reflectron": {
+   "title": "Reflectron TOF template after refine + fly, results (TOF histogram)",
+   "info": {
+    "name": "reflectron.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\reflectron-14\\reflectron.pa0",
+    "template": "reflectron",
+    "dims": [
+     241,
+     61,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 25,
+     "3": 50,
+     "4": 75,
+     "5": 100,
+     "6": 125,
+     "7": 150
+    },
+    "ions": 30,
+    "drawn": 30,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 30,
+     "min": 17.139347746752865,
+     "max": 17.289058211877407,
+     "mean": 17.217887049428175,
+     "std": 0.0423218336940593
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "-x"
+      },
+      30
+     ]
+    ]
+   },
+   "ms": 3399,
+   "at": "2026-10-25T09:02:33.071Z"
+  },
+  "template-trap": {
+   "title": "Ion trap template after refine + fly, results (TOF histogram)",
+   "info": {
+    "name": "trap.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\trap-15\\trap.pa0",
+    "template": "trap",
+    "dims": [
+     161,
+     81,
+     1
+    ],
+    "voltages": {
+     "1": 9,
+     "2": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 16.016049112250183,
+     "max": 16.619228613611803,
+     "mean": 16.397037833038336,
+     "std": 0.19176089723204215
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "-x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 3256,
+   "at": "2026-10-25T09:02:36.327Z"
+  },
+  "props-ions": {
+   "title": "Einzel: properties panel scrolled to the ion source section",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-138\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 80,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 8.13061239995573,
+     "max": 8.577914171069898,
+     "mean": 8.263054533570292,
+     "std": 0.1339514705924327
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 4288,
+   "at": "2026-10-25T09:02:40.615Z"
+  },
+  "props-flight-results": {
+   "title": "Einzel: properties panel scrolled to the flight results section (TOF stats, hits)",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-138\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 80,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 8.13061239995573,
+     "max": 8.577914171069898,
+     "mean": 8.263054533570292,
+     "std": 0.1339514705924327
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 2896,
+   "at": "2026-10-25T09:02:43.512Z"
+  },
+  "props-end": {
+   "title": "Einzel: properties panel scrolled to the end (flight results section)",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-143\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 80,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 8.13061239995573,
+     "max": 8.577914171069898,
+     "mean": 8.263054533570292,
+     "std": 0.1339514705924327
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 4294,
+   "at": "2026-10-25T09:27:38.818Z"
+  },
+  "electrode-selected": {
+   "title": "Einzel: electrode #2 selected in the scene tree (electrode properties)",
+   "info": {
+    "electrode": 2
+   },
+   "ms": 2368,
+   "at": "2026-10-25T09:27:41.187Z"
+  },
+  "live-slider": {
+   "title": "Einzel: dragging the #2 voltage slider (live re-fly during the drag)",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-138\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 80,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 8.13061239995573,
+     "max": 8.577914171069898,
+     "mean": 8.263054533570292,
+     "std": 0.1339514705924327
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 4731,
+   "at": "2026-10-25T09:02:53.510Z"
+  },
+  "results-map": {
+   "title": "Results: detector map tab",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-138\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 40,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "NVIDIA GeForce RTX 3070 · Vulkan",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 7.480908097117208,
+     "max": 7.5121473636245355,
+     "mean": 7.4906661919041655,
+     "std": 0.009474694471297881
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 2942,
+   "at": "2026-10-25T09:02:56.453Z"
+  },
+  "results-ion": {
+   "title": "Results: ion tab with ion #5 selected (time series)",
+   "info": {
+    "trace": true
+   },
+   "ms": 2552,
+   "at": "2026-10-25T09:02:59.006Z"
+  },
+  "results-table": {
+   "title": "Results: end-position table",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-138\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 40,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "NVIDIA GeForce RTX 3070 · Vulkan",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 7.480908097117208,
+     "max": 7.5121473636245355,
+     "mean": 7.4906661919041655,
+     "std": 0.009474694471297881
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 2493,
+   "at": "2026-10-25T09:03:01.500Z"
+  },
+  "results-compare": {
+   "title": "Results: compare tab with one kept run and a changed voltage",
+   "info": {
+    "snapshots": 1,
+    "voltages": {
+     "1": 0,
+     "2": 40,
+     "3": 0
+    }
+   },
+   "ms": 3692,
+   "at": "2026-10-25T09:36:14.526Z"
+  },
+  "results-export-menu": {
+   "title": "Results: export menu open",
+   "info": {
+    "name": "einzel.pa0",
+    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-145\\einzel.pa0",
+    "template": "einzel",
+    "dims": [
+     201,
+     41,
+     1
+    ],
+    "voltages": {
+     "1": 0,
+     "2": 40,
+     "3": 0
+    },
+    "ions": 40,
+    "drawn": 40,
+    "device": "NVIDIA GeForce RTX 3070 · Vulkan",
+    "precision": "live",
+    "tof": {
+     "n": 40,
+     "min": 7.480908097117208,
+     "max": 7.5121473636245355,
+     "mean": 7.4906661919041655,
+     "std": 0.009474694471297881
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      40
+     ]
+    ]
+   },
+   "ms": 3919,
+   "at": "2026-10-25T09:36:18.447Z"
+  },
+  "help": {
+   "title": "Help overlay (shortcuts, start tour)",
+   "info": {
+    "help": true
+   },
+   "ms": 2407,
+   "at": "2026-10-25T09:03:11.024Z"
+  },
+  "log-drawer": {
+   "title": "Log drawer open",
+   "info": {
+    "logs": 10
+   },
+   "ms": 2403,
+   "at": "2026-10-25T09:36:20.851Z"
+  },
+  "export-dialog": {
+   "title": "Export dialog (geometry tab)",
+   "info": {
+    "export": true
+   },
+   "ms": 2507,
+   "at": "2026-10-25T09:03:15.979Z"
+  },
+  "toasts": {
+   "title": "Toasts after creating a template",
+   "info": {
+    "toasts": [
+     {
+      "key": "toast.templateReady.title",
+      "params": {
+       "name": {
+        "key": "template.einzel.title"
+       }
+      }
+     }
+    ]
+   },
+   "ms": 3983,
+   "at": "2026-10-25T09:03:19.963Z"
+  },
+  "error-unsupported-file": {
+   "title": "Error: opening an unsupported file (toast)",
+   "info": {
+    "toasts": [
+     [
+      "warning",
+      {
+       "key": "toast.unsupported.title",
+       "params": {
+        "file": "notes.txt"
+       }
+      },
+      {
+       "key": "toast.unsupported.body"
+      }
+     ]
+    ]
+   },
+   "ms": 3934,
+   "at": "2026-10-25T09:03:23.897Z"
+  },
+  "refine-progress": {
+   "title": "Refine in progress (properties refine section + viewport chip)",
+   "info": {
+    "status": "running",
+    "stage": 0,
+    "cycle": 3,
+    "device": "CPU · 32 threads"
+   },
+   "ms": 75597,
+   "at": "2026-10-25T09:35:09.445Z"
+  },
+  "exact-on": {
+   "title": "Exact surface card ON (quadrupole cut-cell .pa0 with .cuts.json) + results badge",
+   "info": {
+    "name": "quadrupole.pa0",
+    "path": "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa\\quad\\quadrupole.pa0",
+    "template": null,
+    "dims": [
+     121,
+     37,
+     37
+    ],
+    "voltages": {
+     "1": 2.5,
+     "2": -2.5,
+     "3": 0
+    },
+    "ions": 1000,
+    "drawn": 300,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 750,
+     "min": 4.245526535345463,
+     "max": 4.262813677028871,
+     "mean": 4.251245304695877,
+     "std": 0.004287694842164868
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      750
+     ],
+     [
+      {
+       "kind": "electrode",
+       "number": 3,
+       "voltage": null
+      },
+      230
+     ],
+     [
+      {
+       "kind": "electrode",
+       "number": 2,
+       "voltage": null
+      },
+      20
+     ]
+    ]
+   },
+   "ms": 4740,
+   "at": "2026-10-25T09:04:44.291Z"
+  },
+  "exact-off": {
+   "title": "Exact surface card OFF (grid-point collision, GPU live)",
+   "info": {
+    "name": "quadrupole.pa0",
+    "path": "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa\\quad\\quadrupole.pa0",
+    "template": null,
+    "dims": [
+     121,
+     37,
+     37
+    ],
+    "voltages": {
+     "1": 2.5,
+     "2": -2.5,
+     "3": 0
+    },
+    "ions": 1000,
+    "drawn": 300,
+    "device": "CPU · 32 threads",
+    "precision": "live",
+    "tof": {
+     "n": 1000,
+     "min": 3.7327746794808734,
+     "max": 4.262813677028871,
+     "mean": 4.124046831851392,
+     "std": 0.2209883870276443
+    },
+    "surfaces": [
+     [
+      {
+       "kind": "wall",
+       "face": "+x"
+      },
+      751
+     ],
+     [
+      {
+       "kind": "electrode",
+       "number": 3,
+       "voltage": null
+      },
+      249
+     ]
+    ]
+   },
+   "ms": 3858,
+   "at": "2026-10-25T09:04:48.150Z"
+  },
+  "wizard-gem-parts": {
+   "title": "Import wizard (GEM): step 1 parts",
+   "info": {
+    "status": "ready",
+    "parts": 3,
+    "method": "aligned"
+   },
+   "ms": 2857,
+   "at": "2026-10-25T09:04:51.008Z"
+  },
+  "wizard-gem-grid": {
+   "title": "Import wizard (GEM): step 2 grid",
+   "info": {
+    "method": "aligned",
+    "spacing": 0.5
+   },
+   "ms": 2462,
+   "at": "2026-10-25T09:04:53.471Z"
+  },
+  "wizard-gem-refine": {
+   "title": "Import wizard (GEM): step 3 output + refine (before running)",
+   "info": {
+    "step": "refine"
+   },
+   "ms": 2458,
+   "at": "2026-10-25T09:04:55.929Z"
+  },
+  "wizard-gem-running": {
+   "title": "Import wizard (GEM): build + refine in progress",
+   "info": {
+    "status": "refining"
+   },
+   "ms": 1920,
+   "at": "2026-10-25T09:04:57.850Z"
+  },
+  "wizard-gem-done": {
+   "title": "Import wizard (GEM): done, ready to fly",
+   "info": {
+    "status": "done",
+    "build": [
+     "paHash",
+     "files",
+     "points",
+     "electrodePoints",
+     "cutNodes",
+     "ms"
+    ]
+   },
+   "ms": 3114,
+   "at": "2026-10-25T09:05:00.965Z"
+  },
+  "wizard-step-parts": {
+   "title": "Import wizard (STEP pair.step): step 1 parts (CAD B-rep check)",
+   "info": {
+    "status": "ready",
+    "error": null,
+    "parts": [
+     "pair/left",
+     "pair/right"
+    ]
+   },
+   "ms": 3371,
+   "at": "2026-10-25T09:05:04.337Z"
+  },
+  "wizard-step-grid": {
+   "title": "Import wizard (STEP): step 2 grid (cut-cell, CAD surface)",
+   "info": {
+    "method": "cutcell",
+    "cadSurface": "tessellated"
+   },
+   "ms": 2465,
+   "at": "2026-10-25T09:05:06.803Z"
+  },
+  "error-import-gem": {
+   "title": "Error: import wizard on a broken GEM file",
+   "info": {
+    "status": "error",
+    "error": {
+     "key": "error.technical",
+     "params": {
+      "detail": "\\\\?\\C:\\Users\\lsu10\\simrep-gui-test\\visual-qa\\bad\\broken.gem: line 2: unsupported numeric function or argument count 'e'"
+     }
+    }
+   },
+   "ms": 3890,
+   "at": "2026-10-25T09:05:10.694Z"
+  },
+  "error-import-step": {
+   "title": "Error: import wizard on a broken STEP file",
+   "info": {
+    "status": "error",
+    "error": {
+     "key": "error.technical",
+     "params": {
+      "detail": "STEP read failed"
+     }
+    }
+   },
+   "ms": 3887,
+   "at": "2026-10-25T09:05:14.582Z"
+  },
+  "tour-1": {
+   "title": "Tour step 1/5: pick the einzel template (start screen)",
+   "info": {
+    "step": 0
+   },
+   "ms": 2752,
+   "at": "2026-10-25T09:05:17.335Z"
+  },
+  "tour-2": {
+   "title": "Tour step 2/5: change the focus voltage",
+   "info": {
+    "step": 1
+   },
+   "ms": 3322,
+   "at": "2026-10-25T09:05:20.658Z"
+  },
+  "tour-3": {
+   "title": "Tour step 3/5: fly",
+   "info": {
+    "step": 2
+   },
+   "ms": 2780,
+   "at": "2026-10-25T09:05:23.439Z"
+  },
+  "tour-4": {
+   "title": "Tour step 4/5: TOF histogram",
+   "info": {
+    "step": 3
+   },
+   "ms": 2790,
+   "at": "2026-10-25T09:05:26.230Z"
+  },
+  "tour-5": {
+   "title": "Tour step 5/5: export CSV",
+   "info": {
+    "step": 4
+   },
+   "ms": 2788,
+   "at": "2026-10-25T09:05:29.019Z"
+  },
+  "tour-done": {
+   "title": "Tour finished card",
+   "info": {
+    "step": 5
+   },
+   "ms": 2789,
+   "at": "2026-10-25T09:05:31.809Z"
+  }
+ },
+ "audits": {
+  "start-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "start-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "start-recent-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33",
+    "div>div._app_10uw8_1>div._start_i5fap_2"
+   ]
+  },
+  "start-recent-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33",
+    "div>div._app_10uw8_1>div._start_i5fap_2"
+   ]
+  },
+  "start-tour-offer-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div>div._app_10uw8_1>div._start_i5fap_2"
+   ]
+  },
+  "start-tour-offer-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div>div._app_10uw8_1>div._start_i5fap_2"
+   ]
+  },
+  "busy-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "busy-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "empty-workspace-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "empty-workspace-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "template-einzel-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-einzel-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-quadrupole-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-quadrupole-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-reflectron-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-reflectron-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-trap-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "template-trap-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "props-ions-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "props-ions-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "props-flight-results-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "props-flight-results-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "props-end-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "props-end-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "electrode-selected-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "electrode-selected-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "live-slider-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "live-slider-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-map-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-map-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-ion-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-ion-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-table-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._body_1v8he_164>div._table_1v8he_447>div._viewport_1v8he_514",
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-table-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._body_1v8he_164>div._table_1v8he_447>div._viewport_1v8he_514",
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-compare-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-compare-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-export-menu-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "results-export-menu-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "help-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "help-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "log-drawer-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33",
+    "div._app_10uw8_1>section._drawer_kyteq_1>ol._list_kyteq_27"
+   ]
+  },
+  "log-drawer-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33",
+    "div._app_10uw8_1>section._drawer_kyteq_1>ol._list_kyteq_27"
+   ]
+  },
+  "export-dialog-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "export-dialog-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "toasts-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "toasts-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "error-unsupported-file-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "error-unsupported-file-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "refine-progress-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "refine-progress-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "exact-on-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "exact-on-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "exact-off-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "exact-off-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "wizard-gem-parts-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-parts-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-grid-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-grid-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-refine-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-refine-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-running-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "wizard-gem-running-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "wizard-gem-done-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-gem-done-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-step-parts-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-step-parts-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "wizard-step-grid-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "wizard-step-grid-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "error-import-gem-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "error-import-gem-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "error-import-step-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "error-import-step-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "tour-1-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "tour-1-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": []
+  },
+  "tour-2-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-2-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-3-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-3-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-4-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-4-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-5-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-5-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-done-light": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  },
+  "tour-done-dark": {
+   "small": {
+    "n": 0,
+    "items": []
+   },
+   "monoHangul": {
+    "n": 0,
+    "items": []
+   },
+   "lowContrast": {
+    "n": 0,
+    "items": []
+   },
+   "unnamed": {
+    "n": 0,
+    "items": []
+   },
+   "smallTargets": {
+    "n": 0,
+    "items": []
+   },
+   "scrollers": [
+    "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+   ]
+  }
+ }
+}

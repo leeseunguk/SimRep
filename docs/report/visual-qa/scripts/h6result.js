@@ -1,0 +1,1 @@
+const { useApp } = await import('/src/state/store.ts'); const { useExport } = await import('/src/state/exportDialog.ts'); return { ...window.__h6, exportOpenNow: useExport.getState().objectId, logged: useApp.getState().logs.slice(window.__h6.logs0).map(l => l.message.key) };
