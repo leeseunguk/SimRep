@@ -4,6 +4,16 @@ Date: 2026-10-23. Windows release Rust, wgpu 30.0.1 WGSL, Vulkan,
 NVIDIA GeForce RTX 3070 8 GB, Ryzen 9 5950X. WSL validation uses Vulkan
 llvmpipe, not the NVIDIA adapter.
 
+## Native dispatch safety (2026-10-25)
+
+Strict real-einzel 100k CLI replay exposed a 2.3 s single-dispatch driver reset.
+Native f64 now defaults to 32,768 ions per dispatch; hardware Preview retains
+131,072. The fixed 100k CLI compute median is 2460.147 ms, with byte-identical
+results and a measured maximum 32,768-ion dispatch of 829.175 ms. This fixes
+watchdog exposure, not the unreproduced historical 637.090 ms throughput.
+See `docs/dev/windows-rtx-20261025/EINZEL-INVESTIGATION.md` for controls,
+history limitations, failure reporting, validation and cleanup.
+
 ## Cached-power Horner specialization (2026-10-24)
 
 **The quadrupole 100k Preview compute target is met: 54.886 ms**, versus

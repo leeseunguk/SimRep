@@ -585,7 +585,9 @@ impl Gpu {
                 }),
             ion_buffers: Arc::default(),
             dispatch_capacity: self.ion_capacity().min(
-                if self.info.device_type == DeviceType::Cpu {
+                // Strict native-f64 electric flights can exceed Windows TDR
+                // at 100k ions. Keep their conservative partition by default.
+                if self.wide || self.info.device_type == DeviceType::Cpu {
                     MAX_IONS_PER_DISPATCH
                 } else {
                     PREFERRED_IONS_PER_DISPATCH
@@ -757,8 +759,9 @@ impl PreparedField<'_> {
     }
 
     /// Select a partition size without changing per-ion arithmetic or RNG.
-    /// 32768 restores the previous partition; zero is invalid. Values above the
-    /// device limits are clamped. Larger electric batches can run longer.
+    /// Native f64 defaults to 32768; hardware Preview defaults to 131072.
+    /// Zero is invalid; values above the device limits are clamped. Larger
+    /// electric batches can exceed the operating system's watchdog budget.
     pub fn set_max_ions_per_dispatch(&mut self, capacity: usize) -> GpuResult<()> {
         if capacity == 0 {
             return Err("GPU dispatch capacity must be positive".into());

@@ -1,6 +1,181 @@
 //! Opt-in, interleaved kernel experiments on the solved live templates.
 use super::*;
 
+#[test]
+fn unfinished_terminal_output_is_an_error() {
+    let field = InstanceField::new(
+        GridField::new(simrep_core::PotentialArray::new(2, 2, 1)).unwrap(),
+        [0.0; 3],
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        1.0,
+        None,
+        None,
+    )
+    .unwrap();
+    let particles = [Particle::new(1.0, 0.0, [0.25, 0.25, 0.0], [0.0; 3], 0.0).unwrap()];
+    let source = include_str!("fly.wgsl");
+    let prefix = &source[..source
+        .find("@compute @workgroup_size(64)\nfn fly(")
+        .unwrap()];
+    let source = format!("{prefix}\n@compute @workgroup_size(64)\nfn fly() {{}}");
+    for precision in [Precision::Precise, Precision::Preview] {
+        let Some(gpu) =
+            pollster::block_on(Gpu::new_with_precision(Backends::VULKAN, precision)).unwrap()
+        else {
+            eprintln!("SKIP unfinished terminal output: no Vulkan adapter");
+            return;
+        };
+        let mut resident = gpu.prepare(&field, &[]).unwrap();
+        // Exercise the actual GPU readback boundary without writing terminal
+        // states, as observed when the driver returned zeroes after recovery.
+        resident.waveform_pipeline = Some(pipeline(&gpu, &source));
+        assert!(resident.fly(&particles, &FlightOptions::default()).is_err());
+    }
+}
+
+#[test]
+#[ignore = "requires SIMREP_GPU_REAL_EINZEL (oracle root and hardware Vulkan timestamps)"]
+fn real_einzel_dispatch_benchmark() {
+    let directory =
+        std::env::var("SIMREP_GPU_REAL_EINZEL").expect("requires SIMREP_GPU_REAL_EINZEL");
+    let directory = std::path::Path::new(&directory).join("_benchfly");
+    let path = directory.join("einzel.pa0");
+    let nearest = std::env::var_os("SIMREP_GPU_REAL_NEAREST").is_some();
+    let grid = |array| {
+        let field = GridField::new(array).unwrap();
+        if nearest {
+            field.with_nearest_node_collisions()
+        } else {
+            field
+        }
+    };
+    let background = simrep_io::read_fast_adjust(&path, &[(1, 0.0), (2, 0.0), (3, 0.0)]).unwrap();
+    let direct = std::env::var_os("SIMREP_GPU_REAL_DIRECT").is_some();
+    let reference = simrep_io::read_pa(&path)
+        .unwrap()
+        .pa0
+        .unwrap()
+        .reference_voltage;
+    let bases: Vec<_> = (1..=3)
+        .map(|n| {
+            if direct {
+                let mut unit = simrep_io::read_pa(path.with_extension(format!("pa{n}")))
+                    .unwrap()
+                    .array;
+                unit.potentials.iter_mut().for_each(|v| *v /= reference);
+                return grid(unit);
+            }
+            let zero = simrep_io::read_fast_adjust(&path, &[(n, 0.0)]).unwrap();
+            let mut unit = simrep_io::read_fast_adjust(&path, &[(n, 1.0)]).unwrap();
+            for (v, z) in unit.potentials.iter_mut().zip(zero.potentials) {
+                *v -= z;
+            }
+            grid(unit)
+        })
+        .collect();
+    let field = InstanceField::new(
+        grid(background),
+        [0.0; 3],
+        [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        1.0,
+        Some([[-101.0, -19.0, -19.0], [291.0, 19.0, 19.0]]),
+        None,
+    )
+    .unwrap();
+    let particles: Vec<_> = simrep_io::read_ion(directory.join("einzel_100000.ion"))
+        .unwrap()
+        .into_iter()
+        .map(|p| {
+            Particle::from_relativistic_energy(
+                p.mass_amu,
+                p.charge_e,
+                p.position_mm,
+                p.energy_ev,
+                p.direction,
+                p.birth_time_us,
+            )
+            .unwrap()
+        })
+        .collect();
+    let gpu = pollster::block_on(Gpu::new(Backends::VULKAN))
+        .unwrap()
+        .expect("requires Vulkan");
+    assert_ne!(gpu.info.device_type, DeviceType::Cpu);
+    assert!(gpu.has_f64() && gpu.has_timestamps());
+    let mut resident = gpu.prepare(&field, &bases).unwrap();
+    resident.set_voltages(&[1.0, 0.0, 110.0, 0.0]).unwrap();
+    let cap = std::env::var("SIMREP_GPU_REAL_CAP")
+        .map(|v| v.parse::<usize>().unwrap())
+        .unwrap_or(resident.max_ions_per_dispatch());
+    resident.set_max_ions_per_dispatch(cap).unwrap();
+    let general = std::env::var_os("SIMREP_GPU_REAL_GENERAL").is_some();
+    if general {
+        resident.waveform_pipeline = Some(pipeline(
+            &gpu,
+            &include_str!("fly.wgsl").replace(
+                "for (var x = i32(effective.x)",
+                "for  (var x = i32(effective.x)",
+            ),
+        ));
+    }
+    let options = FlightOptions {
+        duration_us: 100.0,
+        relativistic: true,
+        ..Default::default()
+    };
+    eprintln!(
+        "REAL adapter={:?} f64={} timestamps={} cap={} general={general} nearest={nearest} direct={direct} dims={:?} degrees={:?}",
+        gpu.info,
+        gpu.has_f64(),
+        gpu.has_timestamps(),
+        resident.max_ions_per_dispatch(),
+        resident.params.dims,
+        resident.params.degrees,
+    );
+    let control = resident.fly(&particles, &options).unwrap();
+    assert!(control.results.iter().all(|r| matches!(
+        r.splat_reason,
+        SplatReason::Electrode { .. } | SplatReason::OutsideGrid | SplatReason::StopPlane
+    )));
+    let mut times = Vec::new();
+    for run in 0..3 {
+        let report = resident.fly(&particles, &options).unwrap();
+        super::tests::assert_flight_bits(&control.results, &report.results);
+        let ms = report.timings.fly.as_secs_f64() * 1000.0;
+        times.push(ms);
+        eprintln!("REAL run={run} compute_ms={ms:.6}");
+    }
+    times.sort_by(f64::total_cmp);
+    eprintln!(
+        "REAL median_ms={:.6} accepted={} rejected={}",
+        times[1],
+        control
+            .results
+            .iter()
+            .map(|r| r.accepted_steps)
+            .sum::<usize>(),
+        control
+            .results
+            .iter()
+            .map(|r| r.rejected_steps)
+            .sum::<usize>()
+    );
+    let mut partitioned = Vec::new();
+    let mut dispatch_times = Vec::new();
+    for (index, batch) in particles.chunks(cap.min(32_768)).enumerate() {
+        let report = resident.fly(batch, &options).unwrap();
+        dispatch_times.push(report.timings.fly.as_secs_f64() * 1000.0);
+        eprintln!(
+            "REAL dispatch={index} ions={} compute_ms={:.6}",
+            batch.len(),
+            dispatch_times.last().unwrap()
+        );
+        partitioned.extend(report.results);
+    }
+    super::tests::assert_flight_bits(&control.results, &partitioned);
+    eprintln!("REAL partition_bits=identical");
+}
+
 fn pipeline(gpu: &Gpu, source: &str) -> wgpu::ComputePipeline {
     let shader = gpu
         .device

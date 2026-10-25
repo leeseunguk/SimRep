@@ -823,6 +823,17 @@ impl PendingBatch {
                 .map(|i| i.map(f64::from))
                 .collect()
         };
+        // Every completed invocation writes a terminal reason in 1..=7.
+        // In particular, zero-filled readback after a driver reset is not a
+        // numerical termination or a valid zero-duration compute sample.
+        if output.iter().any(|ion| !(1..=7).contains(&ion.outcome[2])) {
+            drop(mapped);
+            readback.unmap();
+            self.needs_unmap = false;
+            return Err(
+                "GPU flight returned unfinished terminal states (possible device loss); compute timestamps and results are invalid".into(),
+            );
+        }
         let mut results: Vec<_> = output
             .iter()
             .zip(&self.birth_times)

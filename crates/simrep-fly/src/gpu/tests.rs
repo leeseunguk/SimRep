@@ -98,6 +98,15 @@ fn pending_flights_snapshot_voltages_samples_and_pipeline_and_recycle_buffers() 
             return;
         };
         let mut prepared = gpu.prepare(&field, &[]).unwrap();
+        assert_eq!(
+            prepared.max_ions_per_dispatch(),
+            gpu.ion_capacity()
+                .min(if gpu.wide || gpu.info.device_type == DeviceType::Cpu {
+                    MAX_IONS_PER_DISPATCH
+                } else {
+                    PREFERRED_IONS_PER_DISPATCH
+                })
+        );
         let initial_bytes = prepared.gpu_memory_bytes();
         assert_eq!(
             initial_bytes,
