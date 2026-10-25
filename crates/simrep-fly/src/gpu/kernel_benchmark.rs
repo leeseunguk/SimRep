@@ -2,7 +2,7 @@
 use super::*;
 
 #[test]
-fn unfinished_terminal_output_is_an_error() {
+fn invalid_terminal_output_is_an_error() {
     let field = InstanceField::new(
         GridField::new(simrep_core::PotentialArray::new(2, 2, 1)).unwrap(),
         [0.0; 3],
@@ -17,7 +17,6 @@ fn unfinished_terminal_output_is_an_error() {
     let prefix = &source[..source
         .find("@compute @workgroup_size(64)\nfn fly(")
         .unwrap()];
-    let source = format!("{prefix}\n@compute @workgroup_size(64)\nfn fly() {{}}");
     for precision in [Precision::Precise, Precision::Preview] {
         let Some(gpu) =
             pollster::block_on(Gpu::new_with_precision(Backends::VULKAN, precision)).unwrap()
@@ -26,10 +25,32 @@ fn unfinished_terminal_output_is_an_error() {
             return;
         };
         let mut resident = gpu.prepare(&field, &[]).unwrap();
-        // Exercise the actual GPU readback boundary without writing terminal
-        // states, as observed when the driver returned zeroes after recovery.
-        resident.waveform_pipeline = Some(pipeline(&gpu, &source));
-        assert!(resident.fly(&particles, &FlightOptions::default()).is_err());
+        // Seed a valid pooled terminal record: a missing write must not return it.
+        resident.fly(&particles, &FlightOptions::default()).unwrap();
+        // Exercise the actual readback boundary with missing and partial output,
+        // including a valid reason paired with NaN or an impossible step count.
+        for body in [
+            "",
+            "terminal.states[0].offset.x = bitcast<f32>(0x7fc00000u);",
+            "terminal.states[0].velocity.x = bitcast<f32>(0x7fc00000u);",
+            "terminal.states[0].offset.w = -0.001;",
+            "terminal.states[0].outcome.x = 0u; terminal.states[0].offset.w = 0.001;",
+        ] {
+            let initialize = if body.is_empty() {
+                ""
+            } else {
+                "terminal.states[0] = EndState(vec4<i32>(0), vec4<u32>(1u,0u,4u,0u),
+                    vec4<f32>(0.0), vec4<f32>(0.0));"
+            };
+            let source = format!(
+                "{prefix}\n@compute @workgroup_size(64)\nfn fly() {{ {initialize} {body} }}"
+            );
+            resident.waveform_pipeline = Some(pipeline(&gpu, &source));
+            assert!(resident.fly(&particles, &FlightOptions::default()).is_err());
+        }
+        // Errors must leave the pool reusable for a real flight.
+        resident.waveform_pipeline = None;
+        resident.fly(&particles, &FlightOptions::default()).unwrap();
     }
 }
 

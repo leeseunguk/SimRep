@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, ci/setup]
+    branches: [main, ci/setup, fix/ci-gpu-nan]
   pull_request:
     branches: [main]
 
@@ -39,6 +39,7 @@ jobs:
           printf 'VK_DRIVER_FILES=%s\nXDG_RUNTIME_DIR=%s\n' \
             "$VK_DRIVER_FILES" "$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
           vulkaninfo --summary
+          lscpu
       - name: Check workspace formatting
         run: cargo fmt --all -- --check
       - name: Check native shell formatting

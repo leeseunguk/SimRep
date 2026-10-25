@@ -516,6 +516,9 @@ impl<'a> PreparedField<'a> {
             0,
             self.instances.size(),
         );
+        // A skipped write must not expose a previous flight's pooled result.
+        // Continuations retain completed ions, which return before writing again.
+        encoder.clear_buffer(&batch.buffers.terminal, 32, Some(output_size));
         batch.dispatch(gpu, encoder, combine.then_some(combine_count));
         batch.timings.upload = start.elapsed();
         self.dirty = false;
@@ -689,8 +692,7 @@ impl PendingBatch {
 
     fn dispatch(&mut self, gpu: &Gpu, mut encoder: wgpu::CommandEncoder, combine: Option<u32>) {
         if self.physics {
-            gpu.queue
-                .write_buffer(&self.buffers.terminal, 0, bytemuck::bytes_of(&0u32));
+            encoder.clear_buffer(&self.buffers.terminal, 0, Some(4));
         }
         if let Some(count) = combine {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -823,15 +825,24 @@ impl PendingBatch {
                 .map(|i| i.map(f64::from))
                 .collect()
         };
-        // Every completed invocation writes a terminal reason in 1..=7.
-        // In particular, zero-filled readback after a driver reset is not a
-        // numerical termination or a valid zero-duration compute sample.
-        if output.iter().any(|ion| !(1..=7).contains(&ion.outcome[2])) {
+        // Failed trials retain the last finite state, and time advances only
+        // with an accepted step. A valid reason alone does not prove that the
+        // shader completed: driver failures can also leave partial output.
+        if output.iter().any(|ion| {
+            !(1..=7).contains(&ion.outcome[2])
+                || ion
+                    .offset
+                    .iter()
+                    .chain(&ion.velocity)
+                    .any(|v| !v.is_finite())
+                || ion.offset[3] + ion.velocity[3] < 0.0
+                || (ion.outcome[0] == 0 && (ion.offset[3] != 0.0 || ion.velocity[3] != 0.0))
+        }) {
             drop(mapped);
             readback.unmap();
             self.needs_unmap = false;
             return Err(
-                "GPU flight returned unfinished terminal states (possible device loss); compute timestamps and results are invalid".into(),
+                "GPU flight returned invalid or unfinished terminal states (possible device loss or shader failure); compute timestamps and results are invalid".into(),
             );
         }
         let mut results: Vec<_> = output
