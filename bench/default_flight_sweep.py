@@ -15,11 +15,24 @@ import subprocess
 import sys
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --oracle.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --oracle was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the oracle working "
+        "data (the sweep uses $SIMREP_ORACLE_CACHE/_benchfly), or pass "
+        "--oracle pointing at that directory.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--oracle", type=Path,
-                        default=Path("/mnt/c/Users/lsu10/simrep-oracle"))
+    parser.add_argument("--oracle", type=Path, default=None,
+                        help="oracle working directory (default: $SIMREP_ORACLE_CACHE)")
     parser.add_argument("--quick", action="store_true",
                         help="Sweep only automatic tolerance (tolerance=0 in output)")
     parser.add_argument("--cli-field", action="store_true",
@@ -29,6 +42,8 @@ def main():
     parser.add_argument("--paired-cli", type=Path,
                         help="Alternate default API and CLI flights to control host-load drift")
     args = parser.parse_args()
+    if args.oracle is None:
+        args.oracle = oracle_cache()
     if args.paired_cli and not args.defaults_only:
         parser.error("--paired-cli requires --defaults-only")
     env = {**os.environ, "SIMREP_DEFAULT_SWEEP": str(args.oracle.resolve()),

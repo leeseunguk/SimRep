@@ -9,13 +9,38 @@ import argparse
 import datetime
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
+from pathlib import Path
 
-DEFAULT_SIMION = "/mnt/c/Program Files/SIMION-2024/simion.exe"
-DEFAULT_ORACLE_ROOT = "/mnt/c/Users/lsu10/simrep-oracle"
+
+def wsl_path(path):
+    """Convert a Windows drive path to its WSL form; POSIX paths pass through."""
+    if re.match(r"^[A-Za-z]:[\\/]", str(path)):
+        drive, rest = str(path)[0].lower(), str(path)[2:].replace("\\", "/")
+        return "/mnt/" + drive + rest
+    return str(path)
+
+
+# SIMION install directory: SIMION_ROOT, default the standard install location.
+SIMION_ROOT = os.environ.get("SIMION_ROOT", r"C:\Program Files\SIMION-2024")
+DEFAULT_SIMION = wsl_path(os.path.join(wsl_path(SIMION_ROOT), "simion.exe"))
+DEFAULT_EXAMPLES = Path(wsl_path(os.path.join(wsl_path(SIMION_ROOT), "examples")))
+
+
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --oracle-root was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory that holds (or should hold) "
+        "the oracle working copies (default layout: $SIMREP_ORACLE_CACHE/"
+        "<example>), or pass --oracle-root pointing at that directory.")
 
 
 def win_path(path):
@@ -90,9 +115,12 @@ def main():
     ap.add_argument("--fly", metavar="IOB", help="IOB file (relative to the example) to fly")
     ap.add_argument("--rec", metavar="REC",
                     help="data recording definition (.rec) for --fly (default: <iob stem>.rec if present)")
-    ap.add_argument("--simion", default=DEFAULT_SIMION, help="path to simion.exe (WSL path)")
-    ap.add_argument("--oracle-root", default=DEFAULT_ORACLE_ROOT,
-                    help="working root, must be on a Windows drive (WSL path)")
+    ap.add_argument("--simion", default=DEFAULT_SIMION,
+                    help="path to simion.exe (default: $SIMION_ROOT/simion.exe, "
+                         "SIMION_ROOT defaulting to 'C:\\Program Files\\SIMION-2024')")
+    ap.add_argument("--oracle-root", default=None,
+                    help="working root, must be on a Windows drive "
+                         "(default: $SIMREP_ORACLE_CACHE)")
     ap.add_argument("--gem2pa", action="store_true",
                     help="run gem2pa on every *.gem in the example before --refine")
     ap.add_argument("--num-threads", metavar="N",
@@ -108,6 +136,9 @@ def main():
                     help="use this existing Windows-visible dir instead of copying the example")
     ap.add_argument("--timeout", type=float, default=1800, help="per-command timeout in seconds")
     args = ap.parse_args()
+    if args.oracle_root is None:
+        args.oracle_root = oracle_cache()
+    args.simion = wsl_path(args.simion)
     if not (args.refine or args.fly or args.gem2pa):
         ap.error("nothing to do: pass --refine, --gem2pa and/or --fly IOB")
 

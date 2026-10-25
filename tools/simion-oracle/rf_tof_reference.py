@@ -10,10 +10,26 @@ sys.path.insert(0, os.path.dirname(__file__))
 from run_oracle import copy_example, run_simion, win_path, DEFAULT_SIMION
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --output.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return root
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --output was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory that holds (or should hold) "
+        "the oracle working data (default layout: $SIMREP_ORACLE_CACHE/_rf_tof "
+        "for this reference), or pass --output pointing at that directory.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", default="/mnt/c/Users/lsu10/simrep-oracle/_rf_tof")
+    parser.add_argument("--output", default=None,
+                        help="output directory (default: $SIMREP_ORACLE_CACHE/_rf_tof)")
     args = parser.parse_args()
+    if args.output is None:
+        args.output = os.path.join(oracle_cache(), "_rf_tof")
     logs = {}
     for name, example, stem in [
         ("tof", "tof", "tof"),

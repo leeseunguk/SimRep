@@ -11,10 +11,24 @@ from rf_tof_report import error, native_state
 from run_oracle import win_path
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --root.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return root
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --root was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the rf_tof oracle "
+        "data (default layout: $SIMREP_ORACLE_CACHE/_rf_tof), or pass --root "
+        "pointing at that directory.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--native", required=True)
-    parser.add_argument("--root", default="/mnt/c/Users/lsu10/simrep-oracle/_rf_tof")
+    parser.add_argument("--root", default=None,
+                        help="rf_tof oracle data directory (default: $SIMREP_ORACLE_CACHE/_rf_tof)")
     parser.add_argument("--mode", action="append", required=True)
     parser.add_argument("--case", action="append", choices=["tof", "rf_mirror", "rf_square_wave"])
     parser.add_argument("--max-step", type=float, default=0.02)
@@ -23,6 +37,8 @@ def main():
     parser.add_argument("--copies", type=int, default=1)
     parser.add_argument("--device", choices=["cpu", "gpu"], default="gpu")
     args = parser.parse_args()
+    if args.root is None:
+        args.root = os.path.join(oracle_cache(), "_rf_tof")
     with open(os.path.join(args.root, "cpu-measurements.json"), encoding="utf-8") as f:
         cpu = json.load(f)
     reference = {}

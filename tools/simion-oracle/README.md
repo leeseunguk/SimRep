@@ -4,6 +4,14 @@
 version `SIMION 2024-09-26-8.2.1.0`) headless from WSL to produce reference results.
 SIMION is used as a black box only.
 
+Environment variables:
+
+- `SIMREP_ORACLE_CACHE`: directory that holds the oracle working copies and collected
+  SIMION inputs. Required by every script here unless the matching override argument
+  (`--oracle-root`, `--root`, `--work`, `--output`, `--source`, `--oracle`) is passed.
+- `SIMION_ROOT`: SIMION install directory, Windows or WSL path
+  (default `C:\Program Files\SIMION-2024`).
+
 `compare_pa.py left.paN [right.paN]` independently decodes binary PA values
 using only the Python standard library. With one file it prints header,
 electrode-voltage, and PA0-trailer statistics. With two it reports maximum
@@ -26,7 +34,7 @@ python3 tools/simion-oracle/run_oracle.py einzel      --refine --fly einzel.iob
 - `<example>` is a folder under `SIMION-2024/examples/` (nested names such as
   `performance_tests/5_planar_pa_tests` work).
 - The examples folder is read-only, so the example is first copied fresh (the old copy is
-  deleted) to `/mnt/c/Users/lsu10/simrep-oracle/<example>/` (`C:\Users\lsu10\simrep-oracle\...`).
+  deleted) to `$SIMREP_ORACLE_CACHE/<example>/` (or `--oracle-root/<example>/`).
   The copy does not keep file metadata, so the read-only attribute is not carried over.
 - `--refine` refines every `*.pa#` in the example. If there is no `.pa#`, it refines every `*.pa` instead.
 - `--fly IOB` flies the IOB with data recording on. The output goes to

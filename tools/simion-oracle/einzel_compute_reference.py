@@ -2,9 +2,23 @@
 """Uninstrumented T.Qual 209 compute calibration; preserve existing oracle logs."""
 import argparse
 import json
+import os
 import re
 
 from run_oracle import DEFAULT_SIMION, run_simion, win_path
+
+
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --work.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return root
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --work was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the einzel benchfly "
+        "oracle copy (default layout: $SIMREP_ORACLE_CACHE/_benchfly), or "
+        "pass --work pointing at that directory.")
 
 
 def main():
@@ -12,8 +26,11 @@ def main():
     parser.add_argument("--particles", required=True)
     parser.add_argument("--ions", type=int, required=True)
     parser.add_argument("--output", required=True)
-    parser.add_argument("--work", default="/mnt/c/Users/lsu10/simrep-oracle/_benchfly")
+    parser.add_argument("--work", default=None,
+                        help="einzel benchfly oracle copy (default: $SIMREP_ORACLE_CACHE/_benchfly)")
     args = parser.parse_args()
+    if args.work is None:
+        args.work = os.path.join(oracle_cache(), "_benchfly")
     run = run_simion(DEFAULT_SIMION, [
         "--nogui", "--noprompt", "--default-num-particles", str(args.ions + 1000),
         "fly", "--trajectory-quality", "209", "--recording-enable", "0",

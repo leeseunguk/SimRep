@@ -2,6 +2,7 @@
 """Recheck PA collision changes against preserved RF/TOF converged references."""
 import argparse
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -9,13 +10,28 @@ from pathlib import Path
 from rf_tof_report import error, native_state, rows
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --root.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --root was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the rf_tof oracle "
+        "data (default layout: $SIMREP_ORACLE_CACHE/_rf_tof), or pass --root "
+        "pointing at that directory.")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--native", type=Path, default=Path("target/release/examples/rf_tof"))
-    parser.add_argument("--root", type=Path,
-                        default=Path("/mnt/c/Users/lsu10/simrep-oracle/_rf_tof"))
+    parser.add_argument("--root", type=Path, default=None,
+                        help="rf_tof oracle data directory (default: $SIMREP_ORACLE_CACHE/_rf_tof)")
     parser.add_argument("--output", type=Path, default=Path("target/collision-rf-tof.json"))
     args = parser.parse_args()
+    if args.root is None:
+        args.root = oracle_cache() / "_rf_tof"
     old = json.loads((args.root / "cpu-measurements.json").read_text())
     tof_reference = next(r for r in old if r["case"] == "tof" and r["factor"] == 8
                          and r["step_us"] == 0.000625 and not r["validation"])

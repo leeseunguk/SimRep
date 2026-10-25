@@ -16,11 +16,29 @@ import shutil
 import statistics
 import subprocess
 
+from run_oracle import DEFAULT_SIMION
+
+
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or explicit --source/--work.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --source/--work were not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory that holds the oracle "
+        "working data (default layout: $SIMREP_ORACLE_CACHE/repulsion for "
+        "--source and $SIMREP_ORACLE_CACHE/space-charge for --work), or "
+        "pass both --source and --work explicitly.")
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=Path("/mnt/c/Users/lsu10/simrep-oracle/repulsion"))
-    parser.add_argument("--work", type=Path, default=Path("/mnt/c/Users/lsu10/simrep-oracle/space-charge"))
+    parser.add_argument("--source", type=Path, default=None,
+                        help="repulsion1 inputs (default: $SIMREP_ORACLE_CACHE/repulsion)")
+    parser.add_argument("--work", type=Path, default=None,
+                        help="output directory (default: $SIMREP_ORACLE_CACHE/space-charge)")
     parser.add_argument("--mode", choices=["factor", "coulombic"], default="coulombic")
     parser.add_argument("--amount", type=float, default=3.47e-13)
     parser.add_argument("--quality", type=int, default=-9)
@@ -28,6 +46,12 @@ def main():
     parser.add_argument("--native", type=Path)
     parser.add_argument("--max-step", type=float, default=1e-4)
     args = parser.parse_args()
+    if args.source is None or args.work is None:
+        cache = oracle_cache()
+        if args.source is None:
+            args.source = cache / "repulsion"
+        if args.work is None:
+            args.work = cache / "space-charge"
     work = args.work / args.mode
     work.mkdir(parents=True, exist_ok=True)
     log = work / "oracle.txt"
@@ -38,7 +62,7 @@ def main():
         (work / "space_charge_case.txt").write_text(
             f"{'coulomb' if args.mode == 'coulombic' else 'factor'} {args.amount:.17g} {args.quality}\n")
         proc = subprocess.run(
-            ["/mnt/c/Program Files/SIMION-2024/simion.exe", "--nogui", "--noprompt",
+            [DEFAULT_SIMION, "--nogui", "--noprompt",
              "fly", "--programs", "1", "repulsion1.iob"],
             cwd=work, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=25)
         log.write_text(proc.stdout + proc.stderr)

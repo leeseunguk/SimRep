@@ -24,6 +24,19 @@ LOW = np.array([-10., -4., -4.])
 HIGH = -LOW
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --oracle.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --oracle was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the space-charge "
+        "oracle endpoints (default layout: $SIMREP_ORACLE_CACHE/space-charge), "
+        "or pass --oracle pointing at that directory.")
+
+
 def read_oracle(path):
     starts, finals = {}, {}
     for line in path.read_text().splitlines():
@@ -151,14 +164,16 @@ def native_run(executable, case, output, mode, amount, dt, factor):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--oracle", type=Path,
-                        default=Path("/mnt/c/Users/lsu10/simrep-oracle/space-charge"))
+    parser.add_argument("--oracle", type=Path, default=None,
+                        help="space-charge oracle directory (default: $SIMREP_ORACLE_CACHE/space-charge)")
     parser.add_argument("--output", type=Path, default=Path("/tmp/simrep-space-charge-reference"))
     parser.add_argument("--mode", choices=["factor", "coulombic"], default="coulombic")
     parser.add_argument("--native", type=Path)
     parser.add_argument("--reference-steps", type=float, nargs="+", default=[1e-3, 5e-4, 2.5e-4])
     parser.add_argument("--native-steps", type=float, nargs="+", default=[1e-4, 5e-5, 2.5e-5])
     args = parser.parse_args()
+    if args.oracle is None:
+        args.oracle = oracle_cache() / "space-charge"
     case = args.oracle / args.mode
     output = args.output / args.mode
     output.mkdir(parents=True, exist_ok=True)

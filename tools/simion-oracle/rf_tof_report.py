@@ -7,6 +7,19 @@ import os
 import re
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --root.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return root
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --root was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the rf_tof oracle "
+        "data (default layout: $SIMREP_ORACLE_CACHE/_rf_tof), or pass --root "
+        "pointing at that directory.")
+
+
 def load(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
@@ -52,8 +65,11 @@ def trajectory_error(actual, reference):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--root", default="/mnt/c/Users/lsu10/simrep-oracle/_rf_tof")
+    ap.add_argument("--root", default=None,
+                    help="rf_tof oracle data directory (default: $SIMREP_ORACLE_CACHE/_rf_tof)")
     args = ap.parse_args()
+    if args.root is None:
+        args.root = os.path.join(oracle_cache(), "_rf_tof")
     cpu = load(os.path.join(args.root, "cpu-measurements.json"))
     gpu = load(os.path.join(args.root, "gpu-measurements.json"))
     oracle = load(os.path.join(args.root, "reference.json"))

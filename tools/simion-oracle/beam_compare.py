@@ -16,7 +16,21 @@ import shutil
 import statistics
 import subprocess
 
-from run_oracle import kill_simion_started_after
+from run_oracle import DEFAULT_SIMION, kill_simion_started_after
+
+
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or explicit --source/--work.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --source/--work were not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory that holds the oracle "
+        "working data (default layout: $SIMREP_ORACLE_CACHE/repulsion for "
+        "--source and $SIMREP_ORACLE_CACHE/beam-endpoints for --work), or "
+        "pass both --source and --work explicitly.")
 
 
 def rms(values):
@@ -34,14 +48,22 @@ def records(text, prefix):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--source", type=Path, default=Path("/mnt/c/Users/lsu10/simrep-oracle/repulsion"))
-    ap.add_argument("--work", type=Path, default=Path("/mnt/c/Users/lsu10/simrep-oracle/beam-endpoints"))
+    ap.add_argument("--source", type=Path, default=None,
+                    help="repulsion1 inputs (default: $SIMREP_ORACLE_CACHE/repulsion)")
+    ap.add_argument("--work", type=Path, default=None,
+                    help="output directory (default: $SIMREP_ORACLE_CACHE/beam-endpoints)")
     ap.add_argument("--case", choices=["repulsion1", "repulsion_mixed_beam"], default="repulsion1")
     ap.add_argument("--current", type=float, default=1e-5)
     ap.add_argument("--native", type=Path)
     ap.add_argument("--native-only", action="store_true")
     ap.add_argument("--max-step", type=float, nargs="+", default=[1e-4, 5e-5, 2.5e-5])
     args = ap.parse_args()
+    if args.source is None or args.work is None:
+        cache = oracle_cache()
+        if args.source is None:
+            args.source = cache / "repulsion"
+        if args.work is None:
+            args.work = cache / "beam-endpoints"
     work = args.work / args.case
     work.mkdir(parents=True, exist_ok=True)
     log = work / "oracle.txt"
@@ -53,7 +75,7 @@ def main():
         started = datetime.datetime.now(datetime.timezone.utc)
         try:
             proc = subprocess.run(
-                ["/mnt/c/Program Files/SIMION-2024/simion.exe", "--nogui", "--noprompt",
+                [DEFAULT_SIMION, "--nogui", "--noprompt",
                  "fly", "--programs", "1", "--grouped", "1", "--omit-relativistic-effects", "1",
                  "--repulsion", "beam", "--repulsion-amount",
                  str(args.current), "--trajectory-quality", "-9", "repulsion1.iob"],

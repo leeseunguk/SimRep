@@ -3,13 +3,40 @@
 import argparse
 import json
 import math
+import os
 import re
 import shutil
 import statistics
 import subprocess
 from pathlib import Path
 
-SIMION = "/mnt/c/Program Files/SIMION-2024/simion.exe"
+
+def wsl_path(path):
+    """Convert a Windows drive path to its WSL form; POSIX paths pass through."""
+    if re.match(r"^[A-Za-z]:[\\/]", str(path)):
+        drive, rest = str(path)[0].lower(), str(path)[2:].replace("\\", "/")
+        return "/mnt/" + drive + rest
+    return str(path)
+
+
+# SIMION install directory: SIMION_ROOT, default the standard install location.
+SIMION_ROOT = os.environ.get("SIMION_ROOT", r"C:\Program Files\SIMION-2024")
+SIMION = wsl_path(SIMION_ROOT) + "/simion.exe"
+
+
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or explicit --root/--output.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --root/--output were not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the physics "
+        "validation oracle data (default layout: $SIMREP_ORACLE_CACHE/"
+        "physics-validation-20261023 and .../cpu-magnetic-compute), or pass "
+        "both --root and --output explicitly.")
+
 CASES = ("magnet1", "mag90", "sector_2dp", "sector_2dc", "sector_3dp",
          "helmholtz", "solenoid")
 REPEATS = dict(magnet1=100, mag90=100, sector_2dp=10, sector_2dc=10,
@@ -118,10 +145,15 @@ end
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", type=Path, default=Path(
-        "/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023"))
-    parser.add_argument("--output", type=Path, default=Path(
-        "/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023/cpu-magnetic-compute"))
+    parser.add_argument("--root", type=Path, default=None,
+                        help="physics-validation oracle directory "
+                             "(default: $SIMREP_ORACLE_CACHE/physics-validation-20261023)")
+    parser.add_argument("--output", type=Path, default=None,
+                        help="output directory (default: <root>/cpu-magnetic-compute)")
     parser.add_argument("--case", nargs="+", choices=CASES)
     args = parser.parse_args()
+    if args.root is None:
+        args.root = oracle_cache() / "physics-validation-20261023"
+    if args.output is None:
+        args.output = args.root / "cpu-magnetic-compute"
     run(args.root, args.output, args.case)

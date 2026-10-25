@@ -9,14 +9,30 @@ import time
 from run_oracle import win_path
 
 
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE
+# or --root.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return root
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --root was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the rf_tof oracle "
+        "data (default layout: $SIMREP_ORACLE_CACHE/_rf_tof), or pass --root "
+        "pointing at that directory.")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--native", required=True)
     ap.add_argument("--device", choices=["cpu", "gpu"], required=True)
-    ap.add_argument("--root", default="/mnt/c/Users/lsu10/simrep-oracle/_rf_tof")
+    ap.add_argument("--root", default=None,
+                    help="rf_tof oracle data directory (default: $SIMREP_ORACLE_CACHE/_rf_tof)")
     ap.add_argument("--grid-study", action="store_true")
     ap.add_argument("--output", help="optional evidence JSON basename")
     args = ap.parse_args()
+    if args.root is None:
+        args.root = os.path.join(oracle_cache(), "_rf_tof")
     native = os.path.abspath(args.native)
     root = win_path(args.root) if native.endswith(".exe") else args.root
     jobs = [(case, 1, 0.02, 1e-12, False) for case in ["tof", "rf_mirror", "rf_square_wave"]]
