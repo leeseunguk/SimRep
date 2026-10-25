@@ -20,7 +20,13 @@ describe("histogram statistics", () => {
 
   it("starts a normalized log axis below the smallest fraction, a count axis at 0.5", () => {
     const fractions = [new Float64Array([0, 1e-4, 0.6]), new Float64Array([0.25, 0, 0.75])];
-    expect(histYRange(fractions, true, true)).toEqual({ domain: [1e-5, 1.5], floor: 1e-5 });
+    const normalized = histYRange(fractions, true, true);
+    // 10 ** -5 differs by one ULP between V8 versions. The floor is the decade
+    // below half the smallest fraction, not an engine-specific bit pattern.
+    expect(Math.abs(normalized.floor - 1e-5)).toBeLessThanOrEqual(Number.EPSILON * 1e-5);
+    expect(normalized.floor).toBeLessThanOrEqual(1e-4 / 2);
+    expect(normalized.floor * 10).toBeGreaterThan(1e-4 / 2);
+    expect(normalized.domain).toEqual([normalized.floor, 1.5]);
     const counts = [new Float64Array([0, 3, 40])];
     expect(histYRange(counts, true, false)).toEqual({ domain: [0.5, 80], floor: 0.5 });
     expect(histYRange(counts, false, false).domain).toEqual([0, 40 * 1.08]);

@@ -14,9 +14,44 @@ E2E; published claims against committed docs/PDF; and native Tauri tests with
 Linux GTK/WebKit dependencies. Cargo and npm dependencies are cached.
 Rust 1.95.0 and Node 24.14.1 match the verified development toolchains; native
 shell formatting is checked separately from the root workspace.
-Rust and Python install Mesa lavapipe and log its adapter; Rust also executes
-the Vulkan kernel smoke check. This verifies software Vulkan, not physical GPU
-performance. The 14 external-fixture tests remain ignored, and Python hardware
+`AtomicU64::try_update` (stable since Rust 1.95.0) replaces the identically
+behaving `fetch_update`, deprecated in Rust 1.99.0. See the
+[Rust 1.95 atomic API](https://doc.rust-lang.org/1.95.0/std/sync/atomic/struct.AtomicU64.html#method.try_update).
+The Rust pin remains: local Rust 1.99.1 Clippy rejects pre-existing constant
+`chunks_exact` calls in `simrep-gem` with `chunks_exact_to_as_chunks`; the
+1.95.0 workspace and Python-feature Clippy checks pass.
+
+The histogram-axis test checks the selected decade within one binary64 ULP
+and verifies that it brackets half the smallest positive bin. Node 22.23.4
+(V8 12.4.254.21-node.57) computes `10 ** -5` as
+`0.0000099999999999999991240`, while Node 24.14.1 (V8
+13.6.233.17-node.44) computes `0.000010000000000000000818`; the literal `1e-5`
+has the latter value on both. `Math.log10(1e-4 / 2)` agrees on both, so this
+is power-function rounding, not summation order or a different decade.
+Both versions pass all 56 unit tests, typechecking, and all three Chromium
+demo E2E tests after the assertion change; product arithmetic is unchanged.
+
+Rust and Python install Mesa lavapipe and disable Gallivm AVX-512 with
+`GALLIUM_OVERRIDE_CPU_CAPS=avx` and `LP_NATIVE_VECTOR_WIDTH=256`. Despite its
+name, Mesa's `avx` tier retains AVX2/F16C/FMA and disables all AVX-512 features.
+The first limits ISA selection; the second fixes the shader vector width. Width alone
+does not disable AVX instructions, as explained in the
+[LLVMpipe environment-variable documentation](https://docs.mesa3d.org/drivers/llvmpipe.html#environment-variables).
+The ISA override values are documented in
+[Mesa environment variables](https://docs.mesa3d.org/envvars.html#envvar-GALLIUM_OVERRIDE_CPU_CAPS).
+Both jobs log the host CPU model and flags, the requested cap/width, and
+`vulkaninfo --summary`, whose `deviceName` includes Mesa's chosen vector width.
+`GALLIUM_DUMP_CPU=1` also audits the post-override capability flags. The
+[Mesa 26.0.8 CPU override](https://gitlab.freedesktop.org/mesa/mesa/-/blob/60e95b787857afbc9a00b693b91c0d9c8923a430/src/util/u_cpu_detect.c#L603-691)
+applies before vector-width selection in
+[`lp_bld_init_common.c`](https://gitlab.freedesktop.org/mesa/mesa/-/blob/60e95b787857afbc9a00b693b91c0d9c8923a430/src/gallium/auxiliary/gallivm/lp_bld_init_common.c#L68-80).
+[`lp_build_fill_mattrs`](https://gitlab.freedesktop.org/mesa/mesa/-/blob/60e95b787857afbc9a00b693b91c0d9c8923a430/src/gallium/auxiliary/gallivm/lp_bld_misc.cpp#L316-363)
+passes the cleared AVX-512 flags to LLVM explicitly. LLVM still detects the
+host CPU for scheduling; this is an ISA/vector cap, not a CPU-model override.
+`GALLIVM_PERF` has `no_avx` but no AVX-512-only switch, and
+`GALLIVM_LLC_OPTIONS` is debug-build-only, so neither is used.
+Rust also executes the Vulkan kernel smoke check. This verifies software Vulkan, not physical GPU
+performance. The 15 external-fixture tests remain ignored, and Python hardware
 GPU numeric parity tests report skips. CAD/OCCT and Windows installer/hardware
 checks remain the explicit local paths below.
 
@@ -29,12 +64,26 @@ cargo clippy -p simrep-py --features python -- -D warnings
 cargo test --workspace --release
 ```
 
-The 14 external-fixture/benchmark tests below are reported as **ignored** by
+The 15 external-fixture/benchmark tests below are reported as **ignored** by
 default, even when their environment variables are set. Run them with both
 the variables and `--ignored`. An explicit run without a required variable
 fails instead of counting an unexecuted check as passed. Other GPU harnesses
 can report adapter-dependent skips separately; workspace success alone is
 not evidence of validation on physical GPU hardware.
+
+## Ignored installed SIMION examples
+
+`installed_simion_examples_read_and_round_trip_without_copying_fixtures` in
+`crates/simrep-io/tests/simion_examples.rs` requires an installed SIMION examples
+directory. Set `SIMION_ROOT` to the installation root (a host-native path, such
+as `/mnt/c/Program Files/SIMION-2024` under WSL), then opt in explicitly:
+
+```sh
+SIMION_ROOT=/path/to/SIMION-2024 cargo test --release -p simrep-io \
+  --test simion_examples -- --ignored --nocapture
+```
+
+An explicit run fails if `SIMION_ROOT` or its `examples` directory is absent.
 
 ## Ignored CPU oracle and sweep tests
 

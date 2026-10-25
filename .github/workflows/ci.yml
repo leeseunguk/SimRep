@@ -2,9 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, ci/setup, fix/ci-gpu-nan]
+    branches: [main, ci/setup, ci/pin-lavapipe]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,6 +21,11 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # Mesa's "avx" tier retains AVX2/FMA but disables every AVX-512 feature.
+      GALLIUM_OVERRIDE_CPU_CAPS: avx
+      LP_NATIVE_VECTOR_WIDTH: "256"
+      GALLIUM_DUMP_CPU: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -38,8 +44,11 @@ jobs:
           install -d -m 700 "$XDG_RUNTIME_DIR"
           printf 'VK_DRIVER_FILES=%s\nXDG_RUNTIME_DIR=%s\n' \
             "$VK_DRIVER_FILES" "$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          lscpu | grep -E 'Architecture:|Model name:|Flags:'
+          printf 'Gallivm ISA cap=%s; requested vector width=%s bits\n' \
+            "$GALLIUM_OVERRIDE_CPU_CAPS" "$LP_NATIVE_VECTOR_WIDTH"
+          # deviceName reports Mesa's actual chosen vector width.
           vulkaninfo --summary
-          lscpu
       - name: Check workspace formatting
         run: cargo fmt --all -- --check
       - name: Check native shell formatting
@@ -58,6 +67,10 @@ jobs:
   python:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      GALLIUM_OVERRIDE_CPU_CAPS: avx
+      LP_NATIVE_VECTOR_WIDTH: "256"
+      GALLIUM_DUMP_CPU: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -80,6 +93,9 @@ jobs:
           install -d -m 700 "$XDG_RUNTIME_DIR"
           printf 'VK_DRIVER_FILES=%s\nXDG_RUNTIME_DIR=%s\n' \
             "$VK_DRIVER_FILES" "$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          lscpu | grep -E 'Architecture:|Model name:|Flags:'
+          printf 'Gallivm ISA cap=%s; requested vector width=%s bits\n' \
+            "$GALLIUM_OVERRIDE_CPU_CAPS" "$LP_NATIVE_VECTOR_WIDTH"
           vulkaninfo --summary
       - name: Build Python extension and CLI
         run: |

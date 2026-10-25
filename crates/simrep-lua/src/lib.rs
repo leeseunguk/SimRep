@@ -17,7 +17,7 @@ pub fn sandbox(label: &'static str) -> mlua::Result<Lua> {
         HookTriggers::new().every_nth_instruction(10000),
         move |_, _| {
             if budget
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |remaining| {
+                .try_update(Ordering::Relaxed, Ordering::Relaxed, |remaining| {
                     remaining.checked_sub(10000)
                 })
                 .is_err()

@@ -1,21 +1,17 @@
 use simrep_core::{FieldType, Symmetry};
 use simrep_io::{PaFile, read_pa};
-use std::path::Path;
+use std::path::PathBuf;
 
 #[test]
+#[ignore = "requires SIMION examples (SIMION_ROOT)"]
 fn installed_simion_examples_read_and_round_trip_without_copying_fixtures() {
-    let examples = Path::new(if cfg!(windows) {
-        r"C:\Program Files\SIMION-2024\examples"
-    } else {
-        "/mnt/c/Program Files/SIMION-2024/examples"
-    });
-    if !examples.is_dir() {
-        eprintln!(
-            "SKIP: SIMION examples not installed at {}",
-            examples.display()
-        );
-        return;
-    }
+    let root = std::env::var_os("SIMION_ROOT").expect("requires SIMION_ROOT");
+    let examples = PathBuf::from(root).join("examples");
+    assert!(
+        examples.is_dir(),
+        "requires SIMION examples at {}",
+        examples.display()
+    );
     let files = [
         "einzel/einzel.pa#",
         "einzel/einzel.pa0",
