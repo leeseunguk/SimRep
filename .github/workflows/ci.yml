@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main, ci/setup]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install and verify software Vulkan
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends mesa-vulkan-drivers vulkan-tools
+          icd=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test -f "${icd[0]}"
+          export VK_DRIVER_FILES="${icd[0]}"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
+          install -d -m 700 "$XDG_RUNTIME_DIR"
+          printf 'VK_DRIVER_FILES=%s\nXDG_RUNTIME_DIR=%s\n' \
+            "$VK_DRIVER_FILES" "$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          vulkaninfo --summary
+      - name: Check workspace formatting
+        run: cargo fmt --all -- --check
+      - name: Lint workspace
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Lint Python feature
+        run: cargo clippy -p simrep-py --all-targets --features python -- -D warnings
+      - name: Probe Vulkan kernels on lavapipe
+        run: cargo run --release -p simrep-cli -- gpu-smoke --backend vulkan
+      - name: Test workspace
+        env:
+          RUST_TEST_NOCAPTURE: "1"
+        run: cargo test --workspace --release
+
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: crates/simrep-py/pyproject.toml
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install and verify software Vulkan
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends mesa-vulkan-drivers vulkan-tools
+          icd=(/usr/share/vulkan/icd.d/lvp_icd*.json)
+          test -f "${icd[0]}"
+          export VK_DRIVER_FILES="${icd[0]}"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/xdg"
+          install -d -m 700 "$XDG_RUNTIME_DIR"
+          printf 'VK_DRIVER_FILES=%s\nXDG_RUNTIME_DIR=%s\n' \
+            "$VK_DRIVER_FILES" "$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          vulkaninfo --summary
+      - name: Build Python extension and CLI
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install 'maturin>=1.8,<2' numpy pytest scipy
+          maturin develop --release --manifest-path crates/simrep-py/Cargo.toml
+          cargo build --release -p simrep-cli
+      - name: Test Python API and CLI parity
+        run: |
+          . .venv/bin/activate
+          python -m pytest crates/simrep-py/tests -q -rs
+
+  app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: Test demo UI in Chromium
+        run: npm run e2e
+
+  claims:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check published claims against committed evidence
+        run: python3 tools/check_claims.py
+
+  tauri:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri -> target
+      - name: Install Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends \
+            libwebkit2gtk-4.1-dev build-essential libxdo-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Build frontend assets for the native shell
+        working-directory: app
+        run: npm ci && npm run build
+      - name: Test native shell
+        run: cargo test --manifest-path app/src-tauri/Cargo.toml

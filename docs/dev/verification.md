@@ -4,6 +4,20 @@ Run commands from the repository root unless a command changes directory.
 The root Cargo workspace contains `crates/*`; it does not include the Tauri
 app, Python extension behavior, or optional CAD features.
 
+## GitHub Actions
+
+`.github/workflows/ci.yml` runs on pushes to `main` and the validation branch
+`ci/setup`, and on pull requests targeting `main`. Five Ubuntu jobs check Rust
+formatting, both Clippy configurations and release tests; the built Python
+extension and CLI parity; frontend types, build, unit tests and Chromium demo
+E2E; published claims against committed docs/PDF; and native Tauri tests with
+Linux GTK/WebKit dependencies. Cargo and npm dependencies are cached.
+Rust and Python install Mesa lavapipe and log its adapter; Rust also executes
+the Vulkan kernel smoke check. This verifies software Vulkan, not physical GPU
+performance. The 14 external-fixture tests remain ignored, and Python hardware
+GPU numeric parity tests report skips. CAD/OCCT and Windows installer/hardware
+checks remain the explicit local paths below. Tauri formatting is not checked.
+
 ## Default workspace
 
 ```sh
