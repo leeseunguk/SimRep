@@ -12,11 +12,13 @@ formatting, both Clippy configurations and release tests; the built Python
 extension and CLI parity; frontend types, build, unit tests and Chromium demo
 E2E; published claims against committed docs/PDF; and native Tauri tests with
 Linux GTK/WebKit dependencies. Cargo and npm dependencies are cached.
+Rust 1.95.0 matches the verified development toolchain; native shell formatting
+is checked separately from the root workspace.
 Rust and Python install Mesa lavapipe and log its adapter; Rust also executes
 the Vulkan kernel smoke check. This verifies software Vulkan, not physical GPU
 performance. The 14 external-fixture tests remain ignored, and Python hardware
 GPU numeric parity tests report skips. CAD/OCCT and Windows installer/hardware
-checks remain the explicit local paths below. Tauri formatting is not checked.
+checks remain the explicit local paths below.
 
 ## Default workspace
 

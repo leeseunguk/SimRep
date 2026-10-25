@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.95.0"
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - name: Install and verify software Vulkan
@@ -40,6 +41,8 @@ jobs:
           vulkaninfo --summary
       - name: Check workspace formatting
         run: cargo fmt --all -- --check
+      - name: Check native shell formatting
+        run: cargo fmt --manifest-path app/src-tauri/Cargo.toml -- --check
       - name: Lint workspace
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Lint Python feature
@@ -62,6 +65,8 @@ jobs:
           cache: pip
           cache-dependency-path: crates/simrep-py/pyproject.toml
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.95.0"
       - uses: Swatinem/rust-cache@v2
       - name: Install and verify software Vulkan
         run: |
@@ -127,6 +132,8 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.95.0"
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: app/src-tauri -> target
