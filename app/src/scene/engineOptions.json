@@ -1,0 +1,10 @@
+{
+  "refineDevices": ["auto", "gpu", "cpu"],
+  "flyPrecisions": ["live", "precise"],
+  "collisions": ["allCorners", "nearestNode"],
+  "beamShapes": ["point", "line", "disk"],
+  "paExportFormats": ["pa", "paHash", "pa0"],
+  "templates": ["einzel", "quadrupole", "reflectron", "trap"],
+  "buildMethods": ["aligned", "cutcell"],
+  "cadSurfaces": ["tessellated", "exact"]
+}

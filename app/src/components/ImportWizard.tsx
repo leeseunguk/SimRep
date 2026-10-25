@@ -1,15 +1,16 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { Box, Check, CircleAlert, Cpu, FolderOpen, Grid3x3, Loader2, Play, Sparkles, Wand2, Wrench, X, Zap } from "lucide-react";
+import { Box, Check, CircleAlert, FolderOpen, Grid3x3, Loader2, Play, Sparkles, Wand2, Wrench, X, Zap } from "lucide-react";
 import { formatBytes, useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { BuildMethod, CadSurface, RefineDevice } from "../scene/backend";
 import { gridCost, type MeshIssues } from "../scene/geometry";
+import { BUILD_METHODS, CAD_SURFACES } from "../scene/options";
 import { closeWizard, reinspect, runWizard } from "../scene/importWizard";
 import type { Vec3 } from "../scene/mesh";
 import { cancelRefine, flyNow } from "../scene/simulation";
 import { useApp } from "../state/store";
 import { useWizard, wizardDims, type WizardPart, type WizardState, type WizardStep } from "../state/wizard";
-import { Notice, RefineProgress } from "./SimulationSections";
+import { deviceOptions, Notice, RefineProgress } from "./SimulationSections";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Field, ReadOnlyValue } from "./ui/Field";
@@ -319,7 +320,7 @@ function GridStep({ w }: { w: WizardState }) {
   const numbers = new Set(w.parts.map((p) => p.number)).size;
   const cost = gridCost(points, numbers);
   const locked = !!gem && w.method === "aligned";
-  const methods: BuildMethod[] = ["cutcell", "aligned"];
+  const methods: readonly BuildMethod[] = BUILD_METHODS;
   const reason =
     s.limitedBy === "gap" && s.gapMm !== null
       ? t("wizard.suggest.gap", { gap: num(s.gapMm, 3) })
@@ -347,7 +348,7 @@ function GridStep({ w }: { w: WizardState }) {
       {info.kind === "cad" && (
         <Section title={t("wizard.section.cadSurface")}>
           <div className={sim.modes} role="radiogroup" aria-label={t("wizard.section.cadSurface")}>
-            {(["tessellated", "exact"] as const satisfies readonly CadSurface[]).map((c) => (
+            {CAD_SURFACES.map((c: CadSurface) => (
               <button key={c} type="button" role="radio" aria-checked={w.cadSurface === c} className={sim.mode} onClick={() => set({ cadSurface: c })}>
                 {c === "tessellated" ? <Zap className={sim.modeIcon} aria-hidden /> : <Sparkles className={sim.modeIcon} aria-hidden />}
                 <span className={sim.modeName}>{t(`wizard.cadSurface.${c}`)}</span>
@@ -456,11 +457,7 @@ function RefineStep({ w }: { w: WizardState }) {
             ariaLabel={t("refine.device")}
             value={w.device}
             onChange={(device) => !started && set({ device })}
-            options={[
-              { value: "auto", label: t("refine.device.auto") },
-              { value: "gpu", label: "GPU", icon: <Zap /> },
-              { value: "cpu", label: "CPU", icon: <Cpu /> },
-            ]}
+            options={deviceOptions(t("refine.device.auto"))}
           />
         </Field>
       </Section>

@@ -89,12 +89,16 @@ export interface Axis {
   label: string;
   domain: [number, number];
   log?: boolean;
+  /** Log y axis: smallest value shown (default 0.5, for counts). */
+  floor?: number;
+  /** Tick label text (default: `tickText`). */
+  format?: (v: number) => string;
 }
 
 export type Layer =
   /** Histogram: filled bars (`fill`) or an outline (`stroke`, overlays). */
   | { kind: "hist"; lo: number; hi: number; counts: ArrayLike<number>; fill?: string; stroke?: string; width?: number }
-  | { kind: "line"; xs: ArrayLike<number>; ys: ArrayLike<number>; color: string; width?: number }
+  | { kind: "line"; xs: ArrayLike<number>; ys: ArrayLike<number>; color: string; width?: number; dash?: number[] }
   | { kind: "vline"; x: number; color: string; dash?: number[]; width?: number }
   | { kind: "band"; x0: number; x1: number; color: string }
   | { kind: "raster"; raster: Raster; x: [number, number]; y: [number, number] }
@@ -181,12 +185,13 @@ export function drawChart(p: Painter, spec: ChartSpec, w: number, h: number, t: 
   const logX = !!spec.x.log;
   let y = [...spec.y.domain] as [number, number];
   let x = [...spec.x.domain] as [number, number];
-  if (logY) y = [Math.max(y[0], 0.5), Math.max(y[1], 1)];
+  if (logY) y = [Math.max(y[0], spec.y.floor ?? 0.5), Math.max(y[1], 1)];
   // y tick labels set the left margin.
   const yTarget = Math.max(2, Math.floor(h / (fs * (compact ? 3.2 : 4))));
   const yTicks = logY ? logTicks(y[0], y[1]) : niceTicks(y[0], y[1], yTarget);
   const yStep = yTicks.length > 1 ? yTicks[1]! - yTicks[0]! : 1;
-  const yText = yTicks.map((v) => (logY ? tickText(v, v) : tickText(v, yStep)));
+  const yLabel = (v: number, step: number) => (spec.y.format ? spec.y.format(v) : logY ? tickText(v, v) : tickText(v, step));
+  const yText = yTicks.map((v) => yLabel(v, yStep));
   const left = x0 + pad + (compact ? 0 : fs * 1.6) + Math.max(fs * 2, ...yText.map((s) => p.measure(s, true))) + fs * 0.5;
   const right = x0 + w - pad - fs * 0.5;
   const top = y0 + pad + titleH;
@@ -227,7 +232,7 @@ export function drawChart(p: Painter, spec: ChartSpec, w: number, h: number, t: 
     p.path([fl, py, fl + width, py], { stroke: t.grid, width: 1 });
     if (Math.abs(lastLabelY - py) < t.tickGap) continue;
     lastLabelY = py;
-    p.text(logY ? tickText(v, v) : tickText(v, ytStep), fl - fs * 0.5, py, { color: t.text, align: "right", baseline: "middle", mono: true });
+    p.text(yLabel(v, ytStep), fl - fs * 0.5, py, { color: t.text, align: "right", baseline: "middle", mono: true });
   }
   for (const v of xt) {
     if (v < x[0] || v > x[1]) continue;
@@ -291,7 +296,7 @@ function drawLayer(p: Painter, f: Frame, layer: Layer, t: PlotTheme) {
         pts[i * 2] = px;
         pts[i * 2 + 1] = py;
       }
-      p.path(pts, { stroke: layer.color, width: layer.width ?? t.lineW });
+      p.path(pts, { stroke: layer.color, width: layer.width ?? t.lineW, dash: layer.dash });
       return;
     }
     case "vline": {
@@ -384,8 +389,8 @@ export function heatRaster(counts: Float32Array, nx: number, ny: number, lut: Ui
 
 /** Points as small squares in a raster of w×h px (row 0 = top), coloured by `colorOf(i)` (0..1). */
 export function pointRaster(
-  xs: Float32Array,
-  ys: Float32Array,
+  xs: Float64Array,
+  ys: Float64Array,
   idx: Uint32Array,
   xr: [number, number],
   yr: [number, number],

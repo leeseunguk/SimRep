@@ -30,7 +30,7 @@ const fn part(electrode: u32, shape: Shape) -> Part {
     Part { electrode, shape }
 }
 
-struct Template {
+pub(crate) struct Template {
     file: &'static str,
     cylindrical: bool,
     /// Grid points per axis and cell size (mm).
@@ -42,7 +42,7 @@ struct Template {
 
 const BIG: f64 = 1e6;
 
-fn template(kind: &str) -> Option<Template> {
+pub(crate) fn template(kind: &str) -> Option<Template> {
     // SIMION's cylindrical arrays are mirrored in y (the radius).
     let radial = MirrorFlags { x: false, y: true, z: false };
     let annulus = |x0: f64, x1: f64, r0: f64, r1: f64| Shape::Box([x0, r0, -BIG], [x1, r1, BIG]);

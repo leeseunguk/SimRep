@@ -2,6 +2,7 @@ import type { Message } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { ViewPreset } from "../state/store";
 import type { IonSource } from "./flight";
+import type { TEMPLATE_IDS } from "./options";
 import type { SliceState } from "./pa";
 
 /**
@@ -10,7 +11,7 @@ import type { SliceState } from "./pa";
  * applies once it is refined: electrode names, voltages, a ready-to-fly ion source and a view.
  */
 
-export type TemplateId = "einzel" | "quadrupole" | "reflectron" | "trap";
+export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 export interface TemplateDef {
   id: TemplateId;

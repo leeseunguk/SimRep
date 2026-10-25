@@ -1,10 +1,14 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Box, Check, Cpu, FileInput, FolderOpen, Maximize2, Play, RotateCcw, Shapes, Sparkles, TriangleAlert, X, Zap } from "lucide-react";
-import { useI18n, type Message } from "../i18n";
+import { useI18n, type Message, type MessageKey, type MessageParams } from "../i18n";
+import { refusalLine, refusals, type Refusal } from "../refusals";
+import { Chart } from "../results/plot/ChartView";
+import { usePlotTheme } from "../results/plot/usePlotTheme";
+import { BEAM_SHAPES, FLY_COLLISIONS, FLY_PRECISIONS, REFINE_DEVICES } from "../scene/options";
 import { deviceLabel, reasonMessage, refineTargets, type BeamShape, type DeviceInfo, type FlyCollision, type FlyPrecision, type RefineDevice, type RefineTargets } from "../scene/backend";
 import { electrodeName, paElectrodes, type PaElectrode } from "../scene/electrodes";
-import { DEFAULT_DRAWN, MAX_DRAWN, MAX_IONS, type IonSource, type Surface } from "../scene/flight";
+import { DEFAULT_DRAWN, MAX_DRAWN, MAX_IONS, type FlightHeader, type IonSource, type Surface } from "../scene/flight";
 import type { Vec3 } from "../scene/mesh";
 import { displayBounds, paKind } from "../scene/pa";
 import { boundsToWorld, isIdentity, isRotated } from "../scene/placement";
@@ -21,7 +25,7 @@ import {
 } from "../scene/simulation";
 import { useApp, type PaObject, type RefineState } from "../state/store";
 import { TOUR_ELECTRODE } from "../state/tour";
-import { REFINE_TOLERANCE, refineProgress, stageLabel, surfaceLabel } from "./simulationFormat";
+import { refineProgress, residualChart, stageLabel, surfaceLabel } from "./simulationFormat";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Field, ReadOnlyValue } from "./ui/Field";
@@ -53,6 +57,33 @@ function deviceText(tm: (m: Message) => string, d: DeviceInfo): string {
   return typeof label === "string" ? label : tm(label);
 }
 
+/**
+ * What actually flew (device, precision), named with the requested mode. A live request that ran
+ * as CPU f64 (exact surfaces, no GPU) says so instead of showing the requested mode alone.
+ * Lives here, not in the lazily loaded results panel, which also shows it.
+ */
+export function runText(t: (key: MessageKey, params?: MessageParams) => string, h: FlightHeader) {
+  const ran = h.executed;
+  const run = `${ran.device.toUpperCase()} ${ran.precision}`;
+  const mode = t(h.precision === "live" ? "ions.precision.live" : "ions.precision.precise");
+  const asRequested = h.precision === "live" ? ran.device === "gpu" && ran.precision === "f32" : ran.device === "cpu" && ran.precision === "f64";
+  return { mode, run, asRequested, text: t(asRequested ? "results.run.as" : "results.run.instead", { mode, run }) };
+}
+
+export function RunBadge({ h }: { h: FlightHeader }) {
+  const { t, tm } = useI18n();
+  const ran = h.executed;
+  const { mode, run, asRequested, text } = runText(t, h);
+  const surfaces = t(ran.surfaces === "grid" ? "results.surfaces.grid" : h.surface?.accuracy === "source" ? "results.surfaces.exact" : "results.surfaces.approximate");
+  const title = [t("results.run.title", { mode, run, surfaces }), h.fallback && tm(refusalLine(refusals.liveOnCpu(h.fallback)))].filter(Boolean).join("\n");
+  return (
+    <Badge tone={!asRequested ? "warning" : ran.precision === "f64" ? "success" : "info"} title={title}>
+      {/* f32 / f64 keep their case inside the uppercase badge. */}
+      <span className={styles.unit}>{text}</span>
+    </Badge>
+  );
+}
+
 export function Notice({ tone = "info", title, body, children }: { tone?: "info" | "warning" | "danger" | "success"; title: string; body?: string; children?: ReactNode }) {
   const Icon = tone === "success" ? Check : tone === "info" ? Sparkles : TriangleAlert;
   return (
@@ -69,17 +100,40 @@ export function Notice({ tone = "info", title, body, children }: { tone?: "info"
 
 // ------------------------------------------------------------------------------------ refine
 
-function Sparkline({ history }: { history: number[] }) {
-  if (history.length < 2) return <div className={styles.sparkline} />;
-  const lo = Math.log10(REFINE_TOLERANCE);
-  const hi = Math.max(Math.log10(history[0]!), lo + 1);
-  const n = Math.max(history.length - 1, 1);
-  const pts = history.map((r, i) => `${(i / n) * 100},${((hi - Math.log10(Math.max(r, 1e-300))) / (hi - lo)) * 100}`).join(" ");
+/** A refusal as a notice: what happened as the title, why and what to do as the body. */
+export function RefusalNotice({ refusal, tone = "info" }: { refusal: Refusal; tone?: "info" | "warning" }) {
+  const { tm } = useI18n();
+  return <Notice tone={tone} title={tm(refusal.what)} body={tm(refusal.why)} />;
+}
+
+/** Refine device choices (refine section and import wizard). */
+export function deviceOptions(autoLabel: string) {
+  return REFINE_DEVICES.map((d) => ({
+    value: d,
+    label: d === "auto" ? autoLabel : d.toUpperCase(),
+    icon: d === "gpu" ? <Zap /> : d === "cpu" ? <Cpu /> : undefined,
+  }));
+}
+
+/** Live log-scale convergence of the running refine (one point per V-cycle, see refine.rs). */
+function ResidualChart({ r }: { r: RefineState }) {
+  const { t } = useI18n();
+  const theme = usePlotTheme();
+  const tolerance = r.tolerance.toExponential(0);
+  const spec = useMemo(
+    () => residualChart(r, theme, { title: t("refine.chart.title"), x: t("refine.chart.x"), target: t("refine.chart.target", { tolerance }), earlier: t("refine.chart.earlier") }),
+    [r.history, r.past, r.tolerance, theme, t],
+  );
+  const readout = (x: number) => {
+    const i = Math.round(x);
+    const v = r.history[i];
+    return v === undefined ? null : [t("refine.cycle", { n: i }), v.toExponential(2)];
+  };
+  const residual = r.residual === null ? "…" : r.residual.toExponential(1);
   return (
-    <svg className={styles.sparkline} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden>
-      <line x1="0" y1="100" x2="100" y2="100" className={styles.sparkTarget} vectorEffect="non-scaling-stroke" />
-      <polyline points={pts} className={styles.sparkLine} vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div className={styles.residualChart}>
+      <Chart spec={spec} ariaLabel={t("refine.chart.aria", { cycle: r.cycle, residual, tolerance })} readout={readout} />
+    </div>
   );
 }
 
@@ -122,7 +176,7 @@ function RefineSection({ o, canRefine }: { o: PaObject; canRefine: boolean }) {
   return (
     <Section title={t("refine.title")}>
       {!desktop ? (
-        <Notice title={t("sim.desktopOnly.title")} body={t("sim.desktopOnly")} />
+        <RefusalNotice refusal={refusals.desktopOnly()} />
       ) : running && r ? (
         <RefineProgress r={r} onCancel={() => cancelRefine(o.id)} />
       ) : (
@@ -166,11 +220,7 @@ function RefineSection({ o, canRefine }: { o: PaObject; canRefine: boolean }) {
                   ariaLabel={t("refine.device")}
                   value={device}
                   onChange={setDevice}
-                  options={[
-                    { value: "auto", label: t("refine.device.auto") },
-                    { value: "gpu", label: "GPU", icon: <Zap /> },
-                    { value: "cpu", label: "CPU", icon: <Cpu /> },
-                  ]}
+                  options={deviceOptions(t("refine.device.auto"))}
                 />
               </Field>
               {confirm ? (
@@ -211,7 +261,7 @@ export function RefineProgress({ r, onCancel }: { r: RefineState; onCancel(): vo
       <div className={styles.meter}>
         <span style={{ width: `${Math.round(progress * 100)}%` }} />
       </div>
-      <Sparkline history={r.history} />
+      <ResidualChart r={r} />
       <div className={styles.stats}>
         <span>{t("refine.cycle", { n: r.cycle })}</span>
         <span className="tnum" title={t("refine.residualHint")}>
@@ -222,9 +272,9 @@ export function RefineProgress({ r, onCancel }: { r: RefineState; onCancel(): vo
       {r.device && (
         <p className={styles.hint}>
           {r.device.kind === "gpu" ? <Zap className={styles.inlineIcon} aria-hidden /> : <Cpu className={styles.inlineIcon} aria-hidden />} {deviceText(tm, r.device)}
-          {r.note && <span className={styles.warnText} title={tm(r.note)}> · {t("refine.fallback")}</span>}
         </p>
       )}
+      {r.note && <p className={styles.warnHint}>{tm(refusalLine(refusals.refineOnCpu(r.note)))}</p>}
       <Button size="sm" icon={<X />} onClick={onCancel} disabled={r.job === null}>
         {t("refine.cancel")}
       </Button>
@@ -316,7 +366,7 @@ function VoltagesSection({ o }: { o: PaObject }) {
   return (
     <Section title={t("volts.title")}>
       {!simulationAvailable() ? (
-        <Notice title={t("sim.desktopOnly.title")} body={t("sim.desktopOnly")} />
+        <RefusalNotice refusal={refusals.desktopOnly()} />
       ) : fast?.state !== "ready" ? (
         <Notice tone="warning" title={t("volts.missing.title")} body={t("volts.missing.body", { detail: fast?.detail ?? "" })} />
       ) : (
@@ -510,7 +560,7 @@ function IonsSection({ o }: { o: PaObject }) {
               ariaLabel={t("ions.shape")}
               value={s.shape}
               onChange={(shape) => set({ shape })}
-              options={(["point", "line", "disk"] as const).map((v) => ({ value: v, label: t(`ions.shape.${v}`) }))}
+              options={BEAM_SHAPES.map((v) => ({ value: v, label: t(`ions.shape.${v}`) }))}
             />
           </Field>
           {s.shape !== "point" && (
@@ -549,13 +599,17 @@ function IonsSection({ o }: { o: PaObject }) {
       )}
       <div className={styles.modes} role="radiogroup" aria-label={t("ions.precision")}>
         <span className={styles.modesLabel}>{t("ions.precision")}</span>
-        {(["live", "precise"] as const satisfies readonly FlyPrecision[]).map((p) => (
-          <button key={p} type="button" role="radio" aria-checked={precision === p} className={styles.mode} onClick={() => set({ precision: p })}>
-            {p === "live" ? <Zap className={styles.modeIcon} aria-hidden /> : <Cpu className={styles.modeIcon} aria-hidden />}
-            <span className={styles.modeName}>{t(`ions.precision.${p}`)}</span>
-            <span className={styles.modeSub}>{t(`ions.precision.${p}Sub`)}</span>
-          </button>
-        ))}
+        {FLY_PRECISIONS.map((p: FlyPrecision) => {
+          // Live flies as CPU f64 when surfaces are checked exactly or there is no GPU; the request stays Live.
+          const cpuLive = p === "live" && (exact || compute.state === "cpu");
+          return (
+            <button key={p} type="button" role="radio" aria-checked={precision === p} className={styles.mode} data-cpu={cpuLive} onClick={() => set({ precision: p })}>
+              {p === "live" ? <Zap className={styles.modeIcon} aria-hidden /> : <Cpu className={styles.modeIcon} aria-hidden />}
+              <span className={styles.modeName}>{t(`ions.precision.${p}`)}</span>
+              <span className={styles.modeSub}>{t(cpuLive ? "ions.precision.liveCpuSub" : `ions.precision.${p}Sub`)}</span>
+            </button>
+          );
+        })}
         <p className={styles.modesHint}>
           {precision === "live" && exact
             ? tm(reasonMessage({ code: "exactSurfaces" }))
@@ -573,13 +627,13 @@ function IonsSection({ o }: { o: PaObject }) {
               ariaLabel={t("ions.collision")}
               value={s.collision ?? "allCorners"}
               onChange={(collision) => set({ collision })}
-              options={(["allCorners", "nearestNode"] as const).map((v) => ({ value: v, label: t(`ions.collision.${v}`) }))}
+              options={FLY_COLLISIONS.map((v) => ({ value: v, label: t(`ions.collision.${v}`) }))}
             />
           </Field>
           {cylindrical && <p className={styles.hint}>{t("ions.cylindricalHint")}</p>}
         </div>
       </details>
-      {blocker && <p className={styles.blocker}>{tm(blocker as Message)}</p>}
+      {blocker && <p className={styles.blocker}>{tm(refusalLine(refusals.flyBlocked(blocker)))}</p>}
       <Button variant="primary" icon={<Play />} className={styles.primary} data-tour="fly" disabled={!!blocker || running} onClick={() => void flyNow(o.id)}>
         {t(running ? "ions.flying" : o.flight.result ? "ions.flyAgain" : "ions.fly")}
       </Button>
@@ -622,7 +676,7 @@ function ResultsSection({ o }: { o: PaObject }) {
         <div>
           <dt>{t("results.mode")}</dt>
           <dd>
-            <Badge tone={h.precision === "live" ? "info" : "success"}>{t(h.precision === "live" ? "results.mode.live" : "results.mode.precise")}</Badge>
+            <RunBadge h={h} />
           </dd>
         </div>
         {(h.surface || o.info.cuts) && (
@@ -668,8 +722,8 @@ function ResultsSection({ o }: { o: PaObject }) {
           <dd className={`tnum ${styles.subtle} ${styles.metaWrap}`}>{prep}</dd>
         </div>
       </dl>
-      {h.fallback && <p className={styles.warnHint}>{t("results.fallback", { reason: reasonMessage(h.fallback) })}</p>}
-      {!h.fallback && <p className={styles.hint}>{t(h.precision === "live" ? "results.liveNote" : "results.preciseNote")}</p>}
+      {h.fallback && <p className={styles.warnHint}>{tm(refusalLine(refusals.liveOnCpu(h.fallback)))}</p>}
+      {!h.fallback && <p className={styles.hint}>{t(h.executed.precision === "f32" ? "results.liveNote" : "results.preciseNote")}</p>}
       <Field label={t("results.show")}>
         <Switch checked={o.showTrajectories} label={t("results.show")} onChange={(showTrajectories) => useApp.getState().updatePa(o.id, () => ({ showTrajectories }))} />
       </Field>

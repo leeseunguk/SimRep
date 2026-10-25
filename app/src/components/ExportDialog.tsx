@@ -7,6 +7,7 @@ import type { MessageKey } from "../i18n/en";
 import { backendError, errorMessage, exportArray, exportTrajectories, type ExportWhat, type SurfaceOptions } from "../scene/backend";
 import { electrodeName, paElectrodes } from "../scene/electrodes";
 import { importPaths } from "../scene/importFiles";
+import { PA_EXPORT_FORMATS } from "../scene/options";
 import { paKind } from "../scene/pa";
 import { isIdentity, isRotated } from "../scene/placement";
 import { flyRequest } from "../scene/simulation";
@@ -24,7 +25,7 @@ import sim from "./SimulationSections.module.css";
 import styles from "./ExportDialog.module.css";
 
 type MeshFormat = "stl" | "obj" | "gltf" | "glb";
-type PaFormat = "pa" | "paHash" | "pa0";
+type PaFormat = (typeof PA_EXPORT_FORMATS)[number];
 
 const KINDS: readonly { kind: ExportKind; icon: typeof Box }[] = [
   { kind: "geometry", icon: Box },
@@ -291,7 +292,7 @@ export function ExportDialog() {
                 )}
                 {kind === "pa" && (
                   <div className={sim.modes} role="radiogroup" aria-label={t("export.format")}>
-                    {(["pa0", "pa", "paHash"] as const).map((f) => {
+                    {PA_EXPORT_FORMATS.map((f) => {
                       const off = (f === "pa0" && o.fast?.state !== "ready") || (f === "pa" && o.formatId === "paHash");
                       return (
                         <button key={f} type="button" role="radio" aria-checked={pa === f} className={`${sim.mode} ${styles.paMode}`} disabled={off} onClick={() => setPaFormat(f)}>

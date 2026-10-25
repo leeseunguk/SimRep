@@ -158,25 +158,9 @@
   transition: width var(--dur-normal) var(--ease-out);
 }
 
-.sparkline {
-  width: 100%;
-  height: var(--sparkline-h);
-  border: var(--border-w) solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-sunken);
-}
-
-.sparkLine {
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-}
-
-.sparkTarget {
-  stroke: var(--color-success);
-  stroke-width: 1;
-  stroke-dasharray: 3 3;
+.residualChart {
+  display: flex;
+  height: var(--refine-chart-h);
 }
 
 .stats {
@@ -458,6 +442,12 @@
 .modeSub {
   color: var(--color-text-subtle);
   font-size: var(--text-2xs);
+}
+
+/* Live that will fly as CPU f64 (exact surfaces / no GPU): shown before flying, request unchanged. */
+.mode[data-cpu="true"] .modeSub {
+  color: var(--color-warning);
+  font-weight: var(--weight-semibold);
 }
 
 /* Workbench: placement of the array on the bench (.iob instance / imported model origin). */

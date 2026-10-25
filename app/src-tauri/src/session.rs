@@ -237,9 +237,9 @@ pub struct Session {
     /// CPU side of the resident field and its workbench box: single-ion traces read it without
     /// waiting for `gpu`, which a GPU flight holds while it runs.
     pub live_fields: Mutex<Option<(BenchKey, Arc<Fields>)>>,
-    /// Final velocities of the last few flights by token (f32 vx, vy, vz per ion), which flight
+    /// Final velocities of the last few flights by token (f64 vx, vy, vz per ion), which flight
     /// packets leave out (`fly::flight_velocities`).
-    pub velocities: Mutex<VecDeque<(u64, Arc<Vec<f32>>)>>,
+    pub velocities: Mutex<VecDeque<(u64, Arc<Vec<f64>>)>>,
     /// The sibling sidecar, loaded by the first exact-surface flight.
     surface: Mutex<Option<Surface>>,
     /// Exact-surface field of the last voltage set / workbench box / placement flown.

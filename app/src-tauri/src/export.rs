@@ -154,7 +154,7 @@ fn run(session: &Session, r: ExportRequest) -> Result<Vec<String>, PaError> {
     Ok(vec![file_name(&path)])
 }
 
-fn write_simion(session: &Session, path: &Path, format: &str, voltages: &[(usize, f64)]) -> Result<Vec<String>, PaError> {
+pub(crate) fn write_simion(session: &Session, path: &Path, format: &str, voltages: &[(usize, f64)]) -> Result<Vec<String>, PaError> {
     let io = |p: &Path, e: std::io::Error| fail(format!("{}: {e}", p.display()));
     match format {
         "pa" => {

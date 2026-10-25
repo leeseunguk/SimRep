@@ -79,7 +79,8 @@
   --resizer-w: 6px;
   --card-max-w: 440px;
   --gizmo-size: 88px;
-  --sparkline-h: 44px;
+  /* Refine convergence chart (properties panel, import wizard). */
+  --refine-chart-h: 136px;
   --meter-h: 6px;
   --start-max-w: 1120px;
   --start-side-w: 320px;

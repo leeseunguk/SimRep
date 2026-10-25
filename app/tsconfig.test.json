@@ -1,0 +1,9 @@
+{
+  // Unit tests (vitest), e2e (Playwright) and their configs: the app's settings plus Node types.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client", "@webgpu/types", "node"]
+  },
+  "include": ["src", "e2e", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"],
+  "exclude": []
+}

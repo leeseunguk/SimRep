@@ -1,5 +1,6 @@
 import { useMemo, useRef, type CSSProperties } from "react";
 import { Pin, X, ZoomOut } from "lucide-react";
+import { runText } from "../components/SimulationSections";
 import { Button } from "../components/ui/Button";
 import { SegmentedControl } from "../components/ui/SegmentedControl";
 import { Switch } from "../components/ui/Switch";
@@ -15,7 +16,7 @@ import { usePlotTheme } from "./plot/usePlotTheme";
 import { MAX_SNAPSHOTS, useResults } from "./store";
 import styles from "./ResultsPanel.module.css";
 
-/** "#2 Focus 110 V · 10,000 ions · live": what a kept run was flown with. */
+/** "#2 Focus 110 V · 10,000 ions · Live · GPU f32": what a kept run was flown with. */
 export function useRunDetail() {
   const { t, num } = useI18n();
   return (o: PaObject) => {
@@ -24,7 +25,8 @@ export function useRunDetail() {
       .map((e) => `#${e.number} ${num(e.voltage ?? 0, 1)} V`)
       .join(", ");
     const h = o.flight.result!.header;
-    return [volts, t("results.compare.ions", { n: h.ions }), t(h.precision === "live" ? "results.mode.live" : "results.mode.precise")].filter(Boolean).join(" · ");
+    // What actually flew, as the run badge says it (a live request can run as CPU f64).
+    return [volts, t("results.compare.ions", { n: h.ions }), runText(t, h).text].filter(Boolean).join(" · ");
   };
 }
 

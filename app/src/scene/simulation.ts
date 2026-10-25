@@ -16,6 +16,7 @@ import {
   type RefineDevice,
   type RefineMessage,
 } from "./backend";
+import { REFINE_TOLERANCE } from "../components/simulationFormat";
 import { computeLabels } from "./electrodes";
 import { DEFAULT_DRAWN, directionOf, parseFlight } from "./flight";
 import { buildPaSurface, formatOfName, voltagesOf } from "./importPa";
@@ -169,7 +170,7 @@ function onRefineMessage(id: string, name: string, notify: boolean, m: RefineMes
   }
   switch (m.type) {
     case "start":
-      patchRefine(id, () => ({ status: "running", device: m.device, stages: m.stages }));
+      patchRefine(id, () => ({ status: "running", device: m.device, stages: m.stages, tolerance: m.tolerance }));
       app.log("info", { key: "log.refineStarted", params: { file: name, device: deviceLabel(m.device), count: m.stages.length } });
       break;
     case "progress":
@@ -179,6 +180,7 @@ function onRefineMessage(id: string, name: string, notify: boolean, m: RefineMes
         residual: m.residual,
         elapsedMs: m.elapsedMs,
         history: m.stage === r.stage ? [...r.history, m.residual] : [m.residual],
+        past: m.stage === r.stage ? r.past : [...r.past, r.history],
       }));
       break;
     case "stageDone":
@@ -227,6 +229,8 @@ export async function startRefine(id: string, device: RefineDevice, notify = tru
       cycle: 0,
       residual: null,
       history: [],
+      past: [],
+      tolerance: REFINE_TOLERANCE,
       elapsedMs: 0,
       note: null,
       done: null,

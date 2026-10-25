@@ -1,3 +1,5 @@
+// First: demo mode replaces the Tauri IPC before any module asks whether it runs on the desktop.
+import "./demo/boot";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles/fonts";

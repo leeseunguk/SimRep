@@ -1,4 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { refusalLine, refusals } from "./refusals";
 import { computeDevice, reasonMessage } from "./scene/backend";
 import { useApp } from "./state/store";
 
@@ -26,7 +27,7 @@ export async function connectRuntime() {
       } else {
         const reason = d.reason ? reasonMessage(d.reason) : { key: "reason.noVulkan" as const };
         app.setCompute({ state: "cpu", name: d.name, reason });
-        app.log("warning", { key: "log.computeCpu", params: { reason } });
+        app.log("warning", refusalLine(refusals.computeOnCpu(reason)));
       }
     },
     (err) => app.setCompute({ state: "cpu", name: "CPU", reason: { key: "error.technical", params: { detail: String(err) } } }),

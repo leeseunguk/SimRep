@@ -61,6 +61,10 @@ export interface RefineState {
   residual: number | null;
   /** Relative residual per V-cycle of the current solution (cycle 0 = start). */
   history: number[];
+  /** The finished solutions' histories, in order (a .pa# solves one per electrode). */
+  past: number[][];
+  /** Target relative residual (from the native core's start message). */
+  tolerance: number;
   elapsedMs: number;
   /** Device fallback reason or error. */
   note: Message | null;

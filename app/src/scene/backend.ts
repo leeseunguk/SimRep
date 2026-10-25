@@ -1,6 +1,7 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import type { Message, MessageParams } from "../i18n";
 import { en, type MessageKey } from "../i18n/en";
+import type { BEAM_SHAPES, BUILD_METHODS, CAD_SURFACES, FLY_COLLISIONS, FLY_PRECISIONS, PA_EXPORT_FORMATS, REFINE_DEVICES, TEMPLATE_IDS } from "./options";
 import { PaReadError, type PaErrorCode } from "./pa";
 import type { Placement } from "./placement";
 
@@ -82,7 +83,7 @@ export function electrodeLabels(id: string): Promise<ArrayBuffer> {
 }
 
 /** Writes a template's .pa# into a new folder under Documents/SimRep (src-tauri/src/templates.rs). */
-export function createTemplate(kind: string): Promise<PathInfo & { dir: string }> {
+export function createTemplate(kind: (typeof TEMPLATE_IDS)[number]): Promise<PathInfo & { dir: string }> {
   return invoke("create_template", { kind });
 }
 
@@ -113,7 +114,7 @@ export function refineTargets(id: string, outputDir: string | null): Promise<Ref
   return invoke<RefineTargets>("refine_targets", { id, outputDir });
 }
 
-export type RefineDevice = "auto" | "gpu" | "cpu";
+export type RefineDevice = (typeof REFINE_DEVICES)[number];
 export interface DeviceInfo {
   kind: "gpu" | "cpu";
   name: string;
@@ -128,7 +129,7 @@ export function deviceLabel(d: DeviceInfo): Message | string {
 
 /** JSON messages of a refine job (`Message` in refine.rs). Binary messages are previews / the result. */
 export type RefineMessage =
-  | { type: "start"; device: DeviceInfo; stages: (number | null)[]; points: number }
+  | { type: "start"; device: DeviceInfo; stages: (number | null)[]; points: number; tolerance: number; maxCycles: number }
   | { type: "progress"; stage: number; cycle: number; residual: number; absolute: number; elapsedMs: number }
   | { type: "stageDone"; stage: number; cycles: number; residual: number }
   | { type: "device"; device: DeviceInfo; reason: Reason }
@@ -157,7 +158,7 @@ export function fastAdjust(id: string, voltages: [number, number][]): Promise<Ar
   return invoke<ArrayBuffer>("fast_adjust", { id, voltages });
 }
 
-export type BeamShape = "point" | "line" | "disk";
+export type BeamShape = (typeof BEAM_SHAPES)[number];
 
 export type FlySource =
   | {
@@ -175,10 +176,10 @@ export type FlySource =
   | { kind: "file"; path: string };
 
 /** live: every ion on the GPU (f32) when one is available; precise: every ion on the CPU (f64). */
-export type FlyPrecision = "live" | "precise";
+export type FlyPrecision = (typeof FLY_PRECISIONS)[number];
 
 /** Electrode collision rule (src-tauri/src/fly.rs `Collision`): SIMION's all-corner cells, or a half-cell box per point. */
-export type FlyCollision = "allCorners" | "nearestNode";
+export type FlyCollision = (typeof FLY_COLLISIONS)[number];
 
 export interface FlyRequest {
   id: string;
@@ -211,7 +212,7 @@ export function computeDevice(): Promise<ComputeDevice> {
   return invoke<ComputeDevice>("compute_device");
 }
 
-/** Resolves to an STR3 packet (see `parseFlight` in flight.ts). */
+/** Resolves to an STR4 packet (see `parseFlight` in flight.ts). */
 export function fly(request: FlyRequest): Promise<ArrayBuffer> {
   return invoke<ArrayBuffer>("fly", { request });
 }
@@ -220,8 +221,8 @@ export function fly(request: FlyRequest): Promise<ArrayBuffer> {
  * Final vx, vy, vz (mm/us) per ion of a recent flight of array `id` (its header's `token`), which
  * flight packets leave out. The native core keeps the last few flights per array.
  */
-export async function flightVelocities(id: string, token: number): Promise<Float32Array<ArrayBuffer>> {
-  return new Float32Array(await invoke<ArrayBuffer>("flight_velocities", { id, token }));
+export async function flightVelocities(id: string, token: number): Promise<Float64Array<ArrayBuffer>> {
+  return new Float64Array(await invoke<ArrayBuffer>("flight_velocities", { id, token }));
 }
 
 /** Re-flies ion `ion` of `request` alone (CPU, f64); resolves to an SIT1 packet (results/trace.ts). */
@@ -256,9 +257,9 @@ export function inspectGeometry(path: string, units: string | null, repair: bool
   return invoke<ArrayBuffer>("inspect_geometry", { request: { path, units, repair } });
 }
 
-export type BuildMethod = "aligned" | "cutcell";
+export type BuildMethod = (typeof BUILD_METHODS)[number];
 /** Surface CAD bodies are sampled from (src-tauri/src/geometry.rs `CadSurface`). */
-export type CadSurface = "tessellated" | "exact";
+export type CadSurface = (typeof CAD_SURFACES)[number];
 
 export interface BuildRequest {
   path: string;
@@ -298,7 +299,7 @@ export type ExportWhat =
   | { kind: "geometry"; surface: SurfaceOptions; names: [number, string][] }
   | { kind: "grid"; field: boolean; angularSegments: number; sweepDegrees: number }
   | { kind: "isosurface"; potential: number; surface: SurfaceOptions }
-  | { kind: "pa"; format: "pa" | "paHash" | "pa0" };
+  | { kind: "pa"; format: (typeof PA_EXPORT_FORMATS)[number] };
 
 /** Writes an export of array `id`; resolves to the file names written. */
 export function exportArray(request: { id: string; path: string; voltages: [number, number][]; placement: Placement | null; what: ExportWhat }): Promise<string[]> {

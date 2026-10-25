@@ -13,6 +13,8 @@ mod fly;
 mod geometry;
 mod iob;
 mod live;
+#[cfg(test)]
+mod options;
 mod pa;
 mod project;
 mod refine;

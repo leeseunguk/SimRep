@@ -1,4 +1,5 @@
 import { formatBytes, type Message } from "../i18n";
+import { refusals } from "../refusals";
 import { newId, useApp, type MeshObject, type PaObject } from "../state/store";
 import { pathInfo, readFile, type PathInfo } from "./backend";
 import { detectFormat, type FileFormat } from "./formats";
@@ -103,7 +104,8 @@ async function importOne({ name, size, file, entry, toasts = true }: { name: str
 
   if (!format) {
     app.log("warning", { key: "log.unsupported", params: { file: name } });
-    app.toast("warning", { key: "toast.unsupported.title", params: { file: name } }, { key: "toast.unsupported.body" });
+    const refusal = refusals.unsupportedFile(name);
+    app.toast("warning", refusal.what, refusal.why);
     return null;
   }
 

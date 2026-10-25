@@ -74,8 +74,11 @@ pub struct Device {
 #[derive(Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 enum Message {
+    /// `tolerance` / `max_cycles`: the target relative residual and the cycle limit per solution
+    /// (the UI's convergence chart draws the target line from them).
     #[serde(rename_all = "camelCase")]
-    Start { device: Device, stages: Vec<Option<usize>>, points: usize },
+    Start { device: Device, stages: Vec<Option<usize>>, points: usize, tolerance: f64, max_cycles: usize },
+    /// One V-cycle's residual (cycle 0 = the starting field). A chunk of cycles arrives together.
     #[serde(rename_all = "camelCase")]
     Progress { stage: usize, cycle: usize, residual: f64, absolute: f64, elapsed_ms: f64 },
     #[serde(rename_all = "camelCase")]
@@ -470,7 +473,7 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
     let layout = Layout::new(a);
     let stage_list = stages(session);
     let prepared = if is_pa_hash(&session.path) { state.geometries.lock().unwrap().get(&session.path).cloned() } else { None };
-    send(channel, &Message::Start { device: solver.device(), stages: stage_list.clone(), points: a.potentials.len() });
+    send(channel, &Message::Start { device: solver.device(), stages: stage_list.clone(), points: a.potentials.len(), tolerance: TOLERANCE, max_cycles: MAX_CYCLES });
 
     let mut total_cycles = 0;
     let mut worst = 0.0_f64;
@@ -573,4 +576,51 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
         },
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    #[test]
+    fn start_names_the_target_residual() {
+        let json = serde_json::to_value(Message::Start { device: cpu_device(), stages: vec![Some(1)], points: 4, tolerance: TOLERANCE, max_cycles: MAX_CYCLES }).unwrap();
+        assert_eq!(json["type"], "start");
+        assert_eq!(json["tolerance"], TOLERANCE);
+        assert_eq!(json["maxCycles"], MAX_CYCLES);
+    }
+
+    /// The UI's convergence chart gets every V-cycle's relative residual, in order, from cycle 0
+    /// (the starting field) through the converged one, however the cycles are chunked.
+    #[test]
+    fn every_v_cycle_residual_is_streamed() {
+        let mut a = PotentialArray::new(65, 33, 1);
+        for j in 0..a.ny {
+            for (i, v) in [(0, 0.0), (a.nx - 1, 100.0)] {
+                let k = a.index(i, j, 0).unwrap();
+                a.electrodes[k] = true;
+                a.potentials[k] = v;
+            }
+        }
+        let layout = Layout::new(&a);
+        let mut values = layout.values(&a).ok().unwrap();
+        let seen = Arc::new(Mutex::new(Vec::<serde_json::Value>::new()));
+        let sink = seen.clone();
+        let channel = Channel::new(move |body| {
+            if let InvokeResponseBody::Json(json) = body {
+                sink.lock().unwrap().push(serde_json::from_str(&json).unwrap());
+            }
+            Ok(())
+        });
+        let cancel = AtomicBool::new(false);
+        let mut solver = Solver { gpu: None, channel: &channel, cancel: &cancel, start: Instant::now() };
+        let (cycles, last) = solver.solve(0, &mut values, &layout, &Operator::Staircase, |_| {}).ok().unwrap();
+        let progress: Vec<(u64, f64)> = seen.lock().unwrap().iter().filter(|m| m["type"] == "progress").map(|m| (m["cycle"].as_u64().unwrap(), m["residual"].as_f64().unwrap())).collect();
+        assert_eq!(progress.iter().map(|p| p.0).collect::<Vec<_>>(), (0..=cycles as u64).collect::<Vec<_>>());
+        // serde_json parses floats to within an ulp (the UI's JSON.parse is exact).
+        assert!((progress.last().unwrap().1 / last.relative - 1.0).abs() < 1e-15);
+        assert!(last.relative <= TOLERANCE);
+        assert!(progress[0].1 > progress.last().unwrap().1);
+    }
 }

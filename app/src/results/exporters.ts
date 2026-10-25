@@ -5,11 +5,11 @@ import { backendError, errorMessage, writeBytes } from "../scene/backend";
 import type { PaObject } from "../state/store";
 import { useApp } from "../state/store";
 import { dirname } from "../state/project";
-import { surfaceKey, type RunData } from "./analysis";
 import { drawFigure, readPlotTheme, type Panel } from "./plot/chart";
 import { CanvasPainter, SvgPainter } from "./plot/painters";
-import type { Trace } from "./trace";
 import { captureViewport } from "../viewport/viewState";
+
+export { endStatesCsv, traceCsv } from "./csv";
 
 /**
  * Exports from the results panel: CSV (end states, one ion's time series), plots as PNG/SVG and a
@@ -60,46 +60,6 @@ export async function saveFile(name: string, kind: ExportKind, data: Uint8Array<
     app.log("error", { key: "log.exportFailed", params: { path, detail } });
     app.toast("error", { key: "toast.exportFailed.title" }, { key: "toast.exportFailed.body", params: { detail } });
   }
-}
-
-// ---------------------------------------------------------------------------------------- CSV
-
-const f32 = (v: number) => (Number.isFinite(v) ? String(Number(v.toPrecision(7))) : "");
-
-/** End state of every ion (or `indices`), one row per ion. `velocity`: vx, vy, vz per ion (`flightVelocities`). */
-export function endStatesCsv(run: RunData, velocity: Float32Array, indices?: ArrayLike<number>): string {
-  const { cols, surface, surfaces } = run;
-  const keys = surfaces.map((s) => surfaceKey(s.surface));
-  const rows = ["ion,surface,x_mm,y_mm,z_mm,r_mm,tof_us,ke_ev,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us"];
-  const n = indices ? indices.length : run.n;
-  for (let k = 0; k < n; k++) {
-    const i = indices ? indices[k]! : k;
-    rows.push(
-      [
-        i,
-        keys[surface[i]!] ?? "",
-        f32(cols.x[i]!),
-        f32(cols.y[i]!),
-        f32(cols.z[i]!),
-        f32(cols.r[i]!),
-        f32(cols.tof[i]!),
-        f32(cols.ke[i]!),
-        f32(velocity[i * 3]!),
-        f32(velocity[i * 3 + 1]!),
-        f32(velocity[i * 3 + 2]!),
-      ].join(","),
-    );
-  }
-  return rows.join("\r\n") + "\r\n";
-}
-
-/** One ion's time series (f64, full precision). */
-export function traceCsv(tr: Trace): string {
-  const rows = ["t_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us,speed_mm_per_us,ke_ev,potential_v"];
-  for (let i = 0; i < tr.t.length; i++) {
-    rows.push([tr.t[i], tr.x[i], tr.y[i], tr.z[i], tr.vx[i], tr.vy[i], tr.vz[i], tr.speed[i], tr.ke[i], tr.potential[i]].join(","));
-  }
-  return rows.join("\r\n") + "\r\n";
 }
 
 // -------------------------------------------------------------------------------------- plots

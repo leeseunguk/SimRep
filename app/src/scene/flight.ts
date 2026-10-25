@@ -99,7 +99,10 @@ export interface FlightHeader {
   keMean: number;
   /** Device that flew every ion. */
   device: DeviceInfo;
+  /** Requested mode; live requests can fall back to CPU f64. */
   precision: FlyPrecision;
+  /** Actual end-state execution, separate from the requested mode. */
+  executed: { device: "cpu" | "gpu"; precision: "f64" | "f32"; surfaces: "exact" | "grid" };
   /** Why a live flight ran on the CPU (no GPU, still starting, field too large, exact surfaces). */
   fallback: Reason | null;
   /**
@@ -137,27 +140,28 @@ export interface Flight {
   /** x, y, z mm per trajectory point. */
   points: Float32Array<ArrayBuffer>;
   /** x, y, z mm, TOF us per ion. */
-  ends: Float32Array<ArrayBuffer>;
+  ends: Float64Array<ArrayBuffer>;
   /** Index into header.surfaces per ion. */
   surface: Uint32Array<ArrayBuffer>;
   /** Final kinetic energy per ion, eV. */
-  ke: Float32Array<ArrayBuffer>;
+  ke: Float64Array<ArrayBuffer>;
   /** UI round trip, ms. */
   roundTripMs: number;
 }
 
 /**
- * See the STR3 layout in src-tauri/src/fly.rs. `points`, `ends` and `ke` view `buf`; the packet's
+ * See the STR4 layout in src-tauri/src/fly.rs. `points`, `ends` and `ke` view `buf`; the packet's
  * drawn-only offsets and narrow surface indices are widened here to one entry per ion.
  */
 export function parseFlight(buf: ArrayBuffer, roundTripMs: number): Flight {
   const bytes = new Uint8Array(buf);
-  if (String.fromCharCode(...bytes.subarray(0, 4)) !== "STR3") throw new Error("the native core answered with an unknown flight packet");
+  if (String.fromCharCode(...bytes.subarray(0, 4)) !== "STR4") throw new Error("the native core answered with an unknown flight packet");
   const headerLen = new DataView(buf).getUint32(4, true);
   const header = JSON.parse(new TextDecoder().decode(bytes.subarray(8, 8 + headerLen))) as FlightHeader;
   const n = header.ions;
   const w = header.surfaceBytes;
-  const size = 8 + headerLen + 4 * (2 * header.drawn + 1 + 3 * header.points + 5 * n) + w * n;
+  const endAt = Math.ceil((8 + headerLen + 4 * (2 * header.drawn + 1 + 3 * header.points)) / 8) * 8;
+  const size = endAt + 40 * n + w * n;
   if (size > buf.byteLength) throw new Error("the native core answered with a short flight packet");
   let at = 8 + headerLen;
   const take = <T>(make: (b: ArrayBuffer, o: number, n: number) => T, count: number, width = 4) => {
@@ -168,8 +172,9 @@ export function parseFlight(buf: ArrayBuffer, roundTripMs: number): Flight {
   const drawn = take((b, o, k) => new Uint32Array(b, o, k), header.drawn);
   const drawnOffsets = take((b, o, k) => new Uint32Array(b, o, k), header.drawn + 1);
   const points = take((b, o, k) => new Float32Array(b, o, k), header.points * 3);
-  const ends = take((b, o, k) => new Float32Array(b, o, k), n * 4);
-  const ke = take((b, o, k) => new Float32Array(b, o, k), n);
+  at = endAt;
+  const ends = take((b, o, k) => new Float64Array(b, o, k), n * 4, 8);
+  const ke = take((b, o, k) => new Float64Array(b, o, k), n, 8);
   const packed = take((b, o, k) => (w === 1 ? new Uint8Array(b, o, k) : w === 2 ? new Uint16Array(b, o, k) : new Uint32Array(b, o, k)), n, w);
   const surface = new Uint32Array(packed);
   // Ion i's points are offsets[i]..offsets[i + 1]: an empty range unless it is drawn.

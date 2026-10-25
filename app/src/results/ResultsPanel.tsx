@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { Activity, BarChart3, Camera, ChevronDown, ChevronUp, Crosshair, Download, FileSpreadsheet, GitCompareArrows, Image, Table2 } from "lucide-react";
+import { RunBadge } from "../components/SimulationSections";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { useI18n } from "../i18n";
@@ -64,14 +65,20 @@ export function ResultsPanel() {
         </div>
         {/* Badges first: on a narrow header the name and the count give way before them. */}
         <div className={styles.context}>
-          <Badge tone={h.precision === "live" ? "info" : "success"}>{t(h.precision === "live" ? "results.mode.live" : "results.mode.precise")}</Badge>
-          {h.surface && (
+          <RunBadge h={h} />
+          {h.surface ? (
             <Badge
               tone={h.surface.accuracy === "source" ? "success" : "warning"}
               title={t(h.surface.accuracy === "source" ? "results.surfaces.exactTitle" : "results.surfaces.approximateTitle", { file: h.surface.file })}
             >
               {t(h.surface.accuracy === "source" ? "results.surfaces.exact" : "results.surfaces.approximate")}
             </Badge>
+          ) : (
+            o.info.cuts && (
+              <Badge tone="neutral" title={t("results.surfaces.gridTitle")}>
+                {t("results.surfaces.grid")}
+              </Badge>
+            )
           )}
           <span className={styles.contextName} title={o.path ?? o.fileName}>
             {o.customName ?? o.fileName}

@@ -13,7 +13,7 @@ export const UNITS: Record<Quantity, string> = { tof: "µs", ke: "eV", x: "mm", 
 /** One run's end states, from the current flight or a kept snapshot (arrays are shared, never mutated). */
 export interface RunData {
   n: number;
-  cols: Record<Quantity, Float32Array>;
+  cols: Record<Quantity, Float64Array>;
   /** Index into `surfaces` per ion. */
   surface: Uint32Array;
   surfaces: FlightHeader["surfaces"];
@@ -26,11 +26,11 @@ export function runOf(f: Flight): RunData {
   let run = runs.get(f);
   if (run) return run;
   const n = f.header.ions;
-  const x = new Float32Array(n);
-  const y = new Float32Array(n);
-  const z = new Float32Array(n);
-  const r = new Float32Array(n);
-  const tof = new Float32Array(n);
+  const x = new Float64Array(n);
+  const y = new Float64Array(n);
+  const z = new Float64Array(n);
+  const r = new Float64Array(n);
+  const tof = new Float64Array(n);
   const e = f.ends;
   for (let i = 0; i < n; i++) {
     const k = i * 4;
@@ -72,10 +72,10 @@ export function surfaceMask(run: RunData, filter: IonFilter): Uint8Array {
 }
 
 /** Values of `q` for ions passing the filter (and inside [lo, hi] when given). */
-export function select(run: RunData, q: Quantity, filter: IonFilter, range?: [number, number] | null): Float32Array {
+export function select(run: RunData, q: Quantity, filter: IonFilter, range?: [number, number] | null): Float64Array {
   const mask = surfaceMask(run, filter);
   const col = run.cols[q];
-  const out = new Float32Array(run.n);
+  const out = new Float64Array(run.n);
   let k = 0;
   const lo = range ? range[0] : -Infinity;
   const hi = range ? range[1] : Infinity;
@@ -215,7 +215,7 @@ export function planeAxes(plane: MapPlane, surface: Surface | null): [MapAxis, M
 }
 
 /** Extent of col[i] over the given ion indices. */
-export function extentAt(col: Float32Array, idx: Uint32Array): [number, number] | null {
+export function extentAt(col: Float64Array, idx: Uint32Array): [number, number] | null {
   let lo = Infinity;
   let hi = -Infinity;
   for (let k = 0; k < idx.length; k++) {
@@ -227,7 +227,7 @@ export function extentAt(col: Float32Array, idx: Uint32Array): [number, number] 
 }
 
 /** Statistics of col[i] over the given ion indices. */
-export function statsAt(col: Float32Array, idx: Uint32Array): Stats | null {
+export function statsAt(col: Float64Array, idx: Uint32Array): Stats | null {
   const n = idx.length;
   if (n === 0) return null;
   let sum = 0;
@@ -246,7 +246,7 @@ export function statsAt(col: Float32Array, idx: Uint32Array): Stats | null {
 }
 
 /** 2D histogram of (xs, ys) for the given ion indices, row 0 = bottom (low y). */
-export function heat(xs: Float32Array, ys: Float32Array, idx: Uint32Array, xr: [number, number], yr: [number, number], nx: number, ny: number): Float32Array {
+export function heat(xs: Float64Array, ys: Float64Array, idx: Uint32Array, xr: [number, number], yr: [number, number], nx: number, ny: number): Float32Array {
   const out = new Float32Array(nx * ny);
   const sx = nx / (xr[1] - xr[0]);
   const sy = ny / (yr[1] - yr[0]);
@@ -261,7 +261,7 @@ export function heat(xs: Float32Array, ys: Float32Array, idx: Uint32Array, xr: [
 }
 
 /** Nearest ion to (x, y) among `idx` in a map's axes, within `maxDist` (data units, per axis scaled). */
-export function nearestIon(xs: Float32Array, ys: Float32Array, idx: Uint32Array, x: number, y: number, sx: number, sy: number, maxPx: number): number | null {
+export function nearestIon(xs: Float64Array, ys: Float64Array, idx: Uint32Array, x: number, y: number, sx: number, sy: number, maxPx: number): number | null {
   let best = -1;
   let bestD = maxPx * maxPx;
   for (let k = 0; k < idx.length; k++) {

@@ -24,15 +24,16 @@
 //! Response (one binary packet, mirrored by `parseFlight` in src/scene/flight.ts):
 //!
 //! ```text
-//! "STR3" | u32 header length | header JSON (space-padded to 4 bytes)
+//! "STR4" | u32 header length | header JSON (space-padded to 8 bytes)
 //!        | u32 drawn ions[drawn] (ascending indices) | u32 offsets[drawn + 1] (into points)
-//!        | f32 points[3 * P] (x, y, z mm) | f32 ends[4 * ions] (x, y, z mm, TOF us)
-//!        | f32 ke[ions] (final kinetic energy, eV)
+//!        | f32 points[3 * P] (x, y, z mm) | padding to 8-byte alignment
+//!        | f64 ends[4 * ions] (x, y, z mm, TOF us) | f64 ke[ions] (kinetic energy, eV)
 //!        | u8 / u16 / u32 surface[ions] (index into header.surfaces; header.surfaceBytes wide)
 //! ```
 //!
 //! Live re-flying is bounded by this packet's IPC (about 13 ms per MB) on fast fields, so it
-//! carries only what the views draw: 21 B per ion with up to 256 end surfaces. The final
+//! carries only what the views draw: 41 B per ion with up to 256 end surfaces. End states remain
+//! f64 in both modes (GPU values retain their original f32 accuracy). The final
 //! velocities (only the end-state CSV export uses them) stay here, under the header's `token`, for
 //! `flight_velocities`.
 //!
@@ -73,7 +74,7 @@ const MAX_POINTS_PER_ION: usize = 1_500;
 
 #[derive(Deserialize, Serialize, Clone, Copy, PartialEq, Default)]
 #[serde(rename_all = "camelCase")]
-enum Precision {
+pub(crate) enum Precision {
     /// GPU (f32) for every ion when available; CPU otherwise.
     #[default]
     Live,
@@ -104,7 +105,7 @@ impl Collision {
 
 #[derive(Deserialize, Serialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
-enum Shape {
+pub(crate) enum Shape {
     Point,
     Line,
     Disk,
@@ -216,6 +217,20 @@ struct Stats {
     std: f64,
 }
 
+/// What flew the end states, independently of the requested precision mode.
+#[derive(Serialize)]
+struct Executed {
+    device: &'static str,
+    precision: &'static str,
+    surfaces: &'static str,
+}
+
+impl Executed {
+    fn of(device: &Device, exact: bool) -> Self {
+        Self { device: device.kind, precision: if device.kind == "gpu" { "f32" } else { "f64" }, surfaces: if exact { "exact" } else { "grid" } }
+    }
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Header {
@@ -228,7 +243,9 @@ struct Header {
     ke_mean: f64,
     /// Device that flew all ions.
     device: Device,
+    /// Requested mode (a live request can execute on the CPU in f64).
     precision: Precision,
+    executed: Executed,
     /// Why live mode ran on the CPU (no GPU, still starting, field does not fit, GPU error,
     /// exact surfaces).
     fallback: Option<Reason>,
@@ -495,6 +512,11 @@ fn stats(values: impl Iterator<Item = f64> + Clone) -> Stats {
         mean,
         std: var.sqrt(),
     }
+}
+
+fn arrival_stats(results: &[FlightResult]) -> Stats {
+    let ended = results.iter().filter(|r| matches!(r.splat_reason, SplatReason::Electrode { .. } | SplatReason::SurfaceElectrode { .. } | SplatReason::OutsideGrid | SplatReason::StopPlane));
+    stats(ended.map(|r| r.tof_us))
 }
 
 fn kinetic_energy(mass: f64, v: Vector, relativistic: bool) -> f64 {
@@ -793,8 +815,7 @@ fn run(state: &AppState, session: &Arc<Session>, request: &FlyRequest) -> Result
     for s in &mut surfaces {
         s.tof_mean /= s.count as f64;
     }
-    let ended = results.iter().filter(|r| matches!(r.splat_reason, SplatReason::Electrode { .. } | SplatReason::OutsideGrid | SplatReason::StopPlane));
-    let tof = stats(ended.map(|r| r.tof_us));
+    let tof = arrival_stats(results);
     let ke: Vec<f64> = results
         .iter()
         .zip(ions.iter())
@@ -835,6 +856,7 @@ fn run(state: &AppState, session: &Arc<Session>, request: &FlyRequest) -> Result
         ke_mean,
         device: flown.device.clone(),
         precision: request.precision,
+        executed: Executed::of(&flown.device, exact.is_some()),
         fallback: if request.precision == Precision::Live { fallback } else { None },
         surface: exact.as_ref().map(SurfaceInfo::of),
         field_ms: particles_ms + exact_ms + flown.setup_ms,
@@ -850,26 +872,32 @@ fn run(state: &AppState, session: &Arc<Session>, request: &FlyRequest) -> Result
         surface_bytes,
         token,
     };
-    let json = serde_json::to_vec(&header).map_err(fly_err)?;
-    let padded = json.len().div_ceil(4) * 4;
+    packet(&header, &picks, &offsets, &points, results, &ke, &surface_of)
+}
+
+fn packet(header: &Header, picks: &[usize], offsets: &[u32], points: &[f32], results: &[FlightResult], ke: &[f64], surface_of: &[u32]) -> Result<Vec<u8>, PaError> {
+    let json = serde_json::to_vec(header).map_err(fly_err)?;
+    let padded = json.len().div_ceil(8) * 8;
     let n = results.len();
-    let mut out = Vec::with_capacity(8 + padded + 4 * (picks.len() + offsets.len() + points.len() + 5 * n) + surface_bytes * n);
-    out.extend_from_slice(b"STR3");
+    let end_at = (8 + padded + 4 * (picks.len() + offsets.len() + points.len())).div_ceil(8) * 8;
+    let mut out = Vec::with_capacity(end_at + 40 * n + header.surface_bytes * n);
+    out.extend_from_slice(b"STR4");
     out.extend_from_slice(&(padded as u32).to_le_bytes());
     out.extend_from_slice(&json);
     out.resize(8 + padded, b' ');
     picks.iter().for_each(|&i| out.extend_from_slice(&(i as u32).to_le_bytes()));
     offsets.iter().for_each(|v| out.extend_from_slice(&v.to_le_bytes()));
     points.iter().for_each(|v| out.extend_from_slice(&v.to_le_bytes()));
+    out.resize(end_at, 0);
     for r in results {
         let p = r.final_state.position_mm;
         for v in [p[0], p[1], p[2], r.tof_us] {
-            out.extend_from_slice(&(v as f32).to_le_bytes());
+            out.extend_from_slice(&v.to_le_bytes());
         }
     }
-    ke.iter().for_each(|&v| out.extend_from_slice(&(v as f32).to_le_bytes()));
-    for &s in &surface_of {
-        out.extend_from_slice(&s.to_le_bytes()[..surface_bytes]);
+    ke.iter().for_each(|v| out.extend_from_slice(&v.to_le_bytes()));
+    for &s in surface_of {
+        out.extend_from_slice(&s.to_le_bytes()[..header.surface_bytes]);
     }
     Ok(out)
 }
@@ -878,12 +906,12 @@ fn run(state: &AppState, session: &Arc<Session>, request: &FlyRequest) -> Result
 /// live re-flying keeps at most three requests in flight (src/scene/simulation.ts).
 const KEPT_VELOCITIES: usize = 4;
 
-/// Keeps the final velocities of `results` (f32 vx, vy, vz mm/us per ion) for
+/// Keeps the final velocities of `results` (f64 vx, vy, vz mm/us per ion) for
 /// `flight_velocities` and returns their token.
 fn keep_velocities(session: &Session, results: &[FlightResult]) -> u64 {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let token = NEXT.fetch_add(1, Ordering::Relaxed);
-    let velocities: Vec<f32> = results.iter().flat_map(|r| r.final_state.velocity_mm_per_us.map(|v| v as f32)).collect();
+    let velocities: Vec<f64> = results.iter().flat_map(|r| r.final_state.velocity_mm_per_us).collect();
     let mut kept = session.velocities.lock().unwrap();
     if kept.len() == KEPT_VELOCITIES {
         kept.pop_front();
@@ -892,13 +920,13 @@ fn keep_velocities(session: &Session, results: &[FlightResult]) -> u64 {
     token
 }
 
-/// Final velocities of a recent flight of array `id` (its header's `token`): f32 vx, vy, vz mm/us
+/// Final velocities of a recent flight of array `id` (its header's `token`): f64 vx, vy, vz mm/us
 /// per ion, for the end-state CSV export (flight packets leave them out).
 #[tauri::command]
 pub fn flight_velocities(state: State<'_, AppState>, id: String, token: u64) -> Result<Response, PaError> {
     let session = state.get(&id).ok_or_else(|| PaError::new("noSession", id.clone()))?;
     let kept = session.velocities.lock().unwrap().iter().find(|(t, _)| *t == token).map(|(_, v)| v.clone());
-    let velocities: Arc<Vec<f32>> = kept.ok_or_else(|| PaError::coded("export", Reason::new("flightExpired")))?;
+    let velocities: Arc<Vec<f64>> = kept.ok_or_else(|| PaError::coded("export", Reason::new("flightExpired")))?;
     Ok(Response::new(velocities.iter().flat_map(|v| v.to_le_bytes()).collect::<Vec<u8>>()))
 }
 
@@ -1065,4 +1093,102 @@ pub async fn fast_adjust(state: State<'_, AppState>, id: String, voltages: Vec<(
     .await
     .map_err(|e| PaError::new("unexpected", e.to_string()))?
     .map(Response::new)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use simrep_core::PotentialArray;
+    use simrep_fly::ParticleState;
+    use simrep_io::PaFile;
+
+    fn result(reason: SplatReason, tof: f64) -> FlightResult {
+        FlightResult {
+            final_state: ParticleState { position_mm: [1.0000000001, 2.0000000002, 3.0000000003], velocity_mm_per_us: [0.10000000001, 0.20000000002, 0.30000000003], time_us: tof },
+            splat_reason: reason,
+            tof_us: tof,
+            accepted_steps: 0,
+            rejected_steps: 0,
+            trajectory: None,
+        }
+    }
+
+    #[test]
+    fn arrival_summary_includes_exact_electrodes_and_excludes_unfinished_ions() {
+        let results = [
+            result(SplatReason::Electrode { index: 0 }, 1.0),
+            result(SplatReason::SurfaceElectrode { number: 2 }, 2.0),
+            result(SplatReason::OutsideGrid, 3.0),
+            result(SplatReason::StopPlane, 6.0),
+            result(SplatReason::TimeLimit, 500.0),
+            result(SplatReason::StepLimit, 600.0),
+            result(SplatReason::StepUnderflow, 700.0),
+            result(SplatReason::NonFinite, 800.0),
+        ];
+        // Independent online variance of the four arrivals, not the production two-pass sum.
+        let (mut n, mut mean, mut m2) = (0, 0.0, 0.0);
+        for value in [1.0, 2.0, 3.0, 6.0] {
+            n += 1;
+            let delta = value - mean;
+            mean += delta / n as f64;
+            m2 += delta * (value - mean);
+        }
+        let actual = arrival_stats(&results);
+        assert_eq!(actual.n, n);
+        assert_eq!((actual.min, actual.max), (1.0, 6.0));
+        assert!((actual.mean - mean).abs() < 1e-14);
+        assert!((actual.std - (m2 / n as f64).sqrt()).abs() < 1e-14);
+        assert_eq!(arrival_stats(&results[4..]).n, 0);
+    }
+
+    #[test]
+    fn flight_packet_and_kept_velocities_preserve_f64_end_states() {
+        let results = [result(SplatReason::SurfaceElectrode { number: 2 }, 100.0), result(SplatReason::OutsideGrid, 100.000001)];
+        assert_eq!(results[0].tof_us as f32, results[1].tof_us as f32);
+        let ke = [10.0000000001, 10.0000000002];
+        let session = Session::new("packet-test.pa".into(), PaFile::new(PotentialArray::new(2, 2, 1)), None);
+        let token = keep_velocities(&session, &results);
+        let kept = session.velocities.lock().unwrap();
+        assert_eq!(kept[0].0, token);
+        assert_eq!(&*kept[0].1, &results.iter().flat_map(|r| r.final_state.velocity_mm_per_us).collect::<Vec<f64>>());
+
+        for drawn in [false, true] {
+            let picks = if drawn { vec![1] } else { vec![] };
+            let offsets = if drawn { vec![0, 1] } else { vec![0] };
+            let points = if drawn { vec![1.0f32, 2.0, 3.0] } else { vec![] };
+            for surface_bytes in [1, 2, 4] {
+                let device = cpu_device();
+                let header = Header {
+                    ions: 2, drawn: picks.len(), points: points.len() / 3,
+                    surfaces: vec![
+                        SurfaceCount { surface: Surface::Electrode { number: Some(2), voltage: None }, count: 1, tof_mean: 100.0 },
+                        SurfaceCount { surface: Surface::Wall { face: "+x" }, count: 1, tof_mean: 100.000001 },
+                    ],
+                    tof: arrival_stats(&results), ke_mean: (ke[0] + ke[1]) / 2.0,
+                    executed: Executed::of(&device, true), device, precision: Precision::Live,
+                    fallback: Some(Reason::new("exactSurfaces")), surface: None,
+                    field_ms: 0.0, prepare_ms: 0.0, fly_ms: 0.0, transfer_ms: 0.0,
+                    paths_ms: 0.0, paths_gpu: false, total_ms: 0.0, thinned: false,
+                    gpu_bytes: 0, dispatch_ions: 0, surface_bytes, token,
+                };
+                let bytes = packet(&header, &picks, &offsets, &points, &results, &ke, &[0, 1]).unwrap();
+                assert_eq!(&bytes[..4], b"STR4");
+                let header_len = u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize;
+                assert_eq!(header_len % 8, 0);
+                let json: serde_json::Value = serde_json::from_slice(&bytes[8..8 + header_len]).unwrap();
+                assert_eq!(json["precision"], "live");
+                assert_eq!(json["executed"], serde_json::json!({"device": "cpu", "precision": "f64", "surfaces": "exact"}));
+                let start = (8 + header_len + 4 * (picks.len() + offsets.len() + points.len())).div_ceil(8) * 8;
+                let expected: Vec<f64> = results.iter().flat_map(|r| r.final_state.position_mm.into_iter().chain([r.tof_us])).chain(ke).collect();
+                for (i, value) in expected.iter().enumerate() {
+                    let at = start + i * 8;
+                    assert_eq!(f64::from_le_bytes(bytes[at..at + 8].try_into().unwrap()).to_bits(), value.to_bits());
+                }
+                assert_eq!(bytes.len(), start + 40 * results.len() + surface_bytes * results.len());
+            }
+        }
+        let gpu = Device { kind: "gpu", name: "test".into(), threads: None };
+        assert_eq!(serde_json::to_value(Executed::of(&gpu, false)).unwrap(), serde_json::json!({"device": "gpu", "precision": "f32", "surfaces": "grid"}));
+        assert_eq!(serde_json::to_value(Executed::of(&cpu_device(), false)).unwrap(), serde_json::json!({"device": "cpu", "precision": "f64", "surfaces": "grid"}));
+    }
 }
