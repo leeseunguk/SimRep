@@ -1,0 +1,248 @@
+{
+  "viewport": [
+    1440,
+    900
+  ],
+  "rows": [
+    {
+      "template": "einzel",
+      "count": 10000,
+      "drawn": 300,
+      "precision": "live",
+      "warmups": 1,
+      "seconds": 5.000599999999976,
+      "sliderEvents": 278,
+      "voltageChanges": 278,
+      "updates": 278,
+      "updatesPerS": 55.5933288005442,
+      "roundTripMedianMs": 16.599999964237213,
+      "flyMedianMs": 4.285408,
+      "pathsMedianMs": 0,
+      "nativeTotalMedianMs": 8.5775,
+      "devices": [
+        "gpu:NVIDIA GeForce RTX 3070 · Vulkan:null"
+      ],
+      "source": {
+        "mode": "beam",
+        "count": 10000,
+        "massAmu": 100,
+        "chargeE": 1,
+        "energyEv": 100,
+        "position": [
+          1,
+          0,
+          0
+        ],
+        "azimuthDeg": 0,
+        "elevationDeg": 0,
+        "coneDeg": 0,
+        "shape": "line",
+        "widthMm": 14,
+        "file": null,
+        "bench": {
+          "enabled": false,
+          "min": [
+            0,
+            -20,
+            -20
+          ],
+          "max": [
+            100,
+            20,
+            20
+          ]
+        },
+        "durationUs": 100,
+        "precision": "live",
+        "collision": "allCorners",
+        "drawCount": 300,
+        "exactSurfaces": true
+      },
+      "voltages": {
+        "1": 0,
+        "2": 60.0060448890754,
+        "3": 0
+      }
+    },
+    {
+      "template": "einzel",
+      "count": 100000,
+      "drawn": 300,
+      "precision": "live",
+      "warmups": 1,
+      "seconds": 5.005607999999978,
+      "sliderEvents": 278,
+      "voltageChanges": 278,
+      "updates": 98,
+      "updatesPerS": 19.578041268912873,
+      "roundTripMedianMs": 135,
+      "flyMedianMs": 23.403456,
+      "pathsMedianMs": 0,
+      "nativeTotalMedianMs": 54.641799999999996,
+      "devices": [
+        "gpu:NVIDIA GeForce RTX 3070 · Vulkan:null"
+      ],
+      "source": {
+        "mode": "beam",
+        "count": 100000,
+        "massAmu": 100,
+        "chargeE": 1,
+        "energyEv": 100,
+        "position": [
+          1,
+          0,
+          0
+        ],
+        "azimuthDeg": 0,
+        "elevationDeg": 0,
+        "coneDeg": 0,
+        "shape": "line",
+        "widthMm": 14,
+        "file": null,
+        "bench": {
+          "enabled": false,
+          "min": [
+            0,
+            -20,
+            -20
+          ],
+          "max": [
+            100,
+            20,
+            20
+          ]
+        },
+        "durationUs": 100,
+        "precision": "live",
+        "collision": "allCorners",
+        "drawCount": 300,
+        "exactSurfaces": true
+      },
+      "voltages": {
+        "1": 0,
+        "2": 60.003031124496296,
+        "3": 0
+      }
+    },
+    {
+      "template": "quadrupole",
+      "count": 10000,
+      "drawn": 300,
+      "precision": "live",
+      "warmups": 15,
+      "seconds": 5.003100000000006,
+      "sliderEvents": 278,
+      "voltageChanges": 278,
+      "updates": 277,
+      "updatesPerS": 55.36567328256474,
+      "roundTripMedianMs": 25.80000001192093,
+      "flyMedianMs": 9.702784000000001,
+      "pathsMedianMs": 0,
+      "nativeTotalMedianMs": 15.246300000000002,
+      "devices": [
+        "gpu:NVIDIA GeForce RTX 3070 · Vulkan:null"
+      ],
+      "source": {
+        "mode": "beam",
+        "count": 10000,
+        "massAmu": 100,
+        "chargeE": 1,
+        "energyEv": 100,
+        "position": [
+          1,
+          0,
+          0
+        ],
+        "azimuthDeg": 0,
+        "elevationDeg": 0,
+        "coneDeg": 0,
+        "shape": "disk",
+        "widthMm": 6,
+        "file": null,
+        "bench": {
+          "enabled": false,
+          "min": [
+            0,
+            -18,
+            -18
+          ],
+          "max": [
+            60,
+            18,
+            18
+          ]
+        },
+        "durationUs": 100,
+        "precision": "live",
+        "collision": "allCorners",
+        "drawCount": 300,
+        "exactSurfaces": true
+      },
+      "voltages": {
+        "1": 2.5,
+        "2": -2.999822352380809,
+        "3": 0
+      }
+    },
+    {
+      "template": "quadrupole",
+      "count": 100000,
+      "drawn": 300,
+      "precision": "live",
+      "warmups": 1,
+      "seconds": 5.009771999999997,
+      "sliderEvents": 278,
+      "voltageChanges": 278,
+      "updates": 82,
+      "updatesPerS": 16.36801036055135,
+      "roundTripMedianMs": 167.39999997615814,
+      "flyMedianMs": 55.975263999999996,
+      "pathsMedianMs": 0,
+      "nativeTotalMedianMs": 104.8802,
+      "devices": [
+        "gpu:NVIDIA GeForce RTX 3070 · Vulkan:null"
+      ],
+      "source": {
+        "mode": "beam",
+        "count": 100000,
+        "massAmu": 100,
+        "chargeE": 1,
+        "energyEv": 100,
+        "position": [
+          1,
+          0,
+          0
+        ],
+        "azimuthDeg": 0,
+        "elevationDeg": 0,
+        "coneDeg": 0,
+        "shape": "disk",
+        "widthMm": 6,
+        "file": null,
+        "bench": {
+          "enabled": false,
+          "min": [
+            0,
+            -18,
+            -18
+          ],
+          "max": [
+            60,
+            18,
+            18
+          ]
+        },
+        "durationUs": 100,
+        "precision": "live",
+        "collision": "allCorners",
+        "drawCount": 300,
+        "exactSurfaces": true
+      },
+      "voltages": {
+        "1": 2.5,
+        "2": -2.9999465467114126,
+        "3": 0
+      }
+    }
+  ]
+}
