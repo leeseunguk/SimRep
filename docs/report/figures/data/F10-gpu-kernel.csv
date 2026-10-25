@@ -1,0 +1,9 @@
+precision,template,ions,general_ms,unrolled_ms,source
+native f64,einzel,10000,24.577984,23.697152,"bench/fly-gpu.md 'Cached-power Horner specialization (2026-10-24)' > 'Retained before/after controls' table (Vulkan compute-pass timestamps, RTX 3070)"
+native f64,einzel,100000,201.912416,194.637760,same table
+native f64,quadrupole,10000,72.957376,59.522912,same table
+native f64,quadrupole,100000,558.632704,490.027552,same table
+f32 Preview,einzel,10000,3.470048,2.334016,same table
+f32 Preview,einzel,100000,19.766240,13.209216,same table
+f32 Preview,quadrupole,10000,19.192544,9.940032,same table
+f32 Preview,quadrupole,100000,99.749952,54.886016,same table

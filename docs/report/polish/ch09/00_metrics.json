@@ -1,0 +1,79 @@
+{
+  "version": "v2.0",
+  "genre": "report",
+  "char_count": 692,
+  "metrics": {
+    "comma_inclusion_rate": 0.6923076923076923,
+    "comma_usage_rate": 1.2307692307692308,
+    "ending_comma_rate": 0.6,
+    "comma_segment_length": 5.379310344827586,
+    "conclusion_pivot_count": 0,
+    "safe_balance_count": 0,
+    "hanja_nominalizer_density": 0.0,
+    "lexical_diversity": 0.8910256410256411
+  },
+  "z_scores": {
+    "comma_inclusion_rate": 2.4723945409429278,
+    "comma_usage_rate": 0.14093598708983346,
+    "ending_comma_rate": 7.107438016528926,
+    "comma_segment_length": 0.48898353673519546,
+    "hanja_nominalizer_density": -2.0,
+    "lexical_diversity": 4.820512820512822
+  },
+  "risk_band": "medium",
+  "risk_score": 4,
+  "evidence": {
+    "conclusion_pivots": [],
+    "safe_balances": []
+  },
+  "warning": "baseline_genre_null:report->essay",
+  "v2_metrics": {
+    "lexical_diversity_ttr": 0.8910256410256411,
+    "lexical_density": 0.0641025641025641,
+    "ending_diversity": 0.8181818181818182,
+    "normalisation_score": 0.38461538461538464,
+    "da_streak_rate": 1,
+    "inanimate_subject_rate": 0.0,
+    "by_passive_count": 0,
+    "double_passive_count": 0,
+    "pronoun_density": 0.0,
+    "deul_overuse_rate": 0.0,
+    "relative_clause_nesting": 1,
+    "have_make_literal_count": 0,
+    "double_particle_count": 0,
+    "progressive_aspect_rate": 0.0
+  },
+  "v2_interference_index": {
+    "components": {
+      "T1_inanimate_subject_rate": 0.0,
+      "T2a_by_passive_per_1k": 0.0,
+      "T2b_double_passive_per_1k": 0.0,
+      "T3_pronoun_density": 0.0,
+      "T4_deul_overuse_rate": 0.0,
+      "T5_nested_clause_count": 1,
+      "T6_have_make_per_1k": 0.0,
+      "T7_double_particle_per_1k": 0.0,
+      "T8b_progressive_rate": 0.0
+    },
+    "weighted_total": 0.05,
+    "n_sentences": 13,
+    "n_chars": 692
+  },
+  "v2_z_scores": {
+    "lexical_diversity_ttr": null,
+    "lexical_density": null,
+    "ending_diversity": null,
+    "normalisation_score": null,
+    "da_streak_rate": null,
+    "inanimate_subject_rate": null,
+    "by_passive_count": null,
+    "double_passive_count": null,
+    "pronoun_density": null,
+    "deul_overuse_rate": null,
+    "relative_clause_nesting": null,
+    "have_make_literal_count": null,
+    "double_particle_count": null,
+    "progressive_aspect_rate": null
+  },
+  "v2_baseline_warnings": []
+}

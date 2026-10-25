@@ -1,0 +1,1 @@
+return {url: location.href, title: document.title, lang: document.documentElement.lang, body: document.body.innerText.slice(0,300)};

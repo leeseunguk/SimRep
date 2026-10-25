@@ -1,0 +1,32 @@
+[
+  {
+    "item": "table:2",
+    "verdict": "verified",
+    "note": "근거 열과 source/장부가 Cargo description 및 확장 구현 절을 구분한다. 11개 description과 Discretization and interfaces, Equations and flight contract, Units and magnetic fields, HS1, SDS, Direct Coulomb, PIC and Poisson, Kernel decision의 실제 제목과 내용을 열어 각 행의 역할을 대조했다."
+  },
+  {
+    "item": "table:5",
+    "verdict": "verified",
+    "note": "표 옆 문장이 CPU의 현재 four-cell 정확도·시간과 별도로 보존된 1,000개 GPU 정확도 제어를 구분하고 직접 CPU/GPU 비교가 아니라고 명시한다. Main integration: all-corner collision defaults와 Native precision study: compute-only criterion의 제목·설정·수치를 대조했다."
+  },
+  {
+    "item": "table:13",
+    "verdict": "fix",
+    "note": "현재 표 바로 아래 문단의 행별 출처 배치는 적절하며, 새로 적은 15개 절 제목은 모두 실제로 존재한다. 다만 세 행의 근거가 아직 완결되지 않았다. 전위 계산 행에 bench/simion-baseline.md의 Refine 절(9–23행)을 추가하라: 19.3/9.1배의 분자인 SIMION 계산 시간 14.23 s는 현재 인용한 refine-real의 두 절에 없고 이 표에 있다. 3D 4중극 행에 bench/fly-real.md의 Physical geometry and the better field route 절(487–511행)을 추가하라: SIMION 물리 8배 RMS 2.382644 mm는 그 절의 표에 있다. 자기장 행의 기존 정확도 기준 통과에는 bench/magnetic-cpu.md의 Unchanged accuracy gate 절(53–69행)을 추가하라. 현재 인용한 Actual matched-population compute는 시간·실행 조건 표이고 오차/gate 표는 다음 절이다. 수치 변경이나 제5열 복원은 필요 없다."
+  },
+  {
+    "item": "table:14",
+    "verdict": "verified",
+    "note": "근거 열의 8개 행을 현재 원문에 대조했다. Magnetic fields and neutral gas, Outputs and flying, PLAN의 3단계/3.4, Equations and flight contract, Export surfaces and fields, Accepted data, Phase replay and generated shader evidence가 실제로 존재하고 대응 기능/제약을 뒷받침한다. 비선형 B-H 미지원은 같은 magnetostatics 문서 첫머리 5행에도 직접 명시되어 있으며 가변 μr 3D 독립 성분 미구현은 인용 절 35–37행에 있다. Nsight 경로와 미측정 범위도 정확하다."
+  },
+  {
+    "item": "claim:large-array-origin",
+    "verdict": "verified",
+    "note": "큰 3D 예제가 없다는 범위를 examples/performance_tests로 한정했고 별도 두 구 껍질 GEM을 gem2pa로 만든 sc3d_x2라고 밝혔다. bench/simion-baseline.md의 실제 Large 3D refine case 절 39–41행과 정확히 대응한다."
+  },
+  {
+    "item": "claim:summary-use-point-sources",
+    "verdict": "verified",
+    "note": "5장 요점 정리가 Audit results와 Uniform Az root cause and fix를 함께 인용한다. 두 실제 절에서 기존 21개 비균일 제어의 1.68–23.23배와 수정된 uniform Az의 .704 ms/34.1배를 확인했으며 22건 모두 빨랐다는 요약을 뒷받침한다."
+  }
+]

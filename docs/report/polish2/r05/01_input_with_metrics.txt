@@ -1,0 +1,25 @@
+[정량 사전 점수 v1.6 / KatFish baseline]
+risk_band: medium  (score 4)
+genre: report
+char_count: 259
+warning: baseline_genre_null:report->essay
+
+[지표]
+- comma_inclusion_rate: 1.00  (z=+4.24 vs report 인간 baseline)  ★ S1 트리거
+- comma_usage_rate: 3.00  (z=+2.62 vs report 인간 baseline)  ★ S1 트리거
+- ending_comma_rate: 1.00  (z=+12.19 vs report 인간 baseline)  ★ S1 트리거
+- comma_segment_length: 5.25  (z=+0.43 vs report 인간 baseline)
+- conclusion_pivot_count: 0
+- safe_balance_count: 0
+- hanja_nominalizer_density: 0.000  (z=-2.00 vs report 인간 baseline)
+- lexical_diversity: 0.95  (z=+6.05 vs report 인간 baseline)  ★ S1 트리거
+
+[근거 사용 가이드]
+- 위 점수는 *근거 보조*다. 단독 판정 금지(보고서 명시).
+- z>1.0 지표는 quick-rules.md S1·S2 패턴과 교차 확인 후 윤문할 것.
+- ending_comma_rate가 ★ S1 트리거인 경우 C-11(연결어미 뒤 쉼표) 우선 손질.
+- conclusion_pivot 매치 토큰은 D-1·H-1 처방 적용 대상.
+
+[원문 시작]
+[P189] 표 14는 docs/PLAN.md, docs/magnetostatics.md, bench/fly-gpu.md, docs/mesh-io.md, docs/bfield-import.md, docs/geometry-pipeline.md에 기록된 한계를 이 문서에서 모은 것이다. 이 가운데 자기장 GPU 비행의 성능은 배정밀도 연산이 빠른 GPU나 혼합 정밀도 방식으로 다시 볼 수 있고, 정확한 표면의 GPU 비행은 메시 교차 계산을 GPU로 옮기면 된다.
+[원문 끝]

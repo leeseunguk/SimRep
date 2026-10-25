@@ -1,0 +1,79 @@
+{
+  "version": "v2.0",
+  "genre": "report",
+  "char_count": 1639,
+  "metrics": {
+    "comma_inclusion_rate": 0.30303030303030304,
+    "comma_usage_rate": 0.5454545454545454,
+    "ending_comma_rate": 0.5555555555555556,
+    "comma_segment_length": 6.803921568627451,
+    "conclusion_pivot_count": 0,
+    "safe_balance_count": 0,
+    "hanja_nominalizer_density": 0.0,
+    "lexical_diversity": 0.8104956268221575
+  },
+  "z_scores": {
+    "comma_inclusion_rate": 0.23001326630358906,
+    "comma_usage_rate": -0.8175460902733628,
+    "ending_comma_rate": 6.542346542346543,
+    "comma_segment_length": 1.1657584649061523,
+    "hanja_nominalizer_density": -2.0,
+    "lexical_diversity": 3.20991253644315
+  },
+  "risk_band": "medium",
+  "risk_score": 4,
+  "evidence": {
+    "conclusion_pivots": [],
+    "safe_balances": []
+  },
+  "warning": "baseline_genre_null:report->essay",
+  "v2_metrics": {
+    "lexical_diversity_ttr": 0.8104956268221575,
+    "lexical_density": 0.03498542274052478,
+    "ending_diversity": 0.7037037037037037,
+    "normalisation_score": 0.18181818181818182,
+    "da_streak_rate": 3,
+    "inanimate_subject_rate": 0.0,
+    "by_passive_count": 0,
+    "double_passive_count": 0,
+    "pronoun_density": 0.0,
+    "deul_overuse_rate": 0.0,
+    "relative_clause_nesting": 1,
+    "have_make_literal_count": 1,
+    "double_particle_count": 0,
+    "progressive_aspect_rate": 0.030303030303030304
+  },
+  "v2_interference_index": {
+    "components": {
+      "T1_inanimate_subject_rate": 0.0,
+      "T2a_by_passive_per_1k": 0.0,
+      "T2b_double_passive_per_1k": 0.0,
+      "T3_pronoun_density": 0.0,
+      "T4_deul_overuse_rate": 0.0,
+      "T5_nested_clause_count": 1,
+      "T6_have_make_per_1k": 0.6101281269066504,
+      "T7_double_particle_per_1k": 0.0,
+      "T8b_progressive_rate": 0.030303030303030304
+    },
+    "weighted_total": 0.2023286556843604,
+    "n_sentences": 33,
+    "n_chars": 1639
+  },
+  "v2_z_scores": {
+    "lexical_diversity_ttr": null,
+    "lexical_density": null,
+    "ending_diversity": null,
+    "normalisation_score": null,
+    "da_streak_rate": null,
+    "inanimate_subject_rate": null,
+    "by_passive_count": null,
+    "double_passive_count": null,
+    "pronoun_density": null,
+    "deul_overuse_rate": null,
+    "relative_clause_nesting": null,
+    "have_make_literal_count": null,
+    "double_particle_count": null,
+    "progressive_aspect_rate": null
+  },
+  "v2_baseline_warnings": []
+}

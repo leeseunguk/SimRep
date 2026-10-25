@@ -1,0 +1,305 @@
+[
+  {
+    "id": "F01",
+    "file": "F01.png",
+    "sha256": "ce3aa7214bdcf8e28a83053d7837b8fcdd3f521e44b3d928b47f64d55932ce9f",
+    "kind": "app-capture",
+    "what_it_shows": "시작 화면의 아인젤 렌즈 템플릿을 연 직후의 실제 앱 창 전체다. 장면 트리, 전위 단면(viridis)과 등전위선, GPU로 날린 이온 1,000개의 궤적, 전극 전압 슬라이더가 한 화면에 있어 무엇을 만들었는지 한눈에 보인다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:1000, draw:300} → project.newFromTemplate('einzel'), 그 뒤 shot(전체 창 2560×1600 px).",
+    "numbers_checked": [
+      "배열 201×41(2D 원통), 전압 #1 0 V / #2 80 V / #3 0 V",
+      "이온 1,000개 모두 +x 벽 도달, 평균 TOF 8.2632 µs, 표준편차 0.1344 µs",
+      "비행 장치 NVIDIA GeForce RTX 3070 · Vulkan, 실시간 미리보기(f32), fallback 없음",
+      "refine 수렴 40회, 잔차 6.3e-11(창에 표시)"
+    ]
+  },
+  {
+    "id": "F02",
+    "file": "F02.png",
+    "sha256": "df1b1aed844942f56996eff3dad2c6237902f346b1249a46c9f3ebca644cddb7",
+    "kind": "stored-data",
+    "what_it_shows": "SIMION 계산 시간을 SimRep 계산 시간으로 나눈 속도 배수다(로그 축, 같거나 더 나은 정밀도의 짝만). 24개 비교 모두 1배를 넘고(1.4–251배), 가장 작은 값은 mag90 1.4배와 μ 구 1.7배다.",
+    "source": "data/F02-speed.csv(행마다 원본 표와 두 시간·정밀도 근거를 적음; shown=0인 6행은 CSV에만 둠). 원본: bench/default-flight.md 'Retained one-cell baseline'·'HS1 and SDS' 표, bench/fly-gpu.md 'Native precision study', bench/fly-real.md 'Compute time at achieved precision'·'Physical geometry'·'Source-geometry cuts v3', bench/space-charge.md 'Matched-precision compute verdict', bench/magnetic-cpu.md 'Actual matched-population compute', bench/refine-real.md 'End-to-end performance' + bench/simion-baseline.md Refine 표, docs/dielectric.md 'Strict oracle and compute medians'·'Speed at matched estimated physical accuracy', docs/magnetostatics.md 'Audit results'·'Hardware GPU and uniform-field follow-up'·'Uniform Az root cause and fix'. scripts/F02_speed.py.",
+    "numbers_checked": [
+      "3D 4중극 같은 계단형 PA: 9.28/0.065829 s = 141×(fly-real.md의 '141x faster than T.Qual 209 at matched accuracy')",
+      "3D 4중극 정확한 표면 경로: 9.28/0.130802 s = 70.9×(cuts 5회 중앙값; 이번 단일 재실행 fly_s 0.045459 s는 쓰지 않음)",
+      "아인젤 10만 GPU 21.37/0.637090 = 33.54×(fly-gpu.md와 일치)",
+      "magnetic-cpu.md 배수 2.11/1.40/7.33/9.27/2.71/48.69/21.50 재계산 일치",
+      "repulsion1 3.19×, mixed 1.99×(space-charge.md와 일치)",
+      "비선형 유전체 87.494/43.636006 = 2.01×(dielectric.md와 일치)",
+      "uniform Az 0.024/0.000704 = 34.1×(magnetostatics.md와 일치)",
+      "라플라스 refine 1,737만 점: GPU 14.23/(0.828705+0.736262) = 9.09×, CPU 1.93×(setup 포함, PA I/O 제외; SIMION 14.23 s는 1e-7 수렴 SIMION 보고 시간)",
+      "외삽한 SIMION 기준(TOF 대형 빔 1,837×, 아인젤 엄격 1,208×)은 넣지 않음"
+    ]
+  },
+  {
+    "id": "F03",
+    "file": "F03.png",
+    "sha256": "6ac5e22c4452b7069e2662b53d3fa686dd59dfcfedef2f2fbfe150c7ab85b47b",
+    "kind": "app-capture",
+    "what_it_shows": "물리 4중극 GEM을 가져오기 마법사로 cut-cell 배열로 만들고, refine하고, 정확한 표면으로 날리고, 결과를 읽는 실제 앱 흐름 네 단계다. 마지막 단계의 끝난 곳별 이온 수(750/230/20)와 평균 TOF 4.1145 µs는 CLI 사용자 경로와 같다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 띠 1–3은 1280×440 CSS 창, 띠 4는 1280×800 창. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(= simrep-oracle\\_quad_cut\\quadrupole.gem, sha256 fb250579…), particles.ion(_quad_gpu, sha256 8d0e731d…). scripts/app/wiz1.js → wizrun.js → quadfly.js {precision:'precise', exact:true} → res.js; scripts/crop.py --stack로 원본 픽셀 그대로 잘라 붙임.",
+    "numbers_checked": [
+      "격자 121×37×37, 0.5 mm, 점 165,649",
+      "만들기 135 ms, cut 노드 11,160, 전극점 15,914/15,914/7,878(docs/dev/frontend.md와 일치)",
+      "refine CPU 32스레드, 해 3개, 잔차 5.58e-11, 568 ms",
+      "정밀(CPU f64)+정확한 표면: +x 750(평균 4.251 µs), 전극 3 230, 전극 2 20; 전체 평균 TOF 4.1145 µs(frontend.md 표 4.1145034797)",
+      "띠 3은 막대 전극 1을 장면에서 숨겨 빔이 보이게 함(계산과 무관한 표시 설정)"
+    ]
+  },
+  {
+    "id": "F04",
+    "file": "F04.png",
+    "sha256": "2a9e96f47ba11f28bc17a0397acea0938b54f76be2c24cda336fde769c508c31",
+    "kind": "cli-result",
+    "what_it_shows": "4중극 x = 30 mm 단면에서 격자점 경계(왼쪽, 전극 셀이 계단)와 cut-cell 경계(오른쪽, 격자선과 실제 원기둥 표면의 교차점)를 같은 색 척도의 전위와 함께 비교한다. 계단 경계는 막대 표면에서 최대 반 칸 어긋나지만 cut-cell 교차점은 r = 5.75 mm 원 위에 놓인다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep refine-geometry quadrupole.gem --electrode 1=1:2.5 --electrode 2=2:-2.5 --electrode 3=3:0 --tolerance 1e-12` (cuts.json v3 + 기저 3개) 및 같은 .pa#의 `simrep refine --tolerance 1e-12`(계단형). 전위 = 2.5·pa1/1e4 − 2.5·pa2/1e4. data/F04-slice.json, scripts/F04_quad_section.py --extract.",
+    "numbers_checked": [
+      "단면 전극 노드 436개, 단면 안 cut 교차점 96개",
+      "refine-geometry cut_nodes=11160, 기저 상대 잔차 3.43e-13/3.43e-13/7.20e-13",
+      "원래 계획(앱 캡처)은 앱이 표면을 격자 상자로만 그려 계단/정확 차이가 보이지 않아 CLI 출력 파일 그림으로 바꿈"
+    ]
+  },
+  {
+    "id": "F05",
+    "file": "F05.png",
+    "sha256": "e4eace202bd8ffad1d8cadba55e9931190de5f76f581d1ce9215840dd31d498e",
+    "kind": "cli-result",
+    "what_it_shows": "멀티그리드 V-cycle 횟수에 따른 상대 잔차다. 16.6만 점 4중극과 1,737만 점 3D 배열 모두 사이클마다 한 자릿수 가까이 줄어 11–13회에 1e-12 기준에 닿는다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); 각 점이 별도 실행 `RAYON_NUM_THREADS=16 simrep refine <pa#> --device cpu --tolerance 1e-12 --max-cycles k`(k=1…수렴). 입력: refine-geometry가 쓴 quadrupole.pa#, simrep-oracle\\_bench3d\\sc3d_x2.pa#. data/F05-residual-history.csv, scripts/F05_residual.py --run.",
+    "numbers_checked": [
+      "sc3d_x2: 11회, 절대 3.306922736e-9 V/mm², 상대 1.102307579e-13 — bench/refine-real.md CPU PA_ 행과 자릿수까지 일치",
+      "4중극 PA#: 13회, 상대 3.555470585e-13",
+      "사이클당 평균 감소율 0.073(sc3d_x2), 0.121(4중극)"
+    ]
+  },
+  {
+    "id": "F06",
+    "file": "F06.png",
+    "sha256": "68637b15b28778568026d0de0da113d523a4ebac0f47108c60671f7e32562300",
+    "kind": "stored-data",
+    "what_it_shows": "cut-cell 경계의 격자 수렴이다. 전위 최대 오차는 기울기 약 2, 표면 근처 전기장 오차는 약 1로 줄고, 같은 구의 계단형 경계 오차(×)는 수십 배 크다.",
+    "source": "docs/cutcell.md 'Grid convergence' 표(CPU f64, 잔차 1e-12)와 'Measured acceptance' 표(구 128³/256³ 계단형 최대 오차). h = 2/(n−1)(구·평면), (b−a)/(n−2)(축대칭). data/F06-cutcell-convergence.csv, scripts/F06_cutcell_order.py.",
+    "numbers_checked": [
+      "전위 차수 2.21/1.92/1.99(문서 2.214/1.918/1.991)",
+      "전기장 차수 1.36/1.02/1.00(문서 1.362/1.020/1.000)",
+      "계단형 구 3.99e-2(128³), 2.57e-2(256³) V"
+    ]
+  },
+  {
+    "id": "F07",
+    "file": "F07.png",
+    "sha256": "11fa97d0e066121ede93619831a52648c64d9305133dc3ccf7bf7b1b22bca97e",
+    "kind": "app-capture",
+    "what_it_shows": "아인젤 템플릿에서 이온 1만 개를 GPU로 날린 궤적과 결과 패널의 TOF 히스토그램이다. 2번 전극이 빔을 출구 쪽에 모으고, TOF 분포는 8.13 µs 근처에 날카로운 봉우리(m/Δm 271)를 가진다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:10000, draw:300, tab:'hist'} → fit.js → zoom.js(휠 6단계 확대, 1단계 축소), 가운데 열(CSS 264,48,704×724) 캡처.",
+    "numbers_checked": [
+      "이온 10,000개, 평균 TOF 8.26321 µs, 표준편차 0.13436 µs, 최소 8.13042, 최대 8.61420, 정점 8.13605 µs",
+      "FWHM 0.01503 µs, m/Δm 271",
+      "RTX 3070 Vulkan 실시간, fallback 없음"
+    ]
+  },
+  {
+    "id": "F08",
+    "file": "F08.png",
+    "sha256": "b8d25c2ea59c1fef1e87fcdc5bf0621271af738c4e693c80b56a2bd2ebf9c338",
+    "kind": "cli-result",
+    "what_it_shows": "4중극 이온 1,000개의 도착 위치를 독립 물리 8배 기준해와 비교한 누적 분포다. 사용자 경로(refine-geometry → fly --cuts)는 RMS 0.0034 mm로, 계단형 PA를 쓴 SIMION T.Qual 209(2.38 mm)보다 약 690배 정확하다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); scripts/cli_runs.sh F08 구간(docs/geometry-pipeline.md 'V3 quadrupole user-route validation'의 명령 그대로: --tolerance 1e-11 --max-step-us 0.025 --bounds=0,-18,-18,60,18,18). 기준해 simrep-oracle\\_quad_cut\\physical-8-global.csv(h = 0.0625 mm). SIMION: _quad_gpu\\quality-209-readout.json의 FINAL 행(SIMION 2024-09-26-8.2.1.0, --trajectory-quality 209, 템플릿 계단형 quad.pa0, compute 9.43 s). data/F08-*.csv, scripts/F08_quad_endpoints.py.",
+    "numbers_checked": [
+      "cuts: RMS 0.003435341 mm, 최대 0.020189609 mm, 끝난 곳 변화 0(compare_quadrupole.py, 문서와 동일)",
+      "--no-cuts: RMS 0.914285 mm, 끝난 곳 변화 1",
+      "SIMION 209: RMS 2.382644 mm, 최대 7.48 mm(fly-real.md 'Physical round-rod 8x RMS' 2.382644와 일치)",
+      "SIMION의 큰 오차는 대부분 계단형 기하(물리 막대와 다른 형상) 때문이며 적분 오차가 아니다"
+    ]
+  },
+  {
+    "id": "F09",
+    "file": "F09.png",
+    "sha256": "06d345dab8efecd0d3734c4ebbee2a76780cdf8ee759af927607ed1a4ae70628",
+    "kind": "app-capture",
+    "what_it_shows": "4중극 템플릿에서 #1 전압 슬라이더를 실제 마우스로 끄는 도중의 화면이다. 전압이 4.45 V가 되는 동안 단면과 이온 1만 개의 궤적(전극 3·2에 부딪힌 점 포함)이 GPU 재비행으로 바로 따라온다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/quad.js {count:10000, view:'iso'} 후 cdp.mjs dragshot(Input.dispatchMouseEvent로 슬라이더 엄지를 2.5 V 위치에서 60단계 끌고, 누른 채로 캡처). crop.py로 뷰포트+속성 패널만 자름.",
+    "numbers_checked": [
+      "끌기 후 전압 #1 4.45 V, #2 −2.50 V, #3 0 V",
+      "이온 10,000개: +x 7,234 / 전극 3 2,346 / 전극 2 420, 평균 TOF 4.1048 µs",
+      "실시간 GPU(f32) RTX 3070, GPU 계산 11.70 ms(헤더 flyMs), fallback 없음",
+      "슬라이더 범위 ±10 V, 단계 0.01 V(frontend.md '전압 슬라이더 범위'와 일치)"
+    ]
+  },
+  {
+    "id": "F10",
+    "file": "F10.png",
+    "sha256": "8904fc113e31ba275c7d204571b28baf6a3ea6b23305b875fe6999a4f0f4406a",
+    "kind": "stored-data",
+    "what_it_shows": "GPU 비행 커널의 Horner 전개 전후 계산 시간이다. 실시간 미리보기(f32)에서 1.5–1.9배, 정밀(f64)에서 1.04–1.23배 빨라졌고 결과는 비트 단위로 같다.",
+    "source": "bench/fly-gpu.md 'Cached-power Horner specialization (2026-10-24)' > 'Retained before/after controls' 표(Vulkan 타임스탬프, RTX 3070). data/F10-gpu-kernel.csv, scripts/F10_gpu_kernel.py.",
+    "numbers_checked": [
+      "4중극 10만 f32: 99.749952 → 54.886016 ms(1.82×)",
+      "4중극 1만 f32: 19.19 → 9.94 ms(1.93×)",
+      "4중극 10만 f64: 558.63 → 490.03 ms(1.14×)",
+      "아인젤 10만 f32: 19.77 → 13.21 ms(1.50×)"
+    ]
+  },
+  {
+    "id": "F11",
+    "file": "F11.png",
+    "sha256": "b444cdb1bbcae4aa0ad5d3920eb46b799950c55074bbb8b3044e7932021727ff",
+    "kind": "cli-result",
+    "what_it_shows": "SIMION 예제 90° 자기 섹터에서 이온 15개를 CLI로 날린 궤적과, 같은 출발 상태로 SIMION이 낸 끝점과의 차이다. 끝점 차이는 최대 0.0091 mm, TOF 차이는 최대 0.00029 µs다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep fly --device cpu --run-file physics-validation-20261023\\sector_2dp\\run.json --particles .../ions.ion --bounds=-20,-120,-120,20,120,120 --nonrelativistic`; 궤적 점은 같은 명령에 --duration-us t --allow-time-limit(t = 0.2…18.6 µs)를 준 93회 실행의 위치. SIMION: sector_2dp\\flight.log FINAL 행. data/F11-*.csv, scripts/F11_sector.py.",
+    "numbers_checked": [
+      "CLI 끝점이 보관된 native-reference.csv와 최대 2.4e-9 mm 차이(설정 일치 확인)",
+      "SimRep−SIMION 끝점 최대 0.009149448 mm, TOF 최대 0.000290458 µs(docs/physics-magnetic-collision.md 표 0.00914941/0.000290456과 일치)",
+      "비행 계산 fly_s 0.00277 s(이온 15개)"
+    ]
+  },
+  {
+    "id": "F12",
+    "file": "F12.png",
+    "sha256": "c96e3be4714267fd142329242307cf6acb88c4aa98823ef6a689650a331c8796",
+    "kind": "cli-result",
+    "what_it_shows": "솔레노이드를 보정된 코일 지도로 날린 결과와 정확한 Biot–Savart로 날린 결과의 이온별 끝점 차이(최대 3.9e-7 mm)와, 지도 영역별 보정 표본 오차다. 지도 오차는 허용치(2e-9 G, 5e-10) 안이고, 단일 실행 두 번에서 비행이 3.4–4.3배 빨랐다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep fly --device cpu --run-file physics-validation-20261023\\solenoid\\run.json --particles .../ions.ion --bounds=-150,-50,-50,150,50,50 --nonrelativistic` (기본: 코일 지도) 및 같은 명령 + --exact-coils. 표준출력 data/F12-solenoid-cli-log.txt. 기준해 solenoid\\native-reference.csv. scripts/F12_coil_map.py.",
+    "numbers_checked": [
+      "보정 최대 절대/상대: 안쪽 관 1.356164e-9 G / 2.716370e-10, 입구 4.567788e-12 / 9.930276e-12, 출구 2.468703e-12 / 7.545330e-12(bench/magnetic-cpu.md 표와 일치)",
+      "|지도 − 정확| 끝점 최대 3.921e-7 mm, TOF 최대 2.06e-10 µs",
+      "단일 실행 fly_s: 지도 0.243 s / 정확 0.836 s(그림 제목 값, 재실행), 첫 실행 0.199/0.852 s; 다른 작업과 겹칠 수 있는 단일 실행이며 문서 5회 중앙값은 0.2219/0.9141 s(4.12×)",
+      "flight.log의 SIMION FINAL은 이 이온들과 다른 무작위 발사라 그리지 않음(default-flight.md 경고)"
+    ]
+  },
+  {
+    "id": "F13",
+    "file": "F13.png",
+    "sha256": "917c0a5e5e5deaa288d079cc299c4edbb3311c44670060fb5018b7e1d30ebd8e",
+    "kind": "stored-data",
+    "what_it_shows": "HS1 충돌 모형에서 50 µs 뒤 이온 4,096개의 x 위치와 에너지 분포를 SimRep CPU, SimRep GPU, SIMION으로 겹쳐 그렸다. 세 분포가 겹치고 KS 검정이 어느 쌍도 같은 분포를 기각하지 않는다.",
+    "source": "C:\\Users\\lsu10\\simrep-oracle\\physics-validation-20261023\\gpu-physics\\hs1-cpu.csv, hs1-gpu.csv(RTX 3070 Vulkan native f64, seed 813; docs/physics-magnetic-collision.md 'GPU distribution replay') 및 collision_hs1\\flight.log FINAL 행(SIMION, seed 237). data/F13-*.csv, scripts/F13_hs1.py(scipy 정확 KS로 재계산).",
+    "numbers_checked": [
+      "KS p CPU–GPU: x 0.0988, KE 0.1287(문서 0.0987632, 0.128702)",
+      "KS p CPU–SIMION: x 0.5159, KE 0.3846(default-flight.md 'New versus SIMION' 0.515856/0.384564)",
+      "TOF는 모두 50 µs 고정(SIMION 49.9999999999993)"
+    ]
+  },
+  {
+    "id": "F14",
+    "file": "F14.png",
+    "sha256": "d34799ad1cc091d845914d4601aec09468866b75b9dcc15323e025f22703363c",
+    "kind": "cli-result",
+    "what_it_shows": "SIMION 유전체 예제 sphere_3dp(ε = 10 구)를 CLI로 푼 전위 단면과 축 위 전기장을 SIMION 엄격 해와 겹쳤다. 구 안 전기장이 인가 1 V/mm의 약 0.26배로 줄고, 두 해의 전 격자 최대 차이는 6.8e-4 V다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep gem2pa sphere_3dp.gem sphere_3dp.pa` → 작업 사본의 비갱신 비트 해제(scripts/pa_prep.py refinable) → 유전 셀 PA의 5를 10으로(예제 Lua의 kinside=10, pa_prep.py relabel) → `simrep refine sphere_3dp-eps10.pa --permittivity sphere_3dp-dielectric-eps10.pa --device cpu --tolerance 1e-12`. SIMION: simrep-oracle\\dielectric\\sphere_3dp.simrep-strict.pa(수렴 1e-7). data/F14-sphere3dp-slices.npz, scripts/F14_dielectric_sphere.py.",
+    "numbers_checked": [
+      "refine 22회, 상대 잔차 4.60e-13, setup 273 ms + solve 757 ms",
+      "중심 Ex: SimRep 0.2571839 V/mm, SIMION 0.2571836 V/mm(docs/dielectric.md 0.257183937462 / 0.257183602977)",
+      "전 격자 최대 |차이| 6.804e-4 V(문서 'Strict SIMION's full-grid maximum differences ... 6.80e-4 V for sphere_3dp')",
+      "같은 PA의 진공 해는 1 V/mm 직선(판 전극 x = 0, 100 mm)"
+    ]
+  },
+  {
+    "id": "F15",
+    "file": "F15.png",
+    "sha256": "c2edf08312789ee324cb0daac706c6a77a29e8f44ed3fdd885e7aa5157b8c025",
+    "kind": "cli-result",
+    "what_it_shows": "10 nA 차가운 균일 빔(반경 1 mm, 이온 500개)이 공간전하로 퍼지는 반경 배율을 검출면 위치별로 CLI 결과와 해석해 R'' = C/R로 비교했다. 4.8 mm에서 RMS 반경 배율 1.19314가 해석해 1.19369와 0.05% 안에서 맞는다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); data/F15-beam.ion(황금각 균일 원판, 1 amu, +1 e, 0.5182134834 eV, 이온 1이 축 위 리더) 및 `simrep fly --device cpu --particles F15-beam.ion --charge-mode beam --beam-current-a 1e-8 --bounds=-1,-20,-20,10,20,20 --plane 1,0,0,d --nonrelativistic`(d = 0.4…4.8 mm, 12회). 해석해 상수는 docs/physics-space-charge.md(C = (q/m)·96.48533202185007·2k·I·1e-6/v). scripts/F15_beam_spread.py.",
+    "numbers_checked": [
+      "해석해 R(0.48 µs) = 1.193692751585(문서 값과 13자리 일치)",
+      "x = 4.8 mm: RMS 배율 1.193135, 이온별 배율 중앙값 1.193694",
+      "전 구간 RMS 상대 차이 −3.1e-6 … −4.7e-4",
+      "CLI 빔은 선(line) 커널이라 유한 개수 이산 효과가 남음(문서의 Rings 검증과 구분)"
+    ]
+  },
+  {
+    "id": "F16",
+    "file": "F16.png",
+    "sha256": "9e2a294530765dab703108eb33b578c17e431de38036b1296bb97a843763f2eb",
+    "kind": "cli-result",
+    "what_it_shows": "SIMION 예제 C자 자석(철심 μr 1000, 코일 2000 A)의 벡터 포텐셜을 CLI로 풀어 |B| 지도와 축 위 |B|를 SIMION 엄격 해와 비교했다. 틈 가운데(x = 175 mm) 1216.3 G로 두 해가 같고, 예제 Lua의 암페어 법칙 근사 1234 G와도 가깝다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); 감사 내보내기(simrep-oracle\\magnetic-potential-audit) 사본에 예제 Lua와 같은 변환(pa_prep.py relabel '*:1000' 1:1 → μ, scale 0.8 → J = 2000 A/2500 mm²), Az 사본 refinable + max_voltage 1e6, `simrep refine Az-phys.pa --magnetic-material c_magnet_phys.json --device cpu --tolerance 1e-10`. SIMION: c_magnet_2dp-Az.strict.pa. data/F16-c-magnet.npz, scripts/F16_c_magnet.py.",
+    "numbers_checked": [
+      "refine 67회, 상대 잔차 7.89e-11, setup 21 ms + solve 315 ms",
+      "max |Az SimRep − SIMION strict| = 1.47e-6(SIMION 기본과 strict 차이 0.186)",
+      "B(175, 0) = 1216.2785 G(두 해), Lua 근사 1233.8 G",
+      "라벨 PA를 그대로 쓰면 물리량이 틀려(μ=2, J=±1) SIMION과 달라지므로 Lua 변환을 반드시 적용"
+    ]
+  },
+  {
+    "id": "F17",
+    "file": "F17.png",
+    "sha256": "0043a134aac26d88ce9708ed89c7820047f1ffd60590c5f29e4e058f8f583ded",
+    "kind": "stored-data",
+    "what_it_shows": "외부 B장 지도를 가져와 날린 결과를 정확한 장으로 날린 결과와 비교한 끝점·TOF 오차를 지도 격자 간격별로 그렸다. 간격을 반으로 줄일 때마다 오차가 대체로 4차(2⁴배 안팎)로 줄고, 0.2 mm 지도에서 끝점 오차는 5e-9 mm 이하다.",
+    "source": "bench/bfield-import-20261024.csv(be-bmap-import, 2026-10-25 병합; `cargo test -p simrep-fly --release --test bfield_import -- --nocapture`), bench/bfield-import.md 표. 3D는 Delimited 행(CSV/Opera/COMSOL은 같은 오차), 축대칭은 Axisymmetric 행. 균일장(오차 0)과 contended 시간 열은 그리지 않음. data/F17-bfield-import-20261024.csv, scripts/F17_bfield_import.py.",
+    "numbers_checked": [
+      "원형 코일 3D: 9.902e-7 → 1.043e-7 → 4.944e-9 mm, 차수 3.25/4.40",
+      "솔레노이드 축대칭: 1.450e-7 → 5.512e-9 → 2.890e-10 mm, 차수 4.72/4.25",
+      "섹터 TOF 0.4 mm 단계의 비단조(차수 −1.46)는 문서대로 그대로 보임"
+    ]
+  },
+  {
+    "id": "F18",
+    "file": "F18.png",
+    "sha256": "c3acc49c678fbef02208d209a92a90628277074e6bde867960801f971b27f62c",
+    "kind": "app-capture",
+    "what_it_shows": "STEP 파일(구 두 개, pair.step)을 가져오기 마법사로 연 실제 화면이다. OpenCascade가 솔리드 2개를 정상 B-rep으로 읽어 부품 이름(pair/left, pair/right), 전극 번호, 전압을 정하는 표와 3D 미리보기를 보여 준다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\step\\pair.step(= simrep-cad-fixtures\\pair.step, sha256 44ad527f…). scripts/app/stepwiz.js, crop.py로 뷰포트+마법사 패널을 자름(프로젝트 이름 표시줄 제외).",
+    "numbers_checked": [
+      "부품 2개 모두 '정상 B-rep', 열기~준비 1.24 s",
+      "격자 추천 0.1 mm, 영역 원점 (−1.2, −0.6, −0.6), 크기 2.3×1.1×1.1 mm",
+      "CAD 곡면 기본값 메시화(tessellated), 경계 처리 cut-cell"
+    ]
+  },
+  {
+    "id": "F19",
+    "file": "F19.png",
+    "sha256": "0dd148ca87595fa5658d14bcaa8a0f17b08efcb4caa1c7d450601e4697e9885b",
+    "kind": "cli-result",
+    "what_it_shows": "GEM Lua(for 반복, $() 확장)로 정의된 SIMION 예제 6중극을 SimRep gem2pa로 변환한 전극 지도와, 막대 가장자리를 확대해 SIMION gem2pa 전극점과 겹친 그림이다. 992,640개 격자점 전체에서 전극 판정과 값이 하나도 다르지 않다.",
+    "source": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep gem2pa hexapole.gem hexapole.pa#`(SIMION-2024 examples\\geometry\\hexapole.gem), SIMION 결과 simrep-oracle\\_gem\\examples\\geometry\\hexapole.oracle.pa#. 비교 tools/simion-oracle/compare_pa.py. data/F19-hexapole-masks.npz, scripts/F19_gem_hexapole.py.",
+    "numbers_checked": [
+      "1408×705×1 = 992,640점, h = 0.01 mm",
+      "compare_pa.py: max_difference_v 0.0, electrode_mask_mismatches 0",
+      "전극점 245,367개, gem2pa compute 19.5 ms",
+      "docs/gem-validation.md 'geometry/hexapole.gem | pass | 0'과 일치"
+    ]
+  },
+  {
+    "id": "F20",
+    "file": "F20.png",
+    "sha256": "e4ce8aef204417ea298ee98ce71c7120db7293e9668370f0658000a6f60e765f",
+    "kind": "cli-result",
+    "what_it_shows": "FLY2 입자 정의를 SimRep과 SIMION(create_ionfile)이 각각 만든 초기 조건이다. 결정적 정의(bngrid, 231개)는 모든 열이 같고, 무작위 정의(tof_histogram, 시드 1–8 합계 4만 개)는 TOB와 원판 반경 분포가 KS 검정으로 구별되지 않는다.",
+    "source": "native: target/release/examples/particles(check_fly2.py가 쓰는 생성기, sha256 9698335c…) `particles <SIMION-2024/examples/...fly2> \"\" <seed>`; SIMION: simrep-oracle\\_fly2\\<이름>.oracle.txt(simion.iob2.load_fly2_file(...):create_ionfile, 시드 1–8; docs/fly2-validation.md). data/F20-*.csv, scripts/F20_fly2.py.",
+    "numbers_checked": [
+      "bngrid 231개, 모든 열 최대 |차이| 1.1e-16(출력 자릿수 수준; results.json differences 0)",
+      "tof_histogram 40,000 대 40,000, 평균 TOB 1.99739 / 1.99774 µs(results.json mean_native/mean_simion과 일치)",
+      "KS p: TOB 0.596, r² 0.750"
+    ]
+  },
+  {
+    "id": "F21",
+    "file": "F21.png",
+    "sha256": "91c4f693c23f08b59908cce540b3a2f8d18bd373072f763724cdd43e2c0003a4",
+    "kind": "app-capture",
+    "what_it_shows": "5분 따라하기의 2단계(집속 전압 바꾸기) 실제 화면이다. 아인젤 템플릿을 고르자 1단계가 자동으로 끝나고, 안내 카드가 #2 집속 전압 컨트롤을 주황 고리로 가리킨다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/tour.js: useTour.start() → project.newFromTemplate('einzel')(사용자가 템플릿 카드를 누르는 것과 같은 동작) → 단계 자동 진행. crop.py로 뷰포트 아래쪽과 속성 패널을 자름.",
+    "numbers_checked": [
+      "시작 단계 'template' → 템플릿 비행 뒤 'voltage'로 자동 이동",
+      "카드 표기 '따라하기 · 5단계 중 2', 강조 대상 #2 집속(80.0 V)"
+    ]
+  },
+  {
+    "id": "F22",
+    "file": "F22.png",
+    "sha256": "a53bd5d3e1d1b6105346e7319217fa0fe337a2602993a2d13511e016360522f1",
+    "kind": "app-capture",
+    "what_it_shows": "정확한 표면 스위치를 켠 경우(왼쪽, 정밀 CPU f64)와 끈 경우(오른쪽, 실시간 GPU f32)의 이온 섹션 카드와 비행 결과다. 켜면 이온이 실제 원기둥에서 멈춰 전극 2에 20개가 부딪히고, 끄면 격자점 계단에서 멈춰 결과가 751/249/0으로 달라진다.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; F03과 같은 마법사 결과 배열(quad2). scripts/app/quadfly.js {precision:'precise', exact:true}와 {precision:'live', exact:false}(두 번째 비행에서 GPU 준비 완료), scrollto.js로 카드·결과 섹션을 각각 캡처, crop.py --stack/--row.",
+    "numbers_checked": [
+      "켜짐: +x 750 / 전극 3 230 / 전극 2 20, 배지 '정밀'·'정확한 표면', CPU 32스레드, 계산 10 ms",
+      "꺼짐: +x 751 / 전극 3 249, 평균 TOF 4.124 µs, 배지 '실시간 미리보기'·'격자점', RTX 3070",
+      "CLI 대응값: frontend.md 표 '앱 표면 끔(계단) 751/249/0, 4.124046832'",
+      "꺼짐 쪽 계산 65 ms는 장 업로드 직후 첫 GPU 비행이라 속도 근거로 쓰지 않음"
+    ]
+  }
+]

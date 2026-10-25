@@ -1,0 +1,23 @@
+{
+ "reviewer": "report-source-review (st_01a16eca, GPT-6.1 Sol; not the author)",
+ "round1": {
+  "file": "source-review.json",
+  "verified": 54,
+  "fix": 42,
+  "unverifiable": 1
+ },
+ "round2": {
+  "file": "source-review-round2.json",
+  "verified": 37,
+  "fix": 6,
+  "unverifiable": 0
+ },
+ "round3": {
+  "file": "source-review-round3.json",
+  "verified": 5,
+  "fix": 1,
+  "unverifiable": 0
+ },
+ "final_fix": "table:13 source paragraph: added bench/simion-baseline.md Refine, bench/fly-real.md Physical geometry and the better field route, bench/magnetic-cpu.md Unchanged accuracy gate exactly as round 3 specified (headings confirmed to exist by the lead).",
+ "unverifiable_resolution": "claim:surface-ion-identities: text reduced to the aggregate 750/230/20 -> 751/249 change, which round 2 verified."
+}

@@ -1,0 +1,1069 @@
+[
+  {
+    "item": "eq:1",
+    "location": "3. 전위 계산 / LₕV_i = Σ_a (V_{i-e_a} − 2V_i + V_{i+e_a}) / h_a²,   −LₕV = ρ/ε₀   (1) / 식 (1)의 Lh는",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/cpu-solver.md; crates/simrep-solve/src/mg.rs",
+      "section_or_symbol": "Discrete operator; solve / solve_poisson",
+      "line_range": "docs/cpu-solver.md:15-23,31-45; mg.rs:109-135"
+    },
+    "note": "차분식과 축의 4/h_r² 계수는 일치한다. 다만 rho와 epsilon_0의 단위를 정의하지 않아 mm 좌표의 Poisson 식을 그대로 SI 상수에 적용할 수 있다. rho는 C/mm³, epsilon_0=8.8541878128e-15 F/mm라고 적고, 전하가 있는 구현은 solve가 아닌 solve_poisson이라고 구분하라."
+  },
+  {
+    "item": "eq:2",
+    "location": "3.1 멀티그리드와 수렴 판정 / ‖r‖_∞ ≤ τ_abs + τ_rel ‖b‖_∞   (2) / 식 (2)의 r은",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/cpu-solver.md; crates/simrep-solve/src/mg.rs",
+      "section_or_symbol": "Convergence and reporting; reached",
+      "line_range": "docs/cpu-solver.md:97-108; mg.rs:255-257"
+    },
+    "note": "비영 Dirichlet RHS에서는 일치한다. 원문은 첫 고정 전압을 뺀 RHS의 노름을 scale로 쓰고 RHS가 0이면 단위 전압 스텐실 scale을 쓴다. 식을 ||r|| <= tau_abs + tau_rel s로 쓰고 이 두 scale 경우를 정의하라. tau_abs 단위 V/mm², tau_rel 무차원도 명시하라."
+  },
+  {
+    "item": "eq:3",
+    "location": "3.3 계단형 전극과 cut-cell 경계 / c (V_j − V_i)  →  (c/θ)(V_Γ − V_i)   (3) / 식 (3)은 Gibou",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/cutcell.md; https://physbam.stanford.edu/papers/cam2000-37.pdf; crates/simrep-solve/src/cutcell.rs",
+      "section_or_symbol": "Operator and symmetry invariant; author manuscript p.8 equations (20),(21); CutRow",
+      "line_range": "docs/cutcell.md:39-69; cutcell.rs:14-48; PDF p.8"
+    },
+    "note": "원본 PDF 8쪽을 실제 열어 식 (21)의 선형 외삽과 식 (20)의 비대칭 quadratic 공식을 대조했다. beta=1, c=1/h²인 연결을 c/theta로 바꾸는 특수화와 표면 전위 치환, 자유/자유 연결 보존이 일치한다. 원문과 이 문서의 기호 변경도 가까운 문장에서 구분되어 있다."
+  },
+  {
+    "item": "eq:4",
+    "location": "4. 이온 비행 / dx/dt = v = u/γ,   γ = √(1 + |u|²/c²),   du/dt = (q/m)[a_E E + a_B (v  / 식 (4)의 x는",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "crates/simrep-fly/src/flight.rs; crates/simrep-fly/src/lib.rs; crates/simrep-fly/README.md",
+      "section_or_symbol": "velocity; derivative; ELECTRIC_ACCELERATION, MAGNETIC_FREQUENCY, SPEED_OF_LIGHT",
+      "line_range": "flight.rs:450-480; lib.rs:25-30; README.md:1-7"
+    },
+    "note": "고유속도 식, 부호, a_E=(e/m_u)1e-6 및 a_B=a_E 1e-4는 구현과 일치한다. 그러나 사용 지점에 물리 출처는 없고 코드와 README만 있다. 로런츠 힘/상대론 운동의 물리 원문 절을 추가하고, 이 문서의 단위 변환임을 유지하라. 상수의 실제 정의 경로는 README가 아닌 lib.rs:25-30이다. c가 빛의 속도 299792.458 mm/us, gamma가 무차원임도 정의하라."
+  },
+  {
+    "item": "eq:5",
+    "location": "4.4 정확도 판정 기준 / RMS = √( (1/N) Σ_i |x_i − x_i^ref|² )   (5) / 식 (5)의 xi는",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/PLAN.md; docs/report/manuscript.json; docs/report/figures/scripts/F08_quad_endpoints.py",
+      "section_or_symbol": "1. 목표; document-defined RMS; per-ion norm then root mean square",
+      "line_range": "PLAN.md:5-11; F08_quad_endpoints.py:18-44"
+    },
+    "note": "RMS가 sqrt(mean(sum((x-xref)^2)))이고 단위 mm임을 확인했다. 독립 8배 기준, 동일 이온 N, 도착면 변화 별도 집계라는 저자 규약이 명확하다. F08 1000행으로 같은 식을 독립 재계산했다."
+  },
+  {
+    "item": "eq:6",
+    "location": "5.1 자기장 / B = −n_g ∇p,    B(x) = (μ₀/4π) ∫ I dℓ × r / |r|³   (6) / 식 (6)의 앞식에서",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/physics-magnetic-collision.md; crates/simrep-fly/src/physics/magnetic.rs; /mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html",
+      "section_or_symbol": "Units and magnetic fields; Coil::field_gauss; defining magnetic scalar potential",
+      "line_range": "physics-magnetic-collision.md:110-151; magnetic.rs:247-310; magnetic_potential.html:283-335"
+    },
+    "note": "B=-ng grad(p), Biot-Savart의 오른손 부호, mm/G/A 단위의 mu0/(4pi)=1 G mm/A가 일치한다. 실제 도움말의 scalar potential 및 ng 설명과도 대조했다. 원형 코일을 타원 적분으로 계산하는 구현을 확인했다."
+  },
+  {
+    "item": "eq:7",
+    "location": "5.2 중성 기체 충돌 / n = P/(k_B T),   ν = n σ ⟨|v − v_g|⟩,   P_coll = 1 − exp(−ν Δt)   (7) / 식 (7)의 n은",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/physics-magnetic-collision.md; crates/simrep-fly/src/physics/collision.rs; /mnt/c/Program Files/SIMION-2024/examples/collision_hs1/collision_hs1.lua",
+      "section_or_symbol": "HS1; collision_rate_per_us; collision probability and mean free path",
+      "line_range": "physics-magnetic-collision.md:158-185; collision.rs:156-166; collision_hs1.lua:305-351"
+    },
+    "note": "확률 법칙 자체는 원본 Lua와 일치한다. 그러나 앞에서 v=mm/us, t=us로 정의하고 여기서는 sigma=m²를 쓰므로 단위 변환을 생략하면 nu가 1000배 다르다. P[Pa], T[K], k_B[J/K], n[m^-3]를 정의하고, 속력을 mm/us로 유지하면 nu[us^-1]=1e-3 n sigma <|v-v_g|>라고 쓰거나, 식 (7)만 속력 m/s·시간 s를 쓰는 SI식임을 명시하라."
+  },
+  {
+    "item": "eq:8",
+    "location": "5.3 유전체 / −∇·(ε_r ∇V) = ρ_f/ε₀,    εᵢⱼ = 2/(1/ε_i + 1/ε_j)   (8) / 식 (8)의 epsilon_r은",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/dielectric.md; crates/simrep-solve/src/dielectric.rs; /mnt/c/Users/lsu10/simion_docs_raw/dielectric.html",
+      "section_or_symbol": "Discretization and interfaces; harmonic, from_nodes, from_cells; dielectric theory",
+      "line_range": "docs/dielectric.md:3-15,116-150; dielectric.rs:130-174; dielectric.html:58-88,155-163"
+    },
+    "note": "PDE와 nodal 유전율의 조화평균 식은 맞다. 다만 본문이 이를 모든 유전체 입력의 이산화처럼 설명한다. SIMION 유전율 PA는 셀 값이며 from_cells는 연결을 가로지르는 셀의 면적 산술평균을 쓴다. 뒷식은 nodal 입력에만 적용한다고 한정하고 셀 PA의 처리도 구분하라. rho_f와 epsilon_0의 mm 단위는 식 (1)과 같다고 연결하라."
+  },
+  {
+    "item": "eq:9",
+    "location": "5.4 공간전하 / E_i = k Σ_{j≠i} Q_j r_ij / (|r_ij|² + ε²)^{3/2},   k = 1/(4πε₀)   (9) / 식 (9)의 E_i는",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/physics-space-charge.md; crates/simrep-fly/src/physics/space_charge.rs",
+      "section_or_symbol": "Charges and units; Direct Coulomb; DirectCharge::field",
+      "line_range": "physics-space-charge.md:9-31,75-90; space_charge.rs:72-107"
+    },
+    "note": "배제된 자기쌍 j=i, r_ij 방향, Plummer 분모의 3/2 지수, C 및 mm 단위가 원문과 코드에 일치한다. epsilon=0의 점전하 극한과 물리 모델 입력인 softening을 구분했다."
+  },
+  {
+    "item": "eq:10",
+    "location": "5.5 재료가 있는 자기장 / −∇·(μ_r ∇p) = (4π/n_g)(−∇·M),    B = −n_g μ_r ∇p + 4πM   (10) / 식 (10)의 mu_r은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/magnetostatics.md; crates/simrep-solve/src/magnetostatics.rs; /mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html",
+      "section_or_symbol": "Equations and flight contract; MagneticProblem::scalar; magnetic potential theory",
+      "line_range": "magnetostatics.md:3-23; magnetostatics.rs:179-266; magnetic_potential.html:169-190"
+    },
+    "note": "scalar PDE의 -div(M) 부호, 4pi/ng, B의 영구자화 항이 원문과 일치한다. mu_r=1, M=0인 진공에서 식 (6)으로 돌아가는 것도 맞다. 도움말의 H=-grad(Omega), div(B)=0에서 이 문서의 저장 PA/단위로 바꾼 설명을 확인했다."
+  },
+  {
+    "item": "eq:11",
+    "location": "5.5 재료가 있는 자기장 / −∇·(μ_r⁻¹ ∇A_z) = (4π/n_g) J_z,    B = n_g ∇ × A   (11) / 식 (11)의 J_z는",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/magnetostatics.md; crates/simrep-solve/src/magnetostatics.rs; /mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html",
+      "section_or_symbol": "Equations and flight contract; MagneticProblem::currents; planar/Cartesian vector potential",
+      "line_range": "magnetostatics.md:25-55; magnetostatics.rs:269-326; magnetic_potential.html:119-168"
+    },
+    "note": "평면 Az 식과 ng curl(A)는 일치한다. 그러나 3D는 세 성분을 각각 푼다는 문장에는 공간적으로 일정한 mu_r 조건이 필요하다(원문 35-37행). Az의 저장 단위도 B=ng curl(A)에 맞춰 G mm/ng라고 정의하라. 축대칭 psi의 발산은 평면 발산이며 원통 scalar Laplacian과 다르다고 덧붙이면 적용 범위가 정확하다."
+  },
+  {
+    "item": "table:1",
+    "location": "1. 개요 / 항목 · 내용 / 표 1의 환경 항목은",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/PLAN.md; bench/simion-baseline.md",
+      "section_or_symbol": "2. 환경과 제약; benchmark preamble",
+      "line_range": "PLAN.md:17-31; simion-baseline.md:3-7"
+    },
+    "note": "CPU 16C/32T, RTX 3070 8 GB와 FP64 1/64, SIMION 경로, Windows native/WSL2 구분은 일치한다. 그러나 인용한 두 원문은 운영체제를 Windows 11 및 Ubuntu라고 특정하지 않는다. 이 두 세부값은 별도 환경 기록을 인용하거나 Windows + WSL2 Linux로 낮춰 적어야 한다."
+  },
+  {
+    "item": "table:2",
+    "location": "2. 프로그램 구성 / 크레이트 · 역할 / 표 2의 역할 설명은",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "crates/simrep-{core,solve,fly,io,gem,lua,geom,mesh,cad,cli,py}/Cargo.toml",
+      "section_or_symbol": "각 package.description; 실제 11개 파일 모두 열어 비교",
+      "line_range": "각 파일:1-6"
+    },
+    "note": "11개 크레이트 이름과 기본 역할은 맞다. 하지만 description을 옮겼다는 설명과 달리 solve의 유전체/자기정역학, fly의 자기장/충돌/공간전하, cad의 STEP/IGES 등은 해당 description에 없다. 옮긴 것이 아니라 구현 문서에서 확장 요약했다고 쓰고 docs/dielectric.md, docs/magnetostatics.md, docs/physics-magnetic-collision.md, docs/physics-space-charge.md, docs/step-import.md의 해당 절을 행별로 추가하라."
+  },
+  {
+    "item": "table:3",
+    "location": "3.2 실제 SIMION 배열에서의 비교 / 계산 · 준비(ms) · 풀이(ms, 전송 포함) · SIMION 대비 / 표 3의 SimRep 행은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/refine-real.md; bench/simion-baseline.md",
+      "section_or_symbol": "End-to-end performance; Refine",
+      "line_range": "refine-real.md:161-185; simion-baseline.md:20-21"
+    },
+    "note": "6개 준비/풀이 숫자와 SIMION 기준을 전부 비교했다. 2376.460/5001.813 ms, 828.705/736.262 ms 및 14.23 s를 올바르게 반올림했다. 직접 계산한 CPU 2.84497배, GPU 19.32736배, GPU 준비 포함 9.09284배가 표의 2.8/19.3/9.1과 일치한다."
+  },
+  {
+    "item": "table:4",
+    "location": "3.3 계단형 전극과 cut-cell 경계 / 장치·격자 · cut-cell 계산(ms) · 계단형 계산(ms) · cut-cell 최대 오차(V) · 계단형 최대 오차(V / 표 4의 값은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/cutcell.md",
+      "section_or_symbol": "Measured acceptance (2026-10-23)",
+      "line_range": "135-151"
+    },
+    "note": "CPU/GPU 128³·256³ 네 행의 시간과 두 최대 전위 오차를 모두 확인했다. 238.368/219.064, 2228.011/2000.849, 89.484/64.665, 285.495/218.014 ms 및 오차의 반올림이 맞다. 인접 문단의 시간 증가율은 별도 claim:cutcell-overhead에서 수정 판정했다."
+  },
+  {
+    "item": "table:5",
+    "location": "4.5 einzel 렌즈 / 방법 · 도착 위치 RMS (mm) · 최대 (mm) · 계산 시간, 이온 1만 개 (s) / 표 5의 정확도는",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/fly-real.md; bench/default-flight.md; bench/fly-gpu.md; bench/simion-baseline.md",
+      "section_or_symbol": "Boundary-aware correction results; Main integration; Native precision study; Fly",
+      "line_range": "fly-real.md:302-317; default-flight.md:15-34; fly-gpu.md:964-970; simion-baseline.md:34"
+    },
+    "note": "모든 표 값은 실제 원문 숫자의 올바른 반올림이다. 그러나 GPU f64 행(최대 1.324228/RMS 0.225702)은 본문이 이름 댄 정확도 출처에 없고 bench/fly-gpu.md의 Native precision study에 있다. 그 파일과 절을 표 바로 옆 출처 문장에 추가하라. CPU 현재 기본값과 GPU/strict 비교의 보존 설정이 서로 다른 측정임도 구분하라."
+  },
+  {
+    "item": "table:6",
+    "location": "4.6 3D 4중극 / 경로 · 도착 위치 RMS (mm) · 출구가 바뀐 이온 · 계산 시간 (s) / 표 6의 값은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/fly-real.md; docs/geometry-pipeline.md",
+      "section_or_symbol": "Physical geometry and the better field route; Compute time at achieved precision; V3 compute overhead and verification",
+      "line_range": "fly-real.md:487-531; geometry-pipeline.md:311-320,574-595"
+    },
+    "note": "세 RMS 및 세 계산 시간은 올바르게 옮겼다. SIMION 2.382644/9.28, 같은 계단 PA CPU 2.382840/0.065829, v3 사용자 경로 0.00343534/0.130802이다. 같은 장에서 충돌만 끈 0.097657 s와 원시 계단형 PA의 0.065829 s는 별도 비교이므로 인접 1.34배 문장은 claim:surface-overhead에서 수정했다."
+  },
+  {
+    "item": "table:7",
+    "location": "4.8 앱의 실시간 재비행 / 템플릿, 이온 수 · 개선 전 (회/s) · 현재 (회/s) · 왕복 시간 (ms) / 표 7은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/dev/frontend.md",
+      "section_or_symbol": "제출/수거 파이프라인과 작은 비행 패킷",
+      "line_range": "425-447"
+    },
+    "note": "4행의 개선 전/후 갱신률과 왕복 시간 12값이 원문 표와 정확히 같다. 5초 끌기 3회 중앙값, release 앱, RTX 3070, 동시 CPU 부하 및 GPU 커널 개선 이전 측정이라는 본문 한정도 원문과 일치한다."
+  },
+  {
+    "item": "table:8",
+    "location": "5.1 자기장 / 예제 · 이온 수 · SIMION (s) · SimRep CPU (s) · 배수 / 표 8은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/magnetic-cpu.md",
+      "section_or_symbol": "Actual matched-population compute; Unchanged accuracy gate",
+      "line_range": "7-69"
+    },
+    "note": "7행의 이온 수, 두 시간, 배수를 모두 비교했다. 원래의 9자리 CPU 시간으로 2.11357/1.40321/7.32976/9.26653/2.71028/48.68589/21.49727을 재계산하여 표의 반올림을 확인했다. SIMION 3회/CPU 5회 중앙값과 16 Rayon workers도 맞다."
+  },
+  {
+    "item": "table:9",
+    "location": "5.3 유전체 / 예제 · 자동 선택 장치 · SimRep (s) · SIMION 엄격 설정 (s) · 배수 / 표 9는",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/dielectric.md",
+      "section_or_symbol": "Automatic selection at the default residual tolerance",
+      "line_range": "261-299"
+    },
+    "note": "CPU plate .053610+.003050+.008300=.064960, CPU r-z sphere .161406+.013060+.009803=.184269, GPU 3D .286475+.174082+.640721=1.101278 s이다. 세 합, 자동 장치, SIMION .13/.43/25.78, 2.0/2.3/23.4배가 정확하다. 전체 실행 중앙값이 아니라 단계 중앙값+한 번 준비의 합이라는 원문 조건은 본문에 보강하면 좋다."
+  },
+  {
+    "item": "table:10",
+    "location": "5.6 외부 프로그램의 자기장 지도 / 자기장 · 격자 간격 (mm) · 도착 위치 차이 (mm) · 비행시간 차이 (μs) / 표 10은",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/bfield-import.md; bench/bfield-import-20261024.csv",
+      "section_or_symbol": "Cartesian full-flight errors; Loop/Solenoid Delimited rows",
+      "line_range": "bfield-import.md:21-43; CSV:57 measurement rows"
+    },
+    "note": "원형 코일/솔레노이드의 h=0.8,0.4,0.2 mm 여섯 행, endpoint 및 TOF 12값이 모두 올바르게 반올림되었다. figure data CSV 57행이 원본 CSV와 정확히 같음도 독립 확인했다."
+  },
+  {
+    "item": "table:11",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 형식 · 내용 · SIMION 예제 비교 결과 / 표 11의 GEM 결과는",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/gem-validation.md; docs/fly2-validation.md; bench/refine-real.md; docs/dev/frontend.md",
+      "section_or_symbol": "GEM summary; FLY2 result table; Validation and Windows process hygiene; SIMION 작업대",
+      "line_range": "gem-validation.md:3-7; fly2-validation.md:3-20; refine-real.md:232-238; frontend.md:196-200"
+    },
+    "note": "GEM 261=254+7, FLY2 154=97+57, mismatch 0, IOB 148 및 SIMION의 PA0 읽기/조정 사실은 모두 확인했다. 다만 source 및 인접 문장은 GEM/FLY2/PA의 파일만 이름 대고 절·표 위치는 주지 않는다. 위의 정확한 summary/result table/Validation 절을 사용 지점 문장에 넣고 ION 행도 read_particles 등의 실제 문서 절로 연결하라."
+  },
+  {
+    "item": "table:12",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 형상, 격자 · 정확한 표면 RMS/최대 (V) · 삼각형 표면 RMS/최대 (V) / 표 12는",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/step-import.md",
+      "section_or_symbol": "Measured accuracy and timing",
+      "line_range": "197-223"
+    },
+    "note": "sphere 33³, cylinder 65², ring 25³의 exact/tessellated RMS 및 maximum 12개 오차값과 격자가 모두 맞다. ring은 exact RMS가 낫지만 maximum은 더 크다는 예외도 표가 그대로 보존한다."
+  },
+  {
+    "item": "table:13",
+    "location": "8. 종합 결과 / 분야 · 대표 비교 · 정확도 · 계산 시간 배수 / 표 13은",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/refine-real.md; bench/default-flight.md; docs/cutcell.md; docs/geometry-pipeline.md; bench/magnetic-cpu.md; docs/dielectric.md; bench/space-charge.md; docs/magnetostatics.md",
+      "section_or_symbol": "종합 표의 실제 원본은 3-5장 각 measured section",
+      "line_range": "refine-real.md:119-185; default-flight.md:301-337,382-413; cutcell.md:192-220; geometry-pipeline.md:311-320,574-595; magnetic-cpu.md:31-39; dielectric.md:273-299,621-662; space-charge.md:538-576; magnetostatics.md:286-310,449-461"
+    },
+    "note": "표의 대표 수치와 반올림은 앞 원본들과 대조하여 일치했다. 그러나 3~5장과 같은 출처라는 먼 묶음 참조는 사용 지점 출처 규칙을 충족하지 않는다. 각 행에 원본 파일·절을 직접 적어라. einzel 46배는 현재 four-cell 10k 기본값이 아닌 보존된 one-cell 1k 시간이라는 표지도 필요하다."
+  },
+  {
+    "item": "table:14",
+    "location": "9. 한계와 남은 일 / 항목 · 현재 상태 / 표 14는",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/PLAN.md; docs/magnetostatics.md; bench/fly-gpu.md; docs/mesh-io.md; docs/bfield-import.md; docs/geometry-pipeline.md",
+      "section_or_symbol": "3단계 보류; Equations and flight contract; hardware counters; export scope; accepted data; surface flight",
+      "line_range": "PLAN.md:13,152-155; magnetostatics.md:3-61; fly-gpu.md:100-123,550-574; mesh-io.md:101-196; bfield-import.md:58-69; geometry-pipeline.md:142-192"
+    },
+    "note": "GPU/정확 표면/보류 octree/B-H/가변 mu/작업대 Lua/STEP export/규칙 격자의 한계는 원본과 맞다. 하지만 Vulkan 경로에서 Nsight를 쓸 수 없음은 틀리다. 원문은 Nsight Compute가 CUDA용이며 Vulkan용 Nsight Graphics/Systems는 여기서 설치·측정하지 않았다고 한다. 그 문구로 바꾸고, 현재 출처 목록에 없는 bfield-import와 geometry-pipeline의 정확한 절도 행별로 연결하라."
+  },
+  {
+    "item": "fig:1",
+    "location": "1.1 비교의 판정 규칙 / 그림 1. SimRep 앱에서 einzel 렌즈 템플릿을 날린 화면(한국어, 밝은 테마). 출처: figures/F01.png / 그림 1은 완성된 앱의 실제 화면이다. einzel 렌즈 템플릿",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F01.png; docs/report/figure-ledger.json; docs/report/figures/scripts/app/einzel.js",
+      "section_or_symbol": "F01 PNG; F01 capture conditions; newFromTemplate / count override",
+      "line_range": "einzel.js:2-26; figure-ledger.json:F01; PNG binary"
+    },
+    "note": "PNG를 직접 열어 1000개, 201x41, E2=80 V, 등전위선 5 V, refine 40회/6.3e-11 및 Vulkan 장치 표기를 확인했다. 앱 스크립트의 템플릿/1000개 인자와 설명이 맞고 원본 PNG SHA-256도 장부와 같다."
+  },
+  {
+    "item": "fig:2",
+    "location": "3.1 멀티그리드와 수렴 판정 / 그림 2. 멀티그리드 V-사이클별 상대 잔차. 현재 빌드의 simrep refine을 실행해 기록한 잔차 이력을 그렸다. 실행 / 멀티그리드가 실제로 몇 번의 사이클로 수렴하는지는 그림 2에 나",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F05.png; docs/report/figures/data/F05-residual-history.csv; docs/report/figures/scripts/F05_residual.py; bench/refine-real.md",
+      "section_or_symbol": "residual-history rows; independent max-cycles runs; CPU PA_ result",
+      "line_range": "CSV:1-25; F05_residual.py:1-58; refine-real.md:180-185"
+    },
+    "note": "모든 CSV 점과 로그 y축, 1e-12 허용선을 PNG에서 비교했다. quadrupole 13회 3.555470585e-13, sc3d 11회 1.102307579e-13이며 165649/17373979점 비는 약 104.88이다. 각 점이 별도 실행인 방식도 캡션/명령과 일치한다."
+  },
+  {
+    "item": "fig:3",
+    "location": "3.3 계단형 전극과 cut-cell 경계 / 그림 3. 4중극 4분의 1 단면의 전위: 계단형 경계(왼쪽)와 cut-cell 경계(오른쪽). 현재 빌드의 simrep으로  / 그림 3은 4중극의 4분의 1 단면을 두 경계 처리로 푼 실제 ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F04.png; docs/report/figures/data/F04-slice.json; docs/report/figures/scripts/F04_quad_section.py; docs/report/figures/scripts/cli_runs.sh",
+      "section_or_symbol": "x=30 mm slice; cut_hits_yz_mm; potential_stair / potential_cut; refine commands",
+      "line_range": "F04_quad_section.py:1-126; cli_runs.sh:23-39; F04-slice.json:1 (compact arrays)"
+    },
+    "note": "PNG의 색 축 ±2.5 V, y/z 단면, 회색 occupied cells, 주황 표면 교점 및 r=5.75 mm 원을 실제로 확인했다. JSON에서 x=30/h=.5, 전극점 436개, 교점 96개를 재계산했고 원 반지름 잔차는 5e-10 mm 이하이다. 기저 전위를 2.5*pa1/1e4-2.5*pa2/1e4로 합치는 스크립트와 두 refine 명령도 맞다."
+  },
+  {
+    "item": "fig:4",
+    "location": "3.3 계단형 전극과 cut-cell 경계 / 그림 4. cut-cell 경계의 격자 수렴. 가로축 격자 간격, 세로축 최대 전위 오차(로그-로그). 값은 docs/cutc / 그림 4는 격자를 촘촘하게 할 때 오차가 줄어드는 속도다. 가로",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F06.png; docs/report/figures/data/F06-cutcell-convergence.csv; docs/report/figures/scripts/F06_cutcell_order.py; docs/cutcell.md",
+      "section_or_symbol": "Grid convergence; two-panel axes and caption",
+      "line_range": "cutcell.md:135-173; CSV:1-12; F06_cutcell_order.py:20-50"
+    },
+    "note": "원자료 9개 cut-cell 점/2개 staircase 점과 전위 차수 2.21/1.92/1.99, 전기장 차수 1.36/1.02/1.00은 맞다. 그러나 본문과 캡션은 세로축을 최대 전위 오차라고만 정의한다. 실제 오른쪽 패널은 표면 두 칸 안의 최대 전기장 성분 오차(V/단위 길이)이다. 왼쪽/오른쪽을 나눠 설명하고 무차원 길이 좌표임을 밝혀라."
+  },
+  {
+    "item": "fig:5",
+    "location": "4.5 einzel 렌즈 / 그림 5. einzel 렌즈 템플릿을 SimRep 앱에서 날린 화면: 3D 궤적과 비행시간(TOF) 히스토그램. 출처: fig / einzel 렌즈는 세 원통 전극(0 V, 110 V, 0 V)",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F07.png; docs/report/figures/scripts/app/einzel.js; app/src/scene/templates.ts; app/src-tauri/src/templates.rs; bench/fly-real.md",
+      "section_or_symbol": "app einzel template vs original SIMION benchmark",
+      "line_range": "einzel.js:10-26; templates.ts:30-39; templates.rs:50-61; fly-real.md:29-38"
+    },
+    "note": "같은 문제라는 앞 문장은 틀리다. F07은 앱 템플릿 201x41, 간격 .5 mm, 0/80/0 V, 100 eV이며 표 5의 SIMION 예제는 91x20, 1 mm, 0/110/0 V, 200 eV다. 별도의 앱 예시라고 구분하라. TOF 정점 8.13605 us, 10000개, FWHM .01503 us, 분해능 271은 PNG와 맞는다. 정면 단면 화면이므로 캡션의 3D 궤적은 전위 단면과 궤적으로 바꾸는 것이 정확하다."
+  },
+  {
+    "item": "fig:6",
+    "location": "4.6 3D 4중극 / 그림 6. 3D 4중극에서 이온별 도착 위치 오차의 누적 분포(실제 형상 8배 격자 기준). SIMION T.Qual 209, / 4중극은 원통 전극 네 개가 만드는 3D 문제다. SIMION ",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F08.png; docs/report/figures/data/F08-{physical-8-global,simion-tq209,simrep-cuts,simrep-nocuts}.csv; docs/report/figures/scripts/F08_quad_endpoints.py",
+      "section_or_symbol": "1000 paired ions; endpoint CDF and maximum",
+      "line_range": "F08_quad_endpoints.py:18-57; each CSV:1-1001"
+    },
+    "note": "네 CSV를 실제 열어 이온 번호를 맞추고 CDF/RMS/최대를 독립 재계산했다. RMS는 cuts .003435341, no-cuts .914285361, SIMION 2.382643598 mm로 그림과 맞다. 하지만 모든 이온이 .02 mm 이하라는 본문은 틀리며 1개가 .0201896089 mm이다. 최대 약 .0202 mm 또는 .021 mm 미만이라고 고쳐라. 오차가 사라진다도 오차가 크게 줄어든다로 바꿔야 한다."
+  },
+  {
+    "item": "fig:7",
+    "location": "4.7 GPU 비행 / 그림 7. GPU 비행 커널의 다항식 전개 전후 계산 시간(RTX 3070, Vulkan, 세 번 측정의 중앙값, 계산 패스  / GPU 커널에서는 전기장 재구성의 다항식 계산이 대부분의 시간을",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F10.png; docs/report/figures/data/F10-gpu-kernel.csv; docs/report/figures/scripts/F10_gpu_kernel.py; bench/fly-gpu.md",
+      "section_or_symbol": "Retained before/after controls; f32/f64 bar panels",
+      "line_range": "fly-gpu.md:7-52; CSV:1-9; F10_gpu_kernel.py:13-40"
+    },
+    "note": "8쌍 16개 시간과 막대 라벨을 대조했다. 99.749952 -> 54.886016 ms 등 모든 원값과 PNG의 유효숫자 반올림이 맞다. 3회 중앙값/패스 timestamp, 결과 bitwise 동일이라는 본문도 원문과 일치한다."
+  },
+  {
+    "item": "fig:8",
+    "location": "4.8 앱의 실시간 재비행 / 그림 8. 4중극 템플릿에서 전극 전압 슬라이더를 움직이며 GPU로 실시간 재비행하는 앱 화면. 출처: figures/F09. / 앱에서는 전압 슬라이더를 끄는 동안 이온을 계속 다시 날려 결과",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F09.png; docs/report/figure-ledger.json; docs/report/figures/scripts/app/quad.js; docs/report/figures/scripts/cdp.mjs",
+      "section_or_symbol": "F09; quadrupole template and dragshot capture",
+      "line_range": "quad.js:7-30; figure-ledger.json:F09; PNG binary"
+    },
+    "note": "PNG를 열어 #1=4.45 V, #2=-2.50 V, #3=0 V, 슬라이더 ±10 V 및 단면과 궤적이 보이는 것을 확인했다. quad.js의 10000개 템플릿 준비와 장부의 실제 dragshot 절차가 설명을 뒷받침한다. 정지 PNG 자체를 갱신률 측정 근거로 쓰지는 않았다."
+  },
+  {
+    "item": "fig:9",
+    "location": "5.1 자기장 / 그림 9. 솔레노이드 코일 지도의 검증: 이온별 도착 위치 차이(왼쪽)와 영역별 보정 오차(오른쪽). 현재 빌드에서 실행한 검 / 코일이 100개인 솔레노이드에서는 이온이 한 스텝을 갈 때마다 ",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F12.png; docs/report/figures/data/F12-solenoid-cli-log.txt; docs/report/figures/data/F12-solenoid-{map,exact,native-reference}.csv; docs/report/figures/scripts/F12_coil_map.py",
+      "section_or_symbol": "map/exact CLI log; 512-point calibration; paired endpoints",
+      "line_range": "F12_coil_map.py:20-65; CLI log:1-11; CSV:1-101"
+    },
+    "note": "현재 그림 제목과 원로그의 시간은 지도 .243018 s / 정확 .835539 s이다. 본문의 .199/.852 s는 장부가 첫 실행으로 따로 보존한 값으로 현재 그림과 다르다. 본문을 .243/.836 s(단일 재실행)로 고치거나 첫 실행이라는 표지를 붙여 구분하라. 최대 끝점 차이 3.921395e-7 mm 및 세 영역 절대/상대 오차는 직접 재계산/대조했고 모두 허용선 아래다."
+  },
+  {
+    "item": "fig:10",
+    "location": "5.1 자기장 / 그림 10. 자기 섹터 예제의 이온 궤적(SimRep CLI 실행 결과). 실행 명령은 figure-ledger.json의 F / 표 8은 bench/magnetic-cpu.md의 Actual ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F11.png; docs/report/figures/data/F11-sector2dp-{samples,simrep-end,simion-final}.csv; docs/report/figures/scripts/F11_sector.py; docs/report/figures/scripts/cli_runs.sh",
+      "section_or_symbol": "15 ions; samples every .2 us; end states",
+      "line_range": "F11_sector.py:19-59; cli_runs.sh:68-79; endpoint CSV:1-16"
+    },
+    "note": "PNG에서 y-z 궤적, 세 끝점 집단 및 두 차이 계열을 확인했다. 15개 끝점의 최대 위치 차이 .0091494482 mm와 TOF .0002904582 us를 재계산하여 본문의 .01 mm/.0003 us 상한을 확인했다. 93회 시간 제한 실행으로 궤적 표본을 만든 명령도 일치한다."
+  },
+  {
+    "item": "fig:11",
+    "location": "5.2 중성 기체 충돌 / 그림 11. HS1 충돌 모델에서 이온 4,096개의 50 μs 뒤 위치·에너지 누적 분포(SIMION, SimRep CPU, / 무작위 모델은 이온 하나하나가 아니라 분포로 비교했다. SIMI",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F13.png; docs/report/figures/data/F13-hs1-{cpu,gpu,simion}.csv; docs/report/figures/scripts/F13_hs1.py; docs/physics-magnetic-collision.md",
+      "section_or_symbol": "GPU distribution replay; Statistical results; exact KS tests",
+      "line_range": "F13_hs1.py:18-45; physics-magnetic-collision.md:82-108,339-364; each CSV:1-4097"
+    },
+    "note": "세 표본 4096개씩을 실제 열어 정확 KS를 독립 계산했다. CPU-GPU x/KE p=.09876318/.12870221, CPU-SIMION .51585556/.38456414이며 PNG의 .099/.129/.516/.385와 일치한다. 50 us, 두 CDF 축과 본문의 기각 없음도 맞다."
+  },
+  {
+    "item": "fig:12",
+    "location": "5.3 유전체 / 그림 12. 유전체 구 예제의 전위 단면(SimRep)과 축 위 전기장(SimRep과 SIMION 엄격 설정). 출처: fig / 표 9는 docs/dielectric.md의 Automatic ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F14.png; docs/report/figures/data/F14-sphere3dp-slices.npz; docs/report/figures/scripts/F14_dielectric_sphere.py; docs/report/figures/scripts/cli_runs.sh; docs/dielectric.md",
+      "section_or_symbol": "sphere_3dp epsilon=10; x-axis central differences; strict oracle",
+      "line_range": "F14_dielectric_sphere.py:20-80; cli_runs.sh:50-56; dielectric.md:202-220; NPZ binary"
+    },
+    "note": "NPZ 두 101x201 단면과 full-grid max 필드를 열어 비교했다. 중심 Ex=.257183937462/.257183602977 V/mm, 최대 전위 차이 .000680409792 V로 PNG·원문과 맞는다. 100 V/100 mm, epsilon 5->10 변환, 1e-12 CPU solve 및 SIMION strict 조건도 스크립트로 확인했다."
+  },
+  {
+    "item": "fig:13",
+    "location": "5.4 공간전하 / 그림 13. 균일한 원통 빔의 공간전하 퍼짐: SimRep beam 모드 결과와 해석해. 출처: figures/F15.png, / SIMION 예제의 이온 103개로 비교했을 때 SimRep의 ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F15.png; docs/report/figures/data/F15-beam.ion; docs/report/figures/data/F15-beam-planes.csv; docs/report/figures/scripts/F15_beam_spread.py; docs/physics-space-charge.md",
+      "section_or_symbol": "500-ion line beam; 12 detector planes; uniform-cylinder envelope",
+      "line_range": "F15_beam_spread.py:1-71; physics-space-charge.md:181-233; ION:1-500; CSV:1-6001"
+    },
+    "note": "입력 500개, 1 amu/+1 e/.5182134834 eV 및 12개 검출면 출력을 열었다. C/R 방정식을 별도로 적분해 R(.48 us)=1.19369275158566 mm, CLI 최종 RMS 반경 비 1.19313496239, 중앙값 1.19369389352를 확인했다. 두 패널과 해석해/유한 표본 비교 설명이 맞다."
+  },
+  {
+    "item": "fig:14",
+    "location": "5.5 재료가 있는 자기장 / 그림 14. C자 자석 예제(c_magnet_2dp)의 자기장 크기 분포(SimRep 자기정역학 계산 결과). 출처: figu / SIMION 자기 포텐셜 예제 20개, 계산 25건으로 비교했다",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F16.png; docs/report/figures/data/F16-c-magnet.npz; docs/report/figures/scripts/F16_c_magnet.py; docs/report/figures/scripts/cli_runs.sh; docs/magnetostatics.md",
+      "section_or_symbol": "physical mu/J relabel; planar Az curl; c_magnet_2dp",
+      "line_range": "F16_c_magnet.py:20-78; cli_runs.sh:58-66; magnetostatics.md:217-224; NPZ binary"
+    },
+    "note": "두 Az 201x251 배열과 mu/J 라벨을 열어 차이와 curl을 재계산했다. max |Az diff|=1.469918e-6, 틈 B=1216.27852207/1216.27852208 G로 PNG의 1216.3/1216.3과 맞다. mu=1000, I/area=.8 A/mm² 및 gap=20 mm 변환도 명령과 원문에 일치한다."
+  },
+  {
+    "item": "fig:15",
+    "location": "5.6 외부 프로그램의 자기장 지도 / 그림 15. 외부 자기장 지도의 격자 간격에 따른 도착 위치 차이(정확한 자기장 대비). bench/bfield-import- / 표 10은 bench/bfield-import.md의 Carte",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F17.png; docs/report/figures/data/F17-bfield-import-20261024.csv; docs/report/figures/scripts/F17_bfield_import.py; bench/bfield-import.md",
+      "section_or_symbol": "Cartesian and axisymmetric error plots",
+      "line_range": "F17_bfield_import.py:17-51; bfield-import.md:21-60; CSV:1-58"
+    },
+    "note": "57행 CSV가 원본과 정확히 같은 것을 확인했고 실제 그린 5계열 x3개 격자의 endpoint/TOF를 모두 대조했다. 하지만 본문/캡션은 세로축을 도착 위치 차이로만 설명한다. 왼쪽 endpoint(mm), 오른쪽 TOF(us), 실선 3D/빈 표식 점선 축대칭을 구분하라. 섹터 TOF의 .4 mm 단계 비단조도 있으므로 모든 곡선이 일정 4차로 줄어든다는 해석은 피해야 한다."
+  },
+  {
+    "item": "fig:16",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 그림 16. Lua 반복문을 쓰는 GEM 파일(hexapole.gem)을 simrep gem2pa로 변환한 전극 단면. 출처: / 표 11의 GEM 결과는 docs/gem-validation.m",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F19.png; docs/report/figures/data/F19-hexapole-masks.npz; docs/report/figures/scripts/F19_gem_hexapole.py; docs/gem-validation.md",
+      "section_or_symbol": "hexapole electrode arrays; occupied-node zoom",
+      "line_range": "F19_gem_hexapole.py:20-75; gem-validation.md:geometry/hexapole.gem row; NPZ binary"
+    },
+    "note": "두 전극 라벨 배열 전체를 열어 705x1408=992640점, h=.01 mm, 금속점 245367개, mismatch=0을 독립 확인했다. 확대에서 검은 SIMION 점과 컬러 SimRep 셀의 대응도 PNG에서 직접 확인했고 gem2pa 명령과 원본 검증 표가 일치한다."
+  },
+  {
+    "item": "fig:17",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 그림 17. FLY2 입자 출발 위치: SIMION이 만든 목록과 SimRep이 만든 목록. 출처: figures/F20.pn / FLY2는 입자 목록 자체를 비교했다. 그림 17의 위쪽은 출발",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F20.png; docs/report/figures/data/F20-{bngrid,tofhist}-{simrep,simion}.csv; docs/report/figures/scripts/F20_fly2.py",
+      "section_or_symbol": "bngrid vs tof_histogram; deterministic rows and two observables",
+      "line_range": "F20_fly2.py:1-67; bngrid CSV:1-232; tofhist CSV:1-40001"
+    },
+    "note": "231개 결정적 입자의 모든 열 최대 차이 1.110223e-16, 무작위 양쪽 40000개 및 KS p=.59632275/.74997829를 독립 재계산했다. 숫자와 그림은 맞다. 다만 아래쪽은 무작위 정의 두 개가 아니라 같은 tof_histogram.fly2 한 정의에서 뽑은 출발 시각과 반경 제곱, 두 관측량이다. 그 문구만 고쳐라."
+  },
+  {
+    "item": "fig:18",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 그림 18. 앱의 가져오기 마법사에서 STEP 파일(pair.step)을 여는 화면. 출처: figures/F18.png, 캡 / 표 12는 docs/step-import.md의 Measured",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F18.png; docs/report/figures/scripts/app/stepwiz.js; docs/report/figure-ledger.json; docs/dev/frontend.md",
+      "section_or_symbol": "pair.step import; two valid B-rep solids",
+      "line_range": "stepwiz.js:10-20; frontend.md:170-194; figure-ledger.json:F18; PNG binary"
+    },
+    "note": "PNG에 pair.step, 솔리드 2개, pair/left와 pair/right의 정상 B-rep, 1=100 V/2=0 V, 단위 선택이 실제로 표시된다. 입력과 부품 전압을 정하는 스크립트가 이를 뒷받침하며 캡션/앞 문단과 일치한다."
+  },
+  {
+    "item": "fig:19",
+    "location": "7. 데스크톱 앱 / 그림 19. 앱의 처리 흐름: 가져오기 → 전위 풀기 → 비행 → 결과를 연속으로 캡처했다. 출처: figures/F03.pn / 앱은 Tauri 2와 React로 만들었고, 3D 화면은 Web",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F03.png; docs/report/figure-ledger.json; docs/report/figures/scripts/app/{wiz1,wizrun,quadfly}.js; docs/dev/frontend.md",
+      "section_or_symbol": "four workflow panels; build vs refine timings; exact-surface counts",
+      "line_range": "wiz1.js:12-21; wizrun.js:6-18; quadfly.js:12-23; frontend.md:326-340; PNG binary"
+    },
+    "note": "네 패널, 2.5/-2.5/0 V, 1000개, 750/230/20 및 평균 TOF 4.1145 us는 실제 이미지와 원문에 맞다. 그러나 본문이 전위를 풀어(135 ms)라고 한 시간은 두 번째 패널의 PA#/cuts 파일 만들기 시간이다. 전위 풀이와 구분해 격자/보조 파일 만들기 135 ms로 고쳐라. 장부는 refine을 별도로 568 ms라고 기록한다."
+  },
+  {
+    "item": "fig:20",
+    "location": "7. 데스크톱 앱 / 그림 20. 앱의 5단계 따라하기 가운데 한 단계(한국어 화면). 출처: figures/F21.png. / 쉽게 쓰도록 다음을 넣었다. 처음 쓰는 사람을 위한 5단계 따라",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F21.png; docs/report/figures/scripts/app/tour.js; docs/dev/frontend.md",
+      "section_or_symbol": "5-step tour; step 2 voltage control",
+      "line_range": "tour.js:12-22; frontend.md:475-489; PNG binary"
+    },
+    "note": "PNG에 따라하기 5단계 중 2와 #2 집속 전압 80.0 V 강조가 보이고, 실제 템플릿 비행 뒤 template->voltage로 진행하는 스크립트 및 공식 앱 문서의 5단계 표와 일치한다."
+  },
+  {
+    "item": "fig:21",
+    "location": "7. 데스크톱 앱 / 그림 21. 정확한 표면 카드와 결과 배지. 표면 파일 이름, 켜고 끄는 스위치, 비행에 쓴 표면 종류를 보여 준다. 출처:  / 정확한 표면 파일이 있으면 카드와 배지로 보여 주고 스위치로 끌",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/F22.png; docs/report/figures/scripts/app/quadfly.js; docs/dev/frontend.md",
+      "section_or_symbol": "exact surface on/precise vs off/live; terminal population table",
+      "line_range": "quadfly.js:12-23; frontend.md:326-340; PNG binary"
+    },
+    "note": "두 모드 카드와 CPU f64/GPU f32 배지, 1000개 및 on 750/230/20, off 751/249/0을 실제 PNG에서 확인했고 앱-CLI 검증 표와 대조했다. 10 ms/65 ms도 캡처 값이며 speed 근거로 쓰지 않았다. 개별 이온 20개의 행선지 동일성은 별도 claim:surface-ion-identities에서 미확인으로 남겼다."
+  },
+  {
+    "item": "fig:22",
+    "location": "8. 종합 결과 / 그림 22. 정밀도를 맞춘 비교에서 SIMION 대비 계산 시간 배수(로그축). 각 막대의 두 계산 시간과 출처는 figure / 그림 22는 각 장에서 정밀도를 맞춰 비교한 계산 시간 배수를 ",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/F02.png; docs/report/figures/data/F02-speed.csv; docs/report/figures/scripts/F02_speed.py; bench/default-flight.md; docs/dielectric.md; docs/magnetostatics.md",
+      "section_or_symbol": "24 shown speed bars; per-row time definition; historical vs selected controls",
+      "line_range": "F02_speed.py:15-53; speed CSV:1-31; default-flight.md:301-322,382-409; dielectric.md:202-299,621-662; magnetostatics.md:286-310,396-407,449-461"
+    },
+    "note": "24개 막대와 모두의 두 원시간/배수를 원표에 대조하여 재계산했다(범위 1.4032~251.1742배). 숫자는 맞지만 단일 계산 시간 축에 refine은 setup+solve, 비행은 fly/pass만, 유전체는 재료준비+계층+solve를 섞었다. 캡션에서 분야별 포함 범위를 밝혀야 한다. 유전체 3.7/18.9배는 표 9의 1e-10 auto 행(2.0/23.4배)이 아닌 1e-12 보존 제어임도 밝혀라. CSV의 비선형 관측량 8개는 원문 기준 4전위+중심장+쌍극자+판전하=7개다."
+  },
+  {
+    "item": "claim:decision-date",
+    "location": "1.1 비교의 판정 규칙 / 속도 비교에는 두 가지 규칙을 두었다. 첫 번째 규칙은 정밀도를 맞춘 상태에서 비교한다는 것이다. SIMION의 기본 수렴 설",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/PLAN.md",
+      "section_or_symbol": "1. 목표; 2026-10-23 user decisions",
+      "line_range": "5-15"
+    },
+    "note": "정밀도를 맞춘 비교, refine의 최소 수렴 1e-7, 계산 시간만 사용한다는 두 규약 및 기록 날짜 2026-10-23이 원문에 명시되어 있다."
+  },
+  {
+    "item": "claim:reference-grid",
+    "location": "1.1 비교의 판정 규칙 / 정확도의 정답은 SIMION의 결과가 아니다. SIMION의 전극 근처 처리 방식은 공개되어 있지 않고 계단형 전극 자체가 오",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/PLAN.md; bench/fly-real.md; docs/geometry-pipeline.md",
+      "section_or_symbol": "1. 목표; independent numerical references",
+      "line_range": "PLAN.md:9-11; fly-real.md:177-225,302-331; geometry-pipeline.md:311-320"
+    },
+    "note": "비행 판정을 SIMION 일치가 아닌 독립 8배 격자에 둔 규약이 맞다. 수치 기준이며 엄밀한 연속해 상한이 아니라는 뒤의 한계 설명도 원문과 같다."
+  },
+  {
+    "item": "claim:fp64-throughput",
+    "location": "1. 개요 / 표 1의 환경 항목은 docs/PLAN.md의 2절 표와 bench/simion-baseline.md에 기록된 실행 환경을 옮",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/PLAN.md",
+      "section_or_symbol": "2. 환경과 제약 GPU row",
+      "line_range": "17-28"
+    },
+    "note": "RTX 3070 8 GB와 FP64/FP32=1/64라는 저장 환경값이 정확히 같다. 이 값만으로 전체 비행 속도 비를 정하지 않고 실제 자기장 비교를 따로 제시한 구조도 맞다."
+  },
+  {
+    "item": "claim:three-frontends-identical",
+    "location": "2. 프로그램 구성 / SimRep의 계산 코어는 역할별로 나눈 11개의 Rust 크레이트다. 크레이트는 Rust의 컴파일 단위이자 라이브러리 단위다 / 2장 요점 정리",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "Cargo.toml; docs/python.md; app/src/scene/templates.ts; docs/dev/frontend.md; bench/fly-gpu.md",
+      "section_or_symbol": "workspace membership; CLI parity; app Preview vs Precise modes",
+      "line_range": "Cargo.toml:1-19; python.md:13-20,59-87; frontend.md:326-340; fly-gpu.md:964-975"
+    },
+    "note": "11개 크레이트 및 세 사용자 경로는 확인했다. 하지만 같은 코어를 쓴다는 사실만으로 세 경로의 계산 결과가 같다고 단정할 수 없다. 앱 실시간은 GPU f32, 정밀은 CPU f64이고 옵션/허용오차도 선택된다. 같은 입력·기하·적분/정밀도 설정을 맞추면 같은 물리 구현을 사용한다로 한정하라. 동일성은 확인된 앱-CLI 비교 사례로만 말하라."
+  },
+  {
+    "item": "claim:frontend-parity",
+    "location": "2. 프로그램 구성 / 사용자는 세 가지 방법으로 SimRep을 쓴다. 명령행 도구 simrep은 refine, refine-geometry, fly",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/python.md",
+      "section_or_symbol": "CLI parity",
+      "line_range": "13-95"
+    },
+    "note": "CLI/Python/데스크톱 세 접점, 열거한 refine/refine-geometry/fly/gem2pa/mesh-import/export와 NumPy 경로가 해당 parity 표에 있다. 장 번호 7도 원고 제목과 일치한다."
+  },
+  {
+    "item": "claim:mg-smoothing",
+    "location": "3.1 멀티그리드와 수렴 판정 / 격자점이 수백만 개면 식 (1)을 반복법으로 푸는 시간이 계산의 대부분을 차지한다. SIMION은 축차 과완화(SOR) 반복을",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/cpu-solver.md",
+      "section_or_symbol": "Coarsening electrodes without losing constraints",
+      "line_range": "55-95"
+    },
+    "note": "P^T A P, thin electrode 제약 보존, CPU f64 및 Chebyshev-Jacobi의 앞/뒤 3회가 원문과 맞다. 거친 격자의 에너지 보존은 동일한 Galerkin 이차형식의 뜻이다."
+  },
+  {
+    "item": "claim:gpu-iterative-refinement",
+    "location": "3.1 멀티그리드와 수렴 판정 / GPU 경로는 같은 멀티그리드를 단정밀도(f32) 보정 사이클로 돌리고 바깥에서 배정밀도 잔차로 보정하는 반복 개선(itera",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/gpu-solver.md",
+      "section_or_symbol": "Numerical method",
+      "line_range": "17-60"
+    },
+    "note": "f32 보정 V-cycle + f64 outer iterate/residual 및 CPU와 동일 residual scale/허용값을 확인했다. 최종 잔차 기준 충족이라는 설명이며 연속해 정확도 보장으로 쓰지 않았다."
+  },
+  {
+    "item": "claim:residual-cycle-count",
+    "location": "3.1 멀티그리드와 수렴 판정 / 멀티그리드가 실제로 몇 번의 사이클로 수렴하는지는 그림 2에 나와 있다. 가로축은 V-사이클 번호, 세로축은 식 (2)의 상대",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/report/figures/data/F05-residual-history.csv; bench/refine-real.md",
+      "section_or_symbol": "max-cycles history and CPU PA_ row",
+      "line_range": "CSV:1-25; refine-real.md:180-185"
+    },
+    "note": "13회/11회, 1e-12 기준 도달, 약 16만/1737만 점 및 약 100배 크기 비가 맞다. 실제 크기 비는 104.8843이다. 이것은 두 사례의 관측이며 보편적인 모든 격자의 횟수 보장은 아니다."
+  },
+  {
+    "item": "claim:large-array-origin",
+    "location": "3.2 실제 SIMION 배열에서의 비교 / 속도와 정확도를 함께 보기 위해 SIMION 예제의 큰 3D 배열(259×259×259, 약 1,737만 격자점)을 두 프로그",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/simion-baseline.md",
+      "section_or_symbol": "Large 3D refine case",
+      "line_range": "39-41"
+    },
+    "note": "259³=17373979점과 두 수렴 설정은 맞다. 다만 이 배열은 설치된 SIMION 예제의 큰 3D 배열이 아니다. 원문은 performance_tests에 큰 3D 예제가 없으며 별도 작성한 두 구각 GEM을 SIMION gem2pa로 만든 sc3d_x2라고 명시한다. 그 출처로 고쳐라."
+  },
+  {
+    "item": "claim:refine-ratios-and-accuracy",
+    "location": "3.2 실제 SIMION 배열에서의 비교 / 표 3의 SimRep 행은 bench/refine-real.md의 End-to-end performance 절, SIMION ",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/refine-real.md; bench/simion-baseline.md",
+      "section_or_symbol": "End-to-end performance; Large-array tight reference and CPU/GPU agreement; Refine",
+      "line_range": "refine-real.md:119-159,161-185; simion-baseline.md:20-21"
+    },
+    "note": "배수와 전위 차이 숫자는 맞다: CPU 풀이 2.84497배/준비 포함 1.92864배, GPU 19.32736배/9.09284배, 최대 차이 6.423112e-5 V, 기본-엄격 최대 .924416 V. 그러나 정확도 두 숫자는 인접 문장이 인용한 End-to-end performance/Refine 시간 표에 없고 Large-array tight reference 절에 있다. 그 절을 사용 지점 출처 문장에 추가하라."
+  },
+  {
+    "item": "claim:cutcell-example-length-unit",
+    "location": "3.3 계단형 전극과 cut-cell 경계 / cut-cell의 효과는 반지름 0.31 mm와 0.83 mm의 두 구 전극(1 V, 0 V)처럼 정확한 해를 아는 문제로 확",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/cutcell.md; docs/report/figures/scripts/F06_cutcell_order.py",
+      "section_or_symbol": "Analytic CLI and acceptance; dimensionless geometry",
+      "line_range": "cutcell.md:121-128; F06_cutcell_order.py:1-7"
+    },
+    "note": "반지름 .31/.83와 전압 1/0은 맞다. 원문/그림 스크립트는 길이를 무차원 영역 [-1,1]의 단위로 쓴다. 본문의 mm는 이 문서가 택한 길이 환산이라고 명시하거나 단위 길이로 바꾸어 그림 4의 무차원 h와 구분하라."
+  },
+  {
+    "item": "claim:cutcell-overhead",
+    "location": "3.3 계단형 전극과 cut-cell 경계 / 표 4의 값은 docs/cutcell.md의 Measured acceptance 절에서 가져왔다. cut-cell은 계산 시간",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/cutcell.md",
+      "section_or_symbol": "Measured acceptance; Equal memory budget",
+      "line_range": "135-151,192-220"
+    },
+    "note": "10~30% 시간 증가라는 범위가 표 4를 포괄하지 않는다. 정확한 증가율은 CPU 8.81%/11.35%, GPU 38.38%/30.95%이므로 약 9~38% 또는 약 10~40%라고 써라. 최대 오차 59.47/96.08배 및 동일 메모리 오차 77.94/83.71배는 맞다. 계단형은 예산을 모두 쓰는 것이 아니라 해당 SDF 예산 이내인 129³/257³이다."
+  },
+  {
+    "item": "claim:boris-choice-and-phase",
+    "location": "4.1 적분기와 스텝 크기 / 정전기장에서는 Dormand-Prince 5(4) 방식의 RK45 적응 적분기를 쓴다. 한 스텝에서 5차와 4차 해를 함께 계",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "crates/simrep-fly/src/flight.rs; crates/simrep-fly/README.md; bench/magnetic-cpu.md; docs/physics-magnetic-collision.md",
+      "section_or_symbol": "FlightOptions::default; boris; ordinary default RK45 magnetic controls",
+      "line_range": "flight.rs:179-196,601-636; physics-magnetic-collision.md:153-156; magnetic-cpu.md:24-29"
+    },
+    "note": "자기장이 있으면 Boris를 쓴다는 자동 선택 설명은 틀리다. 기본은 RK45이고 자기장도 두 적분기를 지원하며 표 8은 RK45다. Boris는 균일 자기장에서 속력/에너지를 반올림 오차까지 보존하지만 정확한 물리 회전각은 아니고 위상 오차가 2차이다. 오래 날려도 에너지가 새지 않는다는 말은 균일 B에서의 성질로 한정하라."
+  },
+  {
+    "item": "claim:step-policy",
+    "location": "4.1 적분기와 스텝 크기 / 스텝 크기에는 오차 추정과 별도로 물리적 상한을 둔다. 한 스텝에 가장 작은 격자 칸 4개 이상을 건너지 않고 자기장 속 회전",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/default-flight.md",
+      "section_or_symbol": "Policy and tolerance selection",
+      "line_range": "100-140"
+    },
+    "note": "자동 ceiling의 4셀/.2 rad/.2 rad 및 numeric tolerance 1e-12, 정적 전기장 추정 1e-12..1e-8이 맞다. 명시적 step/tolerance override와 coupled space-charge의 별도 한 셀 한정은 원문에 있으며 현재 문단은 일반 독립 비행 설명으로 읽힌다."
+  },
+  {
+    "item": "claim:quintic-continuity",
+    "location": "4.2 매끄러운 전기장 재구성 / SIMION은 격자 전위를 선형 보간해 전기장을 읽는다. 선형 보간한 전기장은 격자 칸 경계에서 끊어진다. 적응 적분기는 이 ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/fly-real.md; crates/simrep-fly/README.md",
+      "section_or_symbol": "Boundary-aware correction results; Fields",
+      "line_range": "fly-real.md:276-300; README.md:11-26"
+    },
+    "note": "공유 nodal 1/2차 도함수, tensor quintic Hermite, C2 전위/C1 전기장, 진공 쪽 경계 도함수 추정이 원문과 맞다. 전극 없는 배열은 기존 cubic을 유지하는 별도 범위임에 유의해야 한다."
+  },
+  {
+    "item": "claim:collision-corner-count",
+    "location": "4.3 전극 충돌과 정확한 표면 / 이온이 전극에 닿았는지는 두 가지 방식으로 판정한다. 기본 방식은 격자 칸의 꼭짓점(2D에서 4개, 3D에서 8개)이 모두 전",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "crates/simrep-fly/README.md; docs/geometry-pipeline.md",
+      "section_or_symbol": "Staircase PA occupied cells; Outputs and flying",
+      "line_range": "README.md:staircase/surface paragraphs; geometry-pipeline.md:70-110,142-192"
+    },
+    "note": "2D 4/3D 8개 꼭짓점 occupied-cell 규칙, v3 source geometry를 보조 파일에 저장하는 방식, 정확 표면이 CPU 전용이라는 설명을 읽어 대조했다."
+  },
+  {
+    "item": "claim:einzel-historical-compute",
+    "location": "4.5 einzel 렌즈 / 표 5의 정확도는 bench/fly-real.md의 Boundary-aware correction results 절과 benc",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/default-flight.md; bench/fly-real.md; bench/simion-baseline.md",
+      "section_or_symbol": "Main integration vs Retained one-cell baseline; Boundary-aware correction results; Fly",
+      "line_range": "default-flight.md:3-44,301-337; fly-real.md:302-326; simion-baseline.md:34"
+    },
+    "note": "4.8925배 정확도, 11.5164배 10k 속도, 10.39/.223796=46.4262배, 옛 spline RMS 5.895332->5.90은 맞다. 다만 .223796 s는 원문이 명시적으로 역사적 one-cell 설정이라고 보존한 값이다. 같은 문단의 현재 기본값 .184954 s(10k four-cell)와 섞어 현재 같은 1k 실행값인 듯 말하지 말고 보존된 one-cell 제어라고 명시하라."
+  },
+  {
+    "item": "claim:surface-overhead",
+    "location": "4.6 3D 4중극 / 표 6의 값은 bench/fly-real.md의 Compute time at achieved precision 절과 docs/",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/geometry-pipeline.md; bench/fly-real.md",
+      "section_or_symbol": "V3 compute overhead and verification; Exact-surface flight overhead after far-pair rejection; Compute time at achieved precision",
+      "line_range": "geometry-pipeline.md:574-638; fly-real.md:513-531"
+    },
+    "note": "표 6의 .130802/.065829는 1.987배이지 1.34배가 아니다. 1.339배는 같은 cut-cell 전위장에서 충돌만 끈 .097657 s와 짝지은 비교이다. 기준 시간을 함께 적어 두 비교를 분리하라. 이후 .047991/.049114=.977배와 .052973/.050733=1.044배는 맞다. 원문의 CSV byte 동일은 각 leg의 7회 반복 내부 동일성이지 이전 구현과의 바이트 대조 증거가 아니므로 그 범위도 바로잡아라."
+  },
+  {
+    "item": "claim:gpu-einzel100k",
+    "location": "4.7 GPU 비행 / 이온은 서로 독립이므로 GPU에서 이온 하나를 스레드 하나로 날린다. 정밀 모드는 배정밀도로 CPU와 같은 적분기와 재구성을 ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/fly-gpu.md; bench/simion-baseline.md",
+      "section_or_symbol": "Native precision study; Fly",
+      "line_range": "fly-gpu.md:978-1018; simion-baseline.md:34-35"
+    },
+    "note": "100000개 f64 GPU .637090 s와 실측 SIMION 기본 21.37 s를 재계산하면 33.54314배이다. 본문의 .637/33.5가 맞고 외삽 strict 1208배를 실측처럼 섞지 않았다."
+  },
+  {
+    "item": "claim:horner-kernel-change",
+    "location": "4.7 GPU 비행 / GPU 커널에서는 전기장 재구성의 다항식 계산이 대부분의 시간을 쓴다. 다항식의 6개 계수 반복을 풀어 쓰니 GPU 컴파일러가",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/fly-gpu.md; docs/report/figures/data/F10-gpu-kernel.csv",
+      "section_or_symbol": "Cached-power Horner specialization; Retained before/after controls",
+      "line_range": "fly-gpu.md:7-52; CSV:1-9"
+    },
+    "note": "6개 x-Horner 반복 전개, quad 100k Preview 99.749952->54.886016 ms, 원문 bitwise 결과 비교 범위가 모두 맞다. 본문 99.7/54.9는 올바른 소수 첫째 자리 반올림이다."
+  },
+  {
+    "item": "claim:electric-auto-crossover",
+    "location": "4.7 GPU 비행 / CPU와 GPU 가운데 무엇을 쓸지는 --device auto가 측정값으로 정한다. 전기장만 있는 비행에서 배정밀도를 지원하는",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/fly-gpu.md",
+      "section_or_symbol": "Automatic device selection",
+      "line_range": "1032-1066"
+    },
+    "note": "1024개 CPU/GPU 13.970/43.720 ms, 4096개 58.734/51.278 ms 및 자동 threshold 4096이 맞다. 이는 측정한 electric-only hardware native-f64 class의 규약이며 보편적 교차점은 2048..4096 사이로만 bracket되었다."
+  },
+  {
+    "item": "claim:app-five-second-control",
+    "location": "4.8 앱의 실시간 재비행 / 앱에서는 전압 슬라이더를 끄는 동안 이온을 계속 다시 날려 결과를 바로 보여 준다. 그림 8은 4중극 템플릿에서 슬라이더를 움 / 4.8 앱의 실시간 재비행 / 표 7은 docs/dev/frontend.md의 제출/수거 파이프라인과 작은 비행 패킷 절에 기록된 앱 측정값이다. 개선은 두",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/dev/frontend.md; bench/fly-gpu.md",
+      "section_or_symbol": "제출/수거 파이프라인과 작은 비행 패킷; later Horner optimization",
+      "line_range": "frontend.md:425-447; fly-gpu.md:7-52"
+    },
+    "note": "5초 끌기, 3회 중앙값, 요청 제출/수거 중첩 및 작은 패킷의 변경 내용이 맞다. 표 7의 recorded 8.6/s를 이후 54.886 ms 커널로부터 새 앱 갱신률인 듯 추정하지 않고 재측정 필요라고 한 것도 정확하다."
+  },
+  {
+    "item": "claim:gpu-threshold-summary",
+    "location": "4.8 앱의 실시간 재비행 / SimRep은 식 (4)를 RK45 또는 Boris로 적분하고 칸 경계에서도 연속인 전기장으로 스텝을 크게 잡는다. einze",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/fly-gpu.md; docs/physics-magnetic-collision.md",
+      "section_or_symbol": "Automatic device selection; Native GPU transport",
+      "line_range": "fly-gpu.md:1032-1055,550-574; physics-magnetic-collision.md:75-80"
+    },
+    "note": "요점의 GPU는 이온 4096개부터 자동 사용이라는 문장은 범위가 빠졌다. 전기장만 있는 비행 + hardware native f64 지원일 때라고 한정하라. 자기장은 CPU이며 제한된 field-free HS1 class는 10000개 threshold다."
+  },
+  {
+    "item": "claim:magnetic-reference-gate",
+    "location": "5.1 자기장 / SIMION 자기장 예제 7개를 같은 이온 출발 조건으로 날려 비교했다. 기준해는 정확한 비오-사바르 계산이나 원래 자기 PA",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/magnetic-cpu.md",
+      "section_or_symbol": "Actual matched-population compute; Unchanged accuracy gate",
+      "line_range": "14-69"
+    },
+    "note": "7개 실제 matched populations 및 exact Biot-Savart/native PA 기준 .0025 us ceiling과 1e-12 허용값을 확인했다. 모든 endpoint/TOF가 원래 old-API 최대오차 gate 아래이며 splat 일치 조건도 있다."
+  },
+  {
+    "item": "claim:magnetic-medians-sector",
+    "location": "5.1 자기장 / 표 8은 bench/magnetic-cpu.md의 Actual matched-population compute 절에서 가져왔다",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/magnetic-cpu.md; docs/report/figures/data/F11-sector2dp-{simrep-end,simion-final}.csv",
+      "section_or_symbol": "3/5-run medians; 15-ion sector endpoint differences",
+      "line_range": "magnetic-cpu.md:24-51; CSV:1-16"
+    },
+    "note": "SIMION 3회, CPU 5회/16 workers 조건을 확인했다. 별도 그림의 15개 궤적 최대 위치 .009149448 mm 및 TOF .000290458 us를 독립 재계산했고 본문의 .01/.0003 상한과 맞다. 150개 timing control과 15개 그림 표본은 구분되어 있다."
+  },
+  {
+    "item": "claim:magnetic-cpu-vs-gpu",
+    "location": "5.1 자기장 / 자기장 계산은 GPU보다 CPU가 빨랐다. RTX 3070의 배정밀도 연산은 단정밀도의 1/64로 느리고 자기 PA 보간과 코",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/fly-gpu.md; docs/PLAN.md",
+      "section_or_symbol": "Fresh native compute controls; GPU environment",
+      "line_range": "fly-gpu.md:550-574; PLAN.md:23"
+    },
+    "note": "sector3dp 10000개 GPU 4.031644832 s/CPU 1.144121800 s=3.52379배로 본문의 4.03/1.14와 일치한다. 자기장 class auto CPU 결정도 원문에 있다."
+  },
+  {
+    "item": "claim:hs1-sds-statistics",
+    "location": "5.2 중성 기체 충돌 / 무작위 모델은 이온 하나하나가 아니라 분포로 비교했다. SIMION과 SimRep으로 각각 이온 4,096개를 날리고, 도착 ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/physics-magnetic-collision.md; bench/default-flight.md; docs/report/figures/data/F13-hs1-{cpu,gpu,simion}.csv",
+      "section_or_symbol": "Statistical results; GPU distribution replay; HS1 and SDS statistical checks",
+      "line_range": "physics-magnetic-collision.md:82-108,339-364; default-flight.md:382-413; each HS1 CSV:1-4097"
+    },
+    "note": "4096개/50 us, CPU-SIMION HS1 위치 p=.515856/.384564/.977716와 KE .384564, CPU-GPU 기각 없음, SDS 범위 .355182..1 및 5% 기준이 맞다. 9.96/.183027=54.4182배, 1.23/.004897=251.1742배도 직접 재계산했다. p값은 분포 동일성의 증명이 아니라 기각 없음으로 읽어야 한다."
+  },
+  {
+    "item": "claim:dielectric-same-residual",
+    "location": "5.3 유전체 / SIMION 유전체 예제 세 개를 같은 잔차 1e-10으로 풀었다. 표 9는 자동으로 고른 장치의 재료 준비, 계층 구성, 풀",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/dielectric.md",
+      "section_or_symbol": "Strict oracle and compute medians; Automatic selection at the default residual tolerance",
+      "line_range": "202-211,261-299"
+    },
+    "note": "같은 잔차 1e-10은 SimRep CPU/GPU에만 적용된다. SIMION은 strict per-iteration 전압 변화 1e-7 V이고 잔차 1e-10을 쓴 것이 아니다. SimRep의 세 예제를 같은 잔차로 풀고 SIMION strict와 비교했다고 명확히 고쳐라."
+  },
+  {
+    "item": "claim:dielectric-phase-sums-and-thresholds",
+    "location": "5.3 유전체 / 표 9는 docs/dielectric.md의 Automatic selection at the default residual t",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/dielectric.md; docs/report/figures/data/F14-sphere3dp-slices.npz",
+      "section_or_symbol": "Automatic selection; Class-aware auto thresholds; strict center field",
+      "line_range": "dielectric.md:261-299,706-741,213-220; NPZ binary"
+    },
+    "note": "3D transfer 포함 1.414065 s, 25.78/1.414065=18.23배, 3D linear/nonlinear thresholds 1048576/131072, epsilon=10 및 중심장 .257183937 V/mm가 맞다. threshold는 이 기계 측정 규약이고 비선형 재측정이 parity를 가로지를 수 있다는 원문 한계는 생략되어도 보편 성능 보장으로 확대하면 안 된다."
+  },
+  {
+    "item": "claim:nonlinear-refinement-and-speed",
+    "location": "5.3 유전체 / 유전율이 전기장 세기에 따라 바뀌는 비선형 유전체도 넣었다. 전위를 풀고 그 전기장으로 유전율을 다시 계산하기를 수렴할 때까지",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/dielectric.md",
+      "section_or_symbol": "Physical grid-refinement audit; Continuum estimates and observed orders; Speed at matched estimated physical accuracy",
+      "line_range": "487-539,541-575,605-662"
+    },
+    "note": "1081.338/624.911/424.769/226.084 V 및 CPU 43.636006/GPU 48.368654 대 SIMION 87.494 s는 맞다. 그러나 격자를 2배,4배로 줄여라는 문장은 대응 해상도가 모호하다. h=2,1,.5,.25 mm(기본 1x=.5 mm, 최종2x=.25 mm)로 써라. 이 자료는 같은 continuum limit의 증명이 아니라 민감도 범위를 둔 연속극한 추정이다. 같은 물리 정확도도 7개 관측량의 추정 오차가 SIMION 이하인 가장 싼 시험 설정이라는 범위로 한정하라."
+  },
+  {
+    "item": "claim:direct-coulomb-and-pic-source",
+    "location": "5.4 공간전하 / SIMION 예제의 이온 103개로 비교했을 때 SimRep의 도착 위치 오차는 독립 기준해 대비 1.0e-4 mm였고 SIM",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/default-flight.md; bench/space-charge.md",
+      "section_or_symbol": "Retained one-cell baseline; Compute time only; GPU PIC agreement and compute time; Matched-precision compute verdict",
+      "line_range": "default-flight.md:315-337; space-charge.md:92-99,142-160,314-353,538-576"
+    },
+    "note": "103개, RMS 1.01389e-4 mm 및 .248803 s의 출처는 bench/default-flight.md 보존 one-cell 표이다. 현재 인용한 space-charge의 Compute time only 표는 dt=1e-4에서 .267262 s/4.863959e-5 mm이므로 출처가 맞지 않는다. 값은 그대로 두고 정확한 보존 표를 인용하거나 그 표의 값으로 바꿔라. beam 3.19222/1.98907배는 맞다. PIC 100000개 1.407배/최대 3.33067e-16 mm는 같은 문서의 GPU PIC agreement 절을 해당 문장에 따로 달고 3 global steps의 짧은 제어임을 밝혀라."
+  },
+  {
+    "item": "claim:magnetostatics-controls",
+    "location": "5.5 재료가 있는 자기장 / SIMION 자기 포텐셜 예제 20개, 계산 25건으로 비교했다. 25건 모두 우리 결과가 SIMION 기본 설정보다 기준해에",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/magnetostatics.md",
+      "section_or_symbol": "Audit results; Hardware GPU and uniform-field follow-up; Uniform Az root cause and fix",
+      "line_range": "269-325,421-462"
+    },
+    "note": "20 stems/25 potential solves, timed 22건 중 21 nonuniform의 1.68..23.23배, uniform의 27->0 cycles 및 setup+solve .704 ms 대 24 ms를 모두 확인했다. 재계산 34.0909배이다. 정확도 판정은 SIMION 기본 stored-potential error 대비이며 모든 strict B-probe/flight 비교를 포함하는 결론으로 확대하지 않아야 한다."
+  },
+  {
+    "item": "claim:imported-map-formats",
+    "location": "5.6 외부 프로그램의 자기장 지도 / 자석 설계는 흔히 COMSOL, Opera, CST, FEMM 같은 전자기 해석 프로그램으로 한다. 그 결과를 다시 계산하지 ",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/bfield-import.md",
+      "section_or_symbol": "Accepted data; units; Reconstruction and diagnostics",
+      "line_range": "19-69,112-137"
+    },
+    "note": "COMSOL 두 형식, Opera .table, delimited/axisymmetric 표, 4개 길이 단위와 3개 B 단위, C2 재구성 및 소스 중첩을 원문과 비교했다. axisymmetric은 (z,r,Bz,Br)이고 규칙 텐서 격자만 받는다."
+  },
+  {
+    "item": "claim:imported-map-convergence",
+    "location": "5.6 외부 프로그램의 자기장 지도 / 표 10은 bench/bfield-import.md의 Cartesian full-flight errors 절에서 가져왔다. 격",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/bfield-import.md; bench/bfield-import-20261024.csv",
+      "section_or_symbol": "Cartesian full-flight errors; Timings and contention",
+      "line_range": "21-43,62-84; CSV:57 records"
+    },
+    "note": "표 10의 두 3D 계열 endpoint 감소율은 9.496..21.092배, 관측 차수 3.247..4.399로 약 10~20배/3.2~4.4는 맞다. 21³=9261점 loop 25.4567 ms, solenoid 24.2401 ms와 형식별 동등 오차도 확인했다. 이 25 ms는 contended single-flight 진단값이며 일반 성능 보장은 아니다."
+  },
+  {
+    "item": "claim:advanced-physics-counts",
+    "location": "5.6 외부 프로그램의 자기장 지도 / 자기장, 기체 충돌, 유전체, 공간전하, 재료가 있는 자기장을 모두 SIMION 예제와 같은 정밀도로 비교했다. 외부 해석 프",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "bench/magnetic-cpu.md; docs/dielectric.md; bench/space-charge.md; docs/magnetostatics.md",
+      "section_or_symbol": "각 selected matched control table",
+      "line_range": "magnetic-cpu.md:31-39; dielectric.md:273-299; space-charge.md:554-576; magnetostatics.md:286-310,449-461"
+    },
+    "note": "자기장7/선형 유전체3/beam2/시간이 있는 자기 포텐셜22건이라는 집계와 선택된 성공 제어의 속도 결론은 일치한다. beam은 명시한 line 모델, collision은 분포, 자기정역학은 기본 stored potential의 서로 다른 판정이므로 하나의 보편 정확도 지표로 합쳐 읽을 수는 없다."
+  },
+  {
+    "item": "claim:entire-installed-corpus",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 새 프로그램을 쓰려면 기존 SIMION 작업 파일을 그대로 열 수 있어야 한다. 그래서 설치된 SIMION 예제 파일 전체를 ",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/gem-validation.md; docs/fly2-validation.md; bench/refine-real.md; docs/dev/frontend.md",
+      "section_or_symbol": "corpus summaries vs selected PA tests and IOB placements",
+      "line_range": "gem-validation.md:3-7; fly2-validation.md:5-20; refine-real.md:36-50; frontend.md:196-200"
+    },
+    "note": "설치 예제 파일 전체를 하나씩 비교했다는 범위는 입증되지 않는다. 전수 범위는 GEM 261개와 FLY2 154개이고, IOB 배치 148개 및 PA refine/round-trip은 명시된 별도 표본이다. 형식별 확인 범위라고 고쳐라."
+  },
+  {
+    "item": "claim:lua-sandbox-and-corpus",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 표 11의 GEM 결과는 docs/gem-validation.md, FLY2 결과는 docs/fly2-validation.md",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/gem.md; docs/fly2-validation.md; docs/gem-validation.md; docs/report/figures/data/F19-hexapole-masks.npz",
+      "section_or_symbol": "Lua version and sandbox; random seeds; hexapole corpus row",
+      "line_range": "gem.md:90-108; fly2-validation.md:12-20; gem-validation.md:geometry/hexapole.gem; NPZ binary"
+    },
+    "note": "Lua 5.1.5, 256 MiB, 50억 instruction budget 및 외부 쓰기 차단, random seed 1..8이 맞다. 1408x705 전극 지도와 원본의 mismatch 0도 전체 binary 배열 비교로 확인했다."
+  },
+  {
+    "item": "claim:simion-model-import-absence",
+    "location": "6. SIMION 파일과 3D 모델 호환 / SIMION에 없는 기능으로 3D 모델 가져오기를 넣었다. STL, OBJ, PLY, 3MF, glTF 메시는 그대로 읽어 전",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/mesh-io.md; docs/gem.md; docs/step-import.md",
+      "section_or_symbol": "SIMION-2024 oracle; stl import; CAD scope",
+      "line_range": "mesh-io.md:245-266; gem.md:41-43; step-import.md:1-27"
+    },
+    "note": "SIMION에 없는 기능으로 3D 모델 가져오기를 넣었다는 일반화는 틀리다. 저장소 자체가 SIMION의 GEM STL import와 설치 STL을 oracle로 검증했다. STEP/IGES B-rep 및 확장 메시 형식 지원을 추가했다고 구체적으로 구분하라."
+  },
+  {
+    "item": "claim:cad-preparation-times",
+    "location": "6. SIMION 파일과 3D 모델 호환 / 표 12는 docs/step-import.md의 Measured accuracy and timing 절에서 가져왔다. 정확한 ",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/step-import.md; docs/report/figures/F18.png",
+      "section_or_symbol": "Measured accuracy and timing; STEP app screenshot",
+      "line_range": "step-import.md:197-223; PNG binary"
+    },
+    "note": "RMS 개선율 3.85/6.00/1.51배와 두 정상 STEP solid 설명은 맞다. B-rep 준비가 모두 수 초 걸린다는 표현은 cylinder .464119 s를 포괄하지 않는다. 세 사례 .46~6.38 s(삼각형 .009886~.068335 s)로 고치거나 구·고리는 수 초라고 한정하라."
+  },
+  {
+    "item": "claim:gem-summary-count",
+    "location": "6. SIMION 파일과 3D 모델 호환 / SIMION 예제의 GEM 261개와 FLY2 154개를 불일치 없이 읽고 PA와 작업대 파일도 그대로 쓴다. 메시와 STEP",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/gem-validation.md; docs/fly2-validation.md",
+      "section_or_symbol": "summary counts",
+      "line_range": "gem-validation.md:3-7; fly2-validation.md:5-20"
+    },
+    "note": "GEM 261개를 불일치 없이 읽었다는 요약은 standalone 실행이 안 된 7개 include 조각을 생략한다. GEM 254개 standalone 일치 + include 조각 7개, FLY2 154개(97 ordered/57 statistical) 일치라고 구분하라. 또한 CAD의 전위 오차가 작다는 말은 RMS에 한정해야 하며 ring maximum은 오히려 exact가 더 크다(표 12)."
+  },
+  {
+    "item": "claim:autosave-interval",
+    "location": "7. 데스크톱 앱 / 정확한 표면 파일이 있으면 카드와 배지로 보여 주고 스위치로 끌 수 있다. 그림 21은 같은 4중극에서 스위치를 켠 경우(정밀 / 그 밖에 되돌리기",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/dev/frontend.md",
+      "section_or_symbol": "프로젝트 (.simrep)",
+      "line_range": "504-509"
+    },
+    "note": "자동 저장은 1.5초마다 반복하는 주기 저장이 아니라 변경 후 1.5초 뒤에 쓰는 debounce다. 변경 후 1.5초가 지나면 자동 저장이라고 고쳐라. 언어/테마/undo·redo 기능은 문서와 맞다."
+  },
+  {
+    "item": "claim:surface-ion-identities",
+    "location": "7. 데스크톱 앱 / 정확한 표면 파일이 있으면 카드와 배지로 보여 주고 스위치로 끌 수 있다. 그림 21은 같은 4중극에서 스위치를 켠 경우(정밀 / 켜면 이온 20개가",
+    "verdict": "unverifiable",
+    "checked_against": {
+      "file": "docs/report/figures/F22.png; docs/dev/frontend.md; docs/report/figures/data/F08-{simrep-cuts,simrep-nocuts}.csv; /mnt/c/Users/lsu10/simrep-gui-test/report-figs/quad2/quadrupole.gem",
+      "section_or_symbol": "exact surface on/off aggregate counts, not per-ion transition table",
+      "line_range": "frontend.md:334-340; PNG binary"
+    },
+    "note": "집계 750/230/20 -> 751/249/0은 확인했다. 별도의 tight CLI CSV를 이온 번호별로 비교하면 표면 E2의 20개 모두 no-cuts에서 x=53 mm 전극 3 앞면으로 가는 것은 확인된다. 다만 그림 21의 실제 앱 precise CPU / live GPU f32 출력에 대한 per-ion on/off 기록은 보관된 report-figs/quad2 및 report figure data에 없어 같은 개별 이온 전이를 엄격히 검증하지 못했다. 집계 변화로만 쓰거나 실제 캡처의 이온별 전이 자료를 남겨 대조해야 한다."
+  },
+  {
+    "item": "claim:installer-size",
+    "location": "7. 데스크톱 앱 / 설치 파일은 관리자 권한 없이 사용자 계정에 깔리는 NSIS 패키지다. 크기는 28.5 MiB이고 STEP 가져오기용 Open",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/dev/frontend.md",
+      "section_or_symbol": "Windows 설치 패키지 (NSIS, 사용자별 설치)",
+      "line_range": "84-120"
+    },
+    "note": "29873560 B / 2^20=28.4896 MiB이므로 28.5 MiB는 맞다. currentUser NSIS, OCCT DLL/VC++ runtime 동봉, 조용한 설치·실행·STEP/IGES·fly·제거의 실제 검증 기록도 읽었다. 새로운 설치를 실행한 검증이 아니라 저장 기록 대조다."
+  },
+  {
+    "item": "claim:summary-universal-accuracy",
+    "location": "8. 종합 결과 / 그림 22는 각 장에서 정밀도를 맞춰 비교한 계산 시간 배수를 한 그림에 모았다. 가로축은 SIMION 계산 시간을 SimRe / 8장 결론·요점 정리",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/figures/data/F02-speed.csv; docs/PLAN.md; docs/magnetostatics.md; docs/dielectric.md; bench/space-charge.md",
+      "section_or_symbol": "selected controls vs validation scope and continuum estimates",
+      "line_range": "speed CSV:1-31; PLAN.md:126-155; magnetostatics.md:269-325; dielectric.md:621-662; space-charge.md:538-576"
+    },
+    "note": "세 단계 수치 목표 5/10/10배 및 대표 제어의 속도 배수는 원문과 맞다. 다만 모든 비교에서 정확도가 같거나 높다는 결론은 정의한 저장 전위/추정 관측량/분포/자체 모델의 판정 범위를 지워 버린다. 이 보고서에서 선정한 대표 제어에서 각 절의 기준을 충족했다고 한정하라. 특히 자기정역학은 기본 potential 기준이지 strict B-probe 일치가 아니고, nonlinear dielectric은 연속해 오차의 추정이며, beam은 private cloud 동등성 검증이 아니다."
+  },
+  {
+    "item": "claim:limitations-orders",
+    "location": "9. 한계와 남은 일 / 결론에는 다음 조건이 붙는다. 첫째, 정확도 기준해는 촘촘한 격자로 얻은 수치 기준이며 연속 해의 엄밀한 상한이 아니다. 둘째",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "docs/cutcell.md; docs/dielectric.md; docs/magnetostatics.md; docs/dev/frontend.md",
+      "section_or_symbol": "Grid convergence; physical estimates; material interfaces; contention notes",
+      "line_range": "cutcell.md:153-190; dielectric.md:116-150,541-616; magnetostatics.md:177-206,255-263; frontend.md:434-447"
+    },
+    "note": "전위 약2차/near-surface E 약1차, 곡면 재료 경계 약1차, numerical reference의 비엄밀성 및 일부 공유 기계 측정이라는 한계를 원본들과 대조했다. RTX 3070 한 종류 하드웨어의 성능 결과라는 범위도 맞다."
+  },
+  {
+    "item": "claim:remaining-magnetic-gpu",
+    "location": "9. 한계와 남은 일 / 결론은 수치 기준해, RTX 3070 한 대, 일부 공유 기계 측정이라는 조건 위에서 성립한다. 자기장과 정확한 표면의 GPU",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "bench/fly-gpu.md; docs/physics-magnetic-collision.md",
+      "section_or_symbol": "Magnetic fields and neutral gas; Native GPU transport",
+      "line_range": "fly-gpu.md:372-432,550-574; physics-magnetic-collision.md:23-80"
+    },
+    "note": "자기장 GPU 비행 자체는 이미 구현되어 명시적 --device gpu로 실행되고 검증되었다. 남은 것은 RTX 3070에서 CPU보다 느린 성능을 개선하고 auto crossover를 재검토하는 일이다. 정확한 표면 GPU 비행 미구현과 자기장 GPU 성능 개선을 구분해 써라."
+  },
+  {
+    "item": "claim:bibliography-gibou",
+    "location": "참고문헌 / Gibou, F., Fedkiw, R. P.",
+    "verdict": "verified",
+    "checked_against": {
+      "file": "https://api.crossref.org/works/10.1006/jcph.2001.6977; https://physbam.stanford.edu/papers/cam2000-37.pdf; docs/cutcell.md",
+      "section_or_symbol": "Crossref publisher-deposited metadata; author manuscript p.8 equations (20),(21); Operator and symmetry invariant",
+      "line_range": "Crossref JSON metadata; PDF p.8; cutcell.md:39-45"
+    },
+    "note": "Crossref 원자료를 열어 네 저자, 제목, 2002년 2월, Journal of Computational Physics 176(1), 205-227 및 DOI 10.1006/jcph.2001.6977을 확인했다. 저자 PDF 8쪽을 눈으로 열어 대칭 선형식 (21)/비대칭 quadratic 식 (20) 번호를 확인했다. DOI 직접 열기/ScienceDirect 본문은 도구의 접근 오류/403이었으며 서지는 성공한 Crossref 원자료로 대조했다."
+  },
+  {
+    "item": "claim:bibliography-occt",
+    "location": "참고문헌 / Open Cascade SAS. (n.d.). STEP",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "https://dev.opencascade.org/doc/overview/html/occt_user_guides__step.html; https://occt3d.com/dev/doc/overview/html/occt_user_guides__step.html; docs/step-import.md",
+      "section_or_symbol": "official STEP Translator guide; introduction and version banner",
+      "line_range": "official HTML:50-79; step-import.md:39-42"
+    },
+    "note": "제시 URL은 실제로 열리며 공식 occt3d.com의 STEP Translator로 redirect한다. 그러나 현재 열린 문서는 OCCT 8.0.1이고 참고문헌은 n.d.만 적어 버전/확인 날짜가 없다. 실제 사용 SDK 7.7.0과 이 rolling 문서 버전을 구분하고 STEP Translator, Open CASCADE Technology 8.0.1, 확인 날짜 2026-10-24(세션 날짜)를 서지에 넣거나 실제 7.7 문서를 인용하라."
+  },
+  {
+    "item": "claim:bibliography-simion-help",
+    "location": "5.1, 5.2, 5.3, 5.5 / SIMION 도움말·예제 출처",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/manuscript.json; /mnt/c/Users/lsu10/simion_docs_raw/{magnetic_potential,dielectric}.html; /mnt/c/Program Files/SIMION-2024/examples/collision_hs1/collision_hs1.lua",
+      "section_or_symbol": "reference list vs cited SIMION physical definitions",
+      "line_range": "manuscript.references; magnetic_potential.html:81-225; dielectric.html:58-88; collision_hs1.lua:305-351"
+    },
+    "note": "본문이 물리 출처로 직접 인용하는 SIMION magnetic_potential.html, dielectric.html, collision_hs1.lua는 참고문헌 목록의 두 항목에 없다. Scientific Instrument Services/SIMION 문서·예제의 제목, SIMION 버전, 해당 절/파일과 접근 경로를 완전 서지로 추가해 본문 인용과 목록을 대응시켜라."
+  },
+  {
+    "item": "claim:summary-use-point-sources",
+    "location": "3장·4장·5장·6장·8장 요점 정리 / GPU 풀이는·einzel 렌즈에서·자기장 예제·GEM 261개·정밀도를 맞춘",
+    "verdict": "fix",
+    "checked_against": {
+      "file": "docs/report/manuscript.json; /home/lsu10/.omo/agent/skills/technical-report-style/SKILL.md",
+      "section_or_symbol": "사용 지점의 출처; numeric chapter conclusions",
+      "line_range": "manuscript.blocks:54,94,146,162,183; SKILL.md:사용 지점의 출처"
+    },
+    "note": "요점 정리에 19/9배, 6.4e-5 V, 약80배, 4.9/11.5/700/71배, 7/3/2/22건, 261/154개 등 결론 수치를 반복하면서 그 자리에 출처가 없다. 검증된 원래 표/절 또는 그 표의 파일·절을 가까운 문장에 연결하라. 특히 4장 4096개 threshold 범위, 6장 include 조각 7개와 CAD RMS 예외는 위의 별도 fix를 함께 반영해야 한다."
+  }
+]

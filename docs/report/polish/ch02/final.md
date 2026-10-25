@@ -1,0 +1,46 @@
+[P016] 이 장에서 배울 것
+
+[P017] SimRep을 이루는 부분과 사용자가 형상에서 결과까지 가는 처리 흐름을 정리한다.
+
+[P018] SimRep의 계산 코어는 역할별로 나눈 11개의 Rust 크레이트다. 크레이트는 Rust의 컴파일 단위이자 라이브러리 단위다. 표 2는 각 크레이트의 역할이다. 이 코어를 명령행 도구 simrep, Python 패키지 simrep, 데스크톱 앱이 함께 쓰기 때문에 세 경로의 계산 결과가 같다.
+
+[P020] 표 2의 역할 설명은 각 크레이트 Cargo.toml(예: crates/simrep-core/Cargo.toml)의 description 항목을 옮겨 적은 것이다. 이 가운데 simrep-solve와 simrep-fly가 계산의 대부분을 맡고 나머지는 입력 형식과 사용자 접점이다.
+
+[P021] 사용자는 세 가지 방법으로 SimRep을 쓴다. 명령행 도구 simrep은 refine, refine-geometry, fly, gem2pa, mesh-import, export 같은 하위 명령으로 일괄 작업과 검증을 맡고 Python 패키지 simrep은 같은 기능을 NumPy 배열로 제공해 매개변수 탐색과 분석에 쓰인다. 명령행 기능과 Python 기능의 대응은 docs/python.md의 CLI parity 절에 표로 정리해 두었고 데스크톱 앱은 7장에서 다룬다.
+
+[P022] 요점 정리
+
+[P023] 계산 코어는 11개 Rust 크레이트이고 명령행 도구, Python 패키지, 데스크톱 앱이 같은 코어를 쓰므로 세 경로의 결과가 같다.
+
+<!-- HUMANIZE-SUMMARY v1.6.1
+run_id: ch02
+metrics:
+  char_in: 789
+  char_out: 784
+  change_rate: 3.3% (char-diff; sentence coverage 59%)
+  self_check: 6/6
+  grade: A
+categories:  # before → after
+  C-11 연결어미 뒤 쉼표: 3 → 0
+  H-1 '그래서': 2 → 0
+  E-2 종결 변주: 2건
+self_check:
+  - 고유명사·수치·인용 100% 보존: ✅
+  - 변경률 30% 이하: ✅
+  - 장르 이탈 없음: ✅
+  - register 보존: ✅
+  - S1 잔존 0건: ✅
+  - 인공 표현 추가 없음: ✅
+highlights:
+  - id: C-11
+    before: "simrep-solve와 simrep-fly가 계산의 대부분을 맡고, 나머지는…"
+    after: "…맡고 나머지는…"
+  - id: H-1
+    before: "같은 코어를 … 함께 쓴다. 그래서 세 경로의 계산 결과가 같다."
+    after: "이 코어를 … 함께 쓰기 때문에 세 경로의 계산 결과가 같다."
+  - id: C-11
+    before: "계산 코어는 11개 Rust 크레이트이고, 명령행 도구…"
+    after: "계산 코어는 11개 Rust 크레이트이고 명령행 도구…"
+residual_findings: 없음
+grade_reason: "A — S1 잔존 0건, char-diff 3.3%·문장 커버리지 59%, 자체검증 6항 통과. 문어체 유지."
+-->

@@ -1,0 +1,29 @@
+[정량 사전 점수 v1.6 / KatFish baseline]
+risk_band: low  (score 2)
+genre: report
+char_count: 351
+warning: baseline_genre_null:report->essay
+
+[지표]
+- comma_inclusion_rate: 0.22  (z=-0.24 vs report 인간 baseline)
+- comma_usage_rate: 0.22  (z=-1.27 vs report 인간 baseline)
+- ending_comma_rate: 0.50  (z=+5.84 vs report 인간 baseline)  ★ S1 트리거
+- comma_segment_length: 6.45  (z=+1.00 vs report 인간 baseline)
+- conclusion_pivot_count: 0
+- safe_balance_count: 0
+- hanja_nominalizer_density: 0.000  (z=-2.00 vs report 인간 baseline)
+- lexical_diversity: 0.96  (z=+6.15 vs report 인간 baseline)  ★ S1 트리거
+
+[근거 사용 가이드]
+- 위 점수는 *근거 보조*다. 단독 판정 금지(보고서 명시).
+- z>1.0 지표는 quick-rules.md S1·S2 패턴과 교차 확인 후 윤문할 것.
+- ending_comma_rate가 ★ S1 트리거인 경우 C-11(연결어미 뒤 쉼표) 우선 손질.
+- conclusion_pivot 매치 토큰은 D-1·H-1 처방 적용 대상.
+
+[원문 시작]
+[C052] 그림 4. cut-cell 경계의 격자 수렴. 가로축 격자 간격, 세로축 최대 전위 오차(로그-로그). 값은 docs/cutcell.md의 Grid convergence 절에 기록된 측정값을 이 문서에서 다시 그린 것이다. 출처: figures/F06.png.
+
+[P053] 요점 정리
+
+[P054] SimRep은 식 (1)을 갤러킨 멀티그리드로 풀고, 반복 변화량이 아닌 잔차로 수렴을 판정한다. 큰 SIMION 배열에서 GPU 풀이는 엄격 설정 SIMION보다 19배(준비 포함 9배) 빠르고 결과는 6.4e-5 V 안에서 같다. cut-cell 경계는 같은 메모리에서 계단형보다 전위 오차를 약 80배 줄인다.
+[원문 끝]

@@ -1,0 +1,10 @@
+const a = __args;
+const own = (e) => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
+const all = [...document.querySelectorAll(a.sel || 'aside *')].filter(e => own(e).startsWith(a.text));
+const el = all[a.nth || 0]; if (!el) return { found: false, n: all.length };
+let p = el.parentElement;
+while (p && !(p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
+if (!p) return { found: true, scroller: false };
+p.scrollTop += el.getBoundingClientRect().top - p.getBoundingClientRect().top - (a.pad ?? 4);
+await new Promise(r=>setTimeout(r,400));
+return { found: true, top: el.getBoundingClientRect().top, scrollTop: p.scrollTop };

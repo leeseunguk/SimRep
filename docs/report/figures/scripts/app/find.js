@@ -1,0 +1,2 @@
+const own = (e) => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
+const a=__args; return [...document.querySelectorAll('aside *, main *')].filter(e => own(e).includes(a.text)).map(e => [e.tagName, own(e).slice(0,80), Math.round(e.getBoundingClientRect().top), Math.round(e.getBoundingClientRect().left)]);

@@ -1,0 +1,1 @@
+[P189] 표 14는 docs/PLAN.md, docs/magnetostatics.md, bench/fly-gpu.md, docs/mesh-io.md, docs/bfield-import.md, docs/geometry-pipeline.md에 기록된 한계를 이 문서에서 모은 것이다. 이 가운데 자기장 GPU 비행의 성능은 배정밀도 연산이 빠른 GPU나 혼합 정밀도 방식으로 다시 볼 수 있고, 정확한 표면의 GPU 비행은 메시 교차 계산을 GPU로 옮기면 된다.

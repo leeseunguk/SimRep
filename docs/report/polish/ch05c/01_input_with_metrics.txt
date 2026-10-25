@@ -1,0 +1,25 @@
+[정량 사전 점수 v1.6 / KatFish baseline]
+risk_band: low  (score 2)
+genre: report
+char_count: 206
+warning: baseline_genre_null:report->essay
+
+[지표]
+- comma_inclusion_rate: 0.50  (z=+1.36 vs report 인간 baseline)  · S2 시그널
+- comma_usage_rate: 1.75  (z=+0.87 vs report 인간 baseline)
+- ending_comma_rate: 0.00  (z=-0.52 vs report 인간 baseline)
+- comma_segment_length: 4.45  (z=+0.05 vs report 인간 baseline)
+- conclusion_pivot_count: 0
+- safe_balance_count: 0
+- hanja_nominalizer_density: 0.000  (z=-2.00 vs report 인간 baseline)
+- lexical_diversity: 0.86  (z=+4.14 vs report 인간 baseline)  ★ S1 트리거
+
+[근거 사용 가이드]
+- 위 점수는 *근거 보조*다. 단독 판정 금지(보고서 명시).
+- z>1.0 지표는 quick-rules.md S1·S2 패턴과 교차 확인 후 윤문할 것.
+- ending_comma_rate가 ★ S1 트리거인 경우 C-11(연결어미 뒤 쉼표) 우선 손질.
+- conclusion_pivot 매치 토큰은 D-1·H-1 처방 적용 대상.
+
+[원문 시작]
+[P146] 자기장, 기체 충돌, 유전체, 공간전하, 재료가 있는 자기장을 모두 SIMION 예제와 같은 정밀도에서 비교했다. 외부 해석 프로그램의 자기장 지도도 읽어 쓸 수 있다. 자기장 예제 7개, 유전체 예제 3개, beam 예제 2개, 자기 포텐셜 계산 22건에서 모두 SimRep이 빨랐다. 자기장 비행은 RTX 3070에서 CPU가 더 빨라 CPU로 돌린다.
+[원문 끝]

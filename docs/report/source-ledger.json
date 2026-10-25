@@ -1,0 +1,519 @@
+[
+ {
+  "item": "eq:1",
+  "location": "3장 식 (1)",
+  "citation": "docs/cpu-solver.md의 Discrete operator 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/cpu-solver.md",
+   "symbol": "Discrete operator; crates/simrep-solve/src/mg.rs solve"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:2",
+  "location": "3.1절 식 (2)",
+  "citation": "docs/cpu-solver.md의 Convergence and reporting 절",
+  "kind": "convention",
+  "checked_against": {
+   "file": "docs/cpu-solver.md",
+   "symbol": "Convergence and reporting; mg.rs reached"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:3",
+  "location": "3.3절 식 (3)",
+  "citation": "Gibou et al., 2002의 식 (21)",
+  "kind": "adapted",
+  "checked_against": {
+   "file": "docs/cutcell.md",
+   "symbol": "Operator and symmetry invariant; Gibou et al. 2002 eq. (21)"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:4",
+  "location": "4장 식 (4)",
+  "citation": "crates/simrep-fly/src/flight.rs의 derivative 함수",
+  "kind": "derived",
+  "checked_against": {
+   "file": "crates/simrep-fly/src/flight.rs",
+   "symbol": "velocity, derivative; crates/simrep-fly/src/lib.rs constants"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:5",
+  "location": "4.4절 식 (5)",
+  "citation": "이 문서의 판정 규약",
+  "kind": "convention",
+  "checked_against": {
+   "file": "docs/PLAN.md",
+   "symbol": "1. 목표: 8배 격자 기준 판정"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:6",
+  "location": "5.1절 식 (6)",
+  "citation": "docs/physics-magnetic-collision.md의 Units and magnetic fields 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/physics-magnetic-collision.md",
+   "symbol": "Units and magnetic fields; physics/magnetic.rs Coil::field_gauss"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:7",
+  "location": "5.2절 식 (7)",
+  "citation": "docs/physics-magnetic-collision.md의 HS1 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/physics-magnetic-collision.md",
+   "symbol": "HS1; physics/collision.rs collision_rate_per_us"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:8",
+  "location": "5.3절 식 (8)",
+  "citation": "docs/dielectric.md의 Discretization and interfaces 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/dielectric.md",
+   "symbol": "Discretization and interfaces; dielectric.rs harmonic"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:9",
+  "location": "5.4절 식 (9)",
+  "citation": "docs/physics-space-charge.md의 Direct Coulomb 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/physics-space-charge.md",
+   "symbol": "Direct Coulomb; physics/space_charge.rs DirectCharge::field"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:10",
+  "location": "5.5절 식 (10)",
+  "citation": "docs/magnetostatics.md의 Equations and flight contract 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/magnetostatics.md",
+   "symbol": "Equations and flight contract; magnetostatics.rs scalar"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "eq:11",
+  "location": "5.5절 식 (11)",
+  "citation": "docs/magnetostatics.md의 Equations and flight contract 절",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/magnetostatics.md",
+   "symbol": "Equations and flight contract; magnetostatics.rs currents"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:1",
+  "location": "1.1절 표 1 환경",
+  "citation": "docs/PLAN.md의 2절 표와 bench/simion-baseline.md",
+  "kind": "measured",
+  "checked_against": {
+   "file": "docs/PLAN.md",
+   "symbol": "2. 환경과 제약; bench/simion-baseline.md preamble"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:2",
+  "location": "2장 표 2 크레이트",
+  "citation": "각 크레이트 Cargo.toml(예: crates/simrep-core/Cargo.toml)의 description 항목과 근거 열의 구현 문서 절",
+  "kind": "measured",
+  "checked_against": {
+   "file": "crates/simrep-core/Cargo.toml",
+   "symbol": "description of all 11 crates; row-level implementation sections in the 근거 column"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:3",
+  "location": "3.2절 표 3 refine 시간",
+  "citation": "bench/refine-real.md End-to-end performance, bench/simion-baseline.md Refine",
+  "kind": "measured",
+  "checked_against": {
+   "file": "bench/refine-real.md",
+   "symbol": "End-to-end performance (lines ~163-185)"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:4",
+  "location": "3.3절 표 4 cut-cell",
+  "citation": "docs/cutcell.md Measured acceptance",
+  "kind": "measured",
+  "checked_against": {
+   "file": "docs/cutcell.md",
+   "symbol": "Measured acceptance (2026-10-23)"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:5",
+  "location": "4.5절 표 5 einzel",
+  "citation": "bench/fly-real.md, bench/default-flight.md, bench/simion-baseline.md",
+  "kind": "measured",
+  "checked_against": {
+   "file": "bench/fly-real.md",
+   "symbol": "Same 1,000 ions, same independent 8x reference; default-flight Main integration; simion-baseline Fly"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:6",
+  "location": "4.6절 표 6 4중극",
+  "citation": "bench/fly-real.md Compute time at achieved precision, docs/geometry-pipeline.md V3",
+  "kind": "measured",
+  "checked_against": {
+   "file": "bench/fly-real.md",
+   "symbol": "Compute time at achieved precision; Source-geometry cuts v3"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:7",
+  "location": "4.8절 표 7 앱 갱신",
+  "citation": "docs/dev/frontend.md 제출/수거 파이프라인 절",
+  "kind": "measured",
+  "checked_against": {
+   "file": "docs/dev/frontend.md",
+   "symbol": "제출/수거 파이프라인과 작은 비행 패킷"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:8",
+  "location": "5.1절 표 8 자기장",
+  "citation": "bench/magnetic-cpu.md Actual matched-population compute",
+  "kind": "measured",
+  "checked_against": {
+   "file": "bench/magnetic-cpu.md",
+   "symbol": "Actual matched-population compute"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:9",
+  "location": "5.3절 표 9 유전체",
+  "citation": "docs/dielectric.md Automatic selection at the default residual tolerance",
+  "kind": "measured",
+  "checked_against": {
+   "file": "docs/dielectric.md",
+   "symbol": "Automatic selection at the default residual tolerance"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:10",
+  "location": "5.6절 표 10 외부 자기장 지도",
+  "citation": "bench/bfield-import.md의 Cartesian full-flight errors 절",
+  "kind": "measured",
+  "checked_against": {
+   "file": "bench/bfield-import.md",
+   "symbol": "Cartesian full-flight errors"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:11",
+  "location": "6장 표 11 호환",
+  "citation": "docs/gem-validation.md, docs/fly2-validation.md, bench/refine-real.md, docs/dev/frontend.md",
+  "kind": "measured",
+  "checked_against": {
+   "file": "docs/gem-validation.md",
+   "symbol": "summary counts; fly2-validation summary; refine-real PA0 loading; frontend IOB"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:12",
+  "location": "6장 표 12 STEP",
+  "citation": "docs/step-import.md Measured accuracy and timing",
+  "kind": "measured",
+  "checked_against": {
+   "file": "docs/step-import.md",
+   "symbol": "Measured accuracy and timing"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:13",
+  "location": "8장 표 13 종합",
+  "citation": "표 아래 문단에 행별로 적은 원본 문서 절에서 가져와 이 문서에서 모은 것",
+  "kind": "derived",
+  "checked_against": {
+   "file": "bench/refine-real.md",
+   "symbol": "rows cite bench/refine-real.md, docs/cutcell.md, bench/default-flight.md, bench/fly-real.md, docs/geometry-pipeline.md, bench/magnetic-cpu.md, docs/dielectric.md, bench/space-charge.md, docs/magnetostatics.md"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "table:14",
+  "location": "9장 표 14 한계",
+  "citation": "근거 열에 적은 각 문서 절의 한계를 이 문서에서 모은 것",
+  "kind": "derived",
+  "checked_against": {
+   "file": "docs/report/evidence-digest.md",
+   "symbol": "9. Limitations"
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:1",
+  "location": "그림 1",
+  "citation": "figures/F01.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F01.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:1000, draw:300} → project.newFromTemplate('einzel'), 그 뒤 shot(전체 창 2560×1600 px)."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:2",
+  "location": "그림 2",
+  "citation": "figures/F05.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F05.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); 각 점이 별도 실행 `RAYON_NUM_THREADS=16 simrep refine <pa#> --device cpu --tolerance 1e-12 --max-cycles k`(k=1…수렴). 입력: refine-geometry가 쓴 quadrupole.pa#, simrep-oracle\\_bench3d\\sc3d_x2.pa#. data/F05-residual-history.csv, scripts/F05_residual.py --run."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:3",
+  "location": "그림 3",
+  "citation": "figures/F04.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F04.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep refine-geometry quadrupole.gem --electrode 1=1:2.5 --electrode 2=2:-2.5 --electrode 3=3:0 --tolerance 1e-12` (cuts.json v3 + 기저 3개) 및 같은 .pa#의 `simrep refine --tolerance 1e-12`(계단형). 전위 = 2.5·pa1/1e4 − 2.5·pa2/1e4. data/F04-slice.json, scripts/F04_quad_section.py --extract."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:4",
+  "location": "그림 4",
+  "citation": "figures/F06.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F06.png",
+   "symbol": "docs/cutcell.md 'Grid convergence' 표(CPU f64, 잔차 1e-12)와 'Measured acceptance' 표(구 128³/256³ 계단형 최대 오차). h = 2/(n−1)(구·평면), (b−a)/(n−2)(축대칭). data/F06-cutcell-convergence.csv, scripts/F06_cutcell_order.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:5",
+  "location": "그림 5",
+  "citation": "figures/F07.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F07.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:10000, draw:300, tab:'hist'} → fit.js → zoom.js(휠 6단계 확대, 1단계 축소), 가운데 열(CSS 264,48,704×724) 캡처."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:6",
+  "location": "그림 6",
+  "citation": "figures/F08.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F08.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); scripts/cli_runs.sh F08 구간(docs/geometry-pipeline.md 'V3 quadrupole user-route validation'의 명령 그대로: --tolerance 1e-11 --max-step-us 0.025 --bounds=0,-18,-18,60,18,18). 기준해 simrep-oracle\\_quad_cut\\physical-8-global.csv(h = 0.0625 mm). SIMION: _quad_gpu\\quality-209-readout.json의 FINAL 행(SIMION 2024-09-26-8.2.1.0, --trajectory-quality 209, 템플릿 계단형 quad.pa0, compute 9.43 s). data/F08-*.csv, scripts/F08_quad_endpoints.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:7",
+  "location": "그림 7",
+  "citation": "figures/F10.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F10.png",
+   "symbol": "bench/fly-gpu.md 'Cached-power Horner specialization (2026-10-24)' > 'Retained before/after controls' 표(Vulkan 타임스탬프, RTX 3070). data/F10-gpu-kernel.csv, scripts/F10_gpu_kernel.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:8",
+  "location": "그림 8",
+  "citation": "figures/F09.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F09.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/quad.js {count:10000, view:'iso'} 후 cdp.mjs dragshot(Input.dispatchMouseEvent로 슬라이더 엄지를 2.5 V 위치에서 60단계 끌고, 누른 채로 캡처). crop.py로 뷰포트+속성 패널만 자름."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:9",
+  "location": "그림 9",
+  "citation": "figures/F12.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F12.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep fly --device cpu --run-file physics-validation-20261023\\solenoid\\run.json --particles .../ions.ion --bounds=-150,-50,-50,150,50,50 --nonrelativistic` (기본: 코일 지도) 및 같은 명령 + --exact-coils. 표준출력 data/F12-solenoid-cli-log.txt. 기준해 solenoid\\native-reference.csv. scripts/F12_coil_map.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:10",
+  "location": "그림 10",
+  "citation": "figures/F11.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F11.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep fly --device cpu --run-file physics-validation-20261023\\sector_2dp\\run.json --particles .../ions.ion --bounds=-20,-120,-120,20,120,120 --nonrelativistic`; 궤적 점은 같은 명령에 --duration-us t --allow-time-limit(t = 0.2…18.6 µs)를 준 93회 실행의 위치. SIMION: sector_2dp\\flight.log FINAL 행. data/F11-*.csv, scripts/F11_sector.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:11",
+  "location": "그림 11",
+  "citation": "figures/F13.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F13.png",
+   "symbol": "C:\\Users\\lsu10\\simrep-oracle\\physics-validation-20261023\\gpu-physics\\hs1-cpu.csv, hs1-gpu.csv(RTX 3070 Vulkan native f64, seed 813; docs/physics-magnetic-collision.md 'GPU distribution replay') 및 collision_hs1\\flight.log FINAL 행(SIMION, seed 237). data/F13-*.csv, scripts/F13_hs1.py(scipy 정확 KS로 재계산)."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:12",
+  "location": "그림 12",
+  "citation": "figures/F14.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F14.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep gem2pa sphere_3dp.gem sphere_3dp.pa` → 작업 사본의 비갱신 비트 해제(scripts/pa_prep.py refinable) → 유전 셀 PA의 5를 10으로(예제 Lua의 kinside=10, pa_prep.py relabel) → `simrep refine sphere_3dp-eps10.pa --permittivity sphere_3dp-dielectric-eps10.pa --device cpu --tolerance 1e-12`. SIMION: simrep-oracle\\dielectric\\sphere_3dp.simrep-strict.pa(수렴 1e-7). data/F14-sphere3dp-slices.npz, scripts/F14_dielectric_sphere.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:13",
+  "location": "그림 13",
+  "citation": "figures/F15.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F15.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); data/F15-beam.ion(황금각 균일 원판, 1 amu, +1 e, 0.5182134834 eV, 이온 1이 축 위 리더) 및 `simrep fly --device cpu --particles F15-beam.ion --charge-mode beam --beam-current-a 1e-8 --bounds=-1,-20,-20,10,20,20 --plane 1,0,0,d --nonrelativistic`(d = 0.4…4.8 mm, 12회). 해석해 상수는 docs/physics-space-charge.md(C = (q/m)·96.48533202185007·2k·I·1e-6/v). scripts/F15_beam_spread.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:14",
+  "location": "그림 14",
+  "citation": "figures/F16.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F16.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); 감사 내보내기(simrep-oracle\\magnetic-potential-audit) 사본에 예제 Lua와 같은 변환(pa_prep.py relabel '*:1000' 1:1 → μ, scale 0.8 → J = 2000 A/2500 mm²), Az 사본 refinable + max_voltage 1e6, `simrep refine Az-phys.pa --magnetic-material c_magnet_phys.json --device cpu --tolerance 1e-10`. SIMION: c_magnet_2dp-Az.strict.pa. data/F16-c-magnet.npz, scripts/F16_c_magnet.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:15",
+  "location": "그림 15",
+  "citation": "figures/F17.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F17.png",
+   "symbol": "bench/bfield-import-20261024.csv(be-bmap-import, 2026-10-25 병합; `cargo test -p simrep-fly --release --test bfield_import -- --nocapture`), bench/bfield-import.md 표. 3D는 Delimited 행(CSV/Opera/COMSOL은 같은 오차), 축대칭은 Axisymmetric 행. 균일장(오차 0)과 contended 시간 열은 그리지 않음. data/F17-bfield-import-20261024.csv, scripts/F17_bfield_import.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:16",
+  "location": "그림 16",
+  "citation": "figures/F19.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F19.png",
+   "symbol": "target/release/simrep 0.1.0 (sha256 f4c00ab4…, built 2026-10-25 01:24 after the be-bmap-import merge; data regenerated end to end with scripts/cli_runs.sh and identical to the first pass); `simrep gem2pa hexapole.gem hexapole.pa#`(SIMION-2024 examples\\geometry\\hexapole.gem), SIMION 결과 simrep-oracle\\_gem\\examples\\geometry\\hexapole.oracle.pa#. 비교 tools/simion-oracle/compare_pa.py. data/F19-hexapole-masks.npz, scripts/F19_gem_hexapole.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:17",
+  "location": "그림 17",
+  "citation": "figures/F20.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F20.png",
+   "symbol": "native: target/release/examples/particles(check_fly2.py가 쓰는 생성기, sha256 9698335c…) `particles <SIMION-2024/examples/...fly2> \"\" <seed>`; SIMION: simrep-oracle\\_fly2\\<이름>.oracle.txt(simion.iob2.load_fly2_file(...):create_ionfile, 시드 1–8; docs/fly2-validation.md). data/F20-*.csv, scripts/F20_fly2.py."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:18",
+  "location": "그림 18",
+  "citation": "figures/F18.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F18.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\step\\pair.step(= simrep-cad-fixtures\\pair.step, sha256 44ad527f…). scripts/app/stepwiz.js, crop.py로 뷰포트+마법사 패널을 자름(프로젝트 이름 표시줄 제외)."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:19",
+  "location": "그림 19",
+  "citation": "figures/F03.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F03.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 띠 1–3은 1280×440 CSS 창, 띠 4는 1280×800 창. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(= simrep-oracle\\_quad_cut\\quadrupole.gem, sha256 fb250579…), particles.ion(_quad_gpu, sha256 8d0e731d…). scripts/app/wiz1.js → wizrun.js → quadfly.js {precision:'precise', exact:true} → res.js; scripts/crop.py --stack로 원본 픽셀 그대로 잘라 붙임."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:20",
+  "location": "그림 20",
+  "citation": "figures/F21.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F21.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/tour.js: useTour.start() → project.newFromTemplate('einzel')(사용자가 템플릿 카드를 누르는 것과 같은 동작) → 단계 자동 진행. crop.py로 뷰포트 아래쪽과 속성 패널을 자름."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:21",
+  "location": "그림 21",
+  "citation": "figures/F22.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F22.png",
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; F03과 같은 마법사 결과 배열(quad2). scripts/app/quadfly.js {precision:'precise', exact:true}와 {precision:'live', exact:false}(두 번째 비행에서 GPU 준비 완료), scrollto.js로 카드·결과 섹션을 각각 캡처, crop.py --stack/--row."
+  },
+  "status": "verified"
+ },
+ {
+  "item": "fig:22",
+  "location": "그림 22",
+  "citation": "figures/F02.png",
+  "kind": "measured",
+  "checked_against": {
+   "file": "figures/F02.png",
+   "symbol": "data/F02-speed.csv(행마다 원본 표와 두 시간·정밀도 근거를 적음; shown=0인 6행은 CSV에만 둠). 원본: bench/default-flight.md 'Retained one-cell baseline'·'HS1 and SDS' 표, bench/fly-gpu.md 'Native precision study', bench/fly-real.md 'Compute time at achieved precision'·'Physical geometry'·'Source-geometry cuts v3', bench/space-charge.md 'Matched-precision compute verdict', bench/magnetic-cpu.md 'Actual matched-population compute', bench/refine-real.md 'End-to-end performance' + bench/simion-baseline.md Refine 표, docs/dielectric.md 'Strict oracle and compute medians'·'Speed at matched estimated physical accuracy', docs/magnetostatics.md 'Audit results'·'Hardware GPU and uniform-field follow-up'·'Uniform Az root cause and fix'. scripts/F02_speed.py."
+  },
+  "status": "verified"
+ }
+]

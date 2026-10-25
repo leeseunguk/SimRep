@@ -1,0 +1,20 @@
+
+const { useApp } = await import('/src/state/store.ts');
+const wiz = await import('/src/scene/importWizard.ts');
+const { useWizard } = await import('/src/state/wizard.ts');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+useApp.getState().setLang('ko'); useApp.getState().setThemePref('light');
+useApp.setState({ dirty: false });
+for (const o of [...useApp.getState().objects]) useApp.getState().removeObject(o.id);
+const { useResults } = await import('/src/results/store.ts'); useResults.getState().setOpen(false);
+const t0 = performance.now();
+await wiz.openWizard({ path: __args.path, name: 'pair.step', size: __args.size });
+for (let i = 0; i < 600 && useWizard.getState().wizard?.status !== 'ready'; i++) await sleep(50);
+const ms = performance.now() - t0;
+const w0 = useWizard.getState().wizard;
+useWizard.getState().set({ parts: w0.parts.map((p, i) => ({ ...p, voltage: i === 0 ? 100 : 0 })) });
+useApp.setState({ toasts: [] });
+useApp.getState().requestView({ type: 'preset', view: 'iso', fit: true });
+await sleep(1200);
+const w = useWizard.getState().wizard;
+return { ms, status: w.status, error: w.error, cad: w.cadUnavailable, parts: w.parts.map(p => ({ name: p.name, number: p.number, voltage: p.voltage })), method: w.method, cadSurface: w.cadSurface, spacing: w.spacing, size: w.size, origin: w.origin };

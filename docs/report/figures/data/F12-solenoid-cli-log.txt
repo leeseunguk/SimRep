@@ -1,0 +1,11 @@
+$ simrep fly ... --output map.csv
+device: cpu, requested: Cpu, auto_gpu_threshold: None (measured compute-only class calibration)
+cpu_coil_map: region=0, nodes=465697, max_abs_gauss=1.356164e-9, max_relative=2.716370e-10, accepted=true
+cpu_coil_map: region=1, nodes=1460437, max_abs_gauss=4.567788e-12, max_relative=9.930276e-12, accepted=true
+cpu_coil_map: region=2, nodes=1460437, max_abs_gauss=2.468703e-12, max_relative=7.545330e-12, accepted=true
+ions: 100, splats: 100, setup_s: 2.741604, fly_s: 0.243018, total_s: 3.000564, ions_per_s: 411
+accepted_steps: 359183, rejected_steps: 5134
+$ ... --exact-coils --output exact.csv
+device: cpu, requested: Cpu, auto_gpu_threshold: None (measured compute-only class calibration)
+ions: 100, splats: 100, setup_s: 0.007988, fly_s: 0.835539, total_s: 0.843705, ions_per_s: 120
+accepted_steps: 359135, rejected_steps: 5072

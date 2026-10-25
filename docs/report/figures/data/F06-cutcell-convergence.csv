@@ -1,0 +1,12 @@
+geometry,n,h,max_potential_error_V,near_surface_field_error,source
+sphere,65,0.03125,4.792432e-3,5.189737e-1,"docs/cutcell.md 'Grid convergence' table; h = 2/(n-1) on [-1,1]^3"
+sphere,129,0.015625,7.759763e-4,1.990090e-1,docs/cutcell.md 'Grid convergence' table
+sphere,257,0.0078125,2.226561e-4,7.853889e-2,docs/cutcell.md 'Grid convergence' table
+planar_cylinders_worst_phase,65,0.03125,1.031903e-3,1.552507e-1,"docs/cutcell.md 'Grid convergence' table; h = 2/(n-1) on [-1,1]^2"
+planar_cylinders_worst_phase,129,0.015625,5.631917e-4,6.122100e-2,docs/cutcell.md 'Grid convergence' table
+planar_cylinders_worst_phase,257,0.0078125,7.229136e-5,3.776763e-2,docs/cutcell.md 'Grid convergence' table
+axisymmetric_cylinders,65,0.008253968253968254,8.849054e-5,1.454852e-2,"docs/cutcell.md 'Grid convergence' table; h = (b-a)/(n-2), a=0.31, b=0.83"
+axisymmetric_cylinders,129,0.004094488188976378,2.195969e-5,7.214950e-3,docs/cutcell.md 'Grid convergence' table
+axisymmetric_cylinders,257,0.002039215686274510,5.469603e-6,3.592335e-3,docs/cutcell.md 'Grid convergence' table
+sphere_staircase,128,0.015748031496062992,3.991813e-2,,"docs/cutcell.md 'Measured acceptance' table (CPU 128^3 staircase max error; n=128 -> h=2/127); same row SDF 6.711957e-4"
+sphere_staircase,256,0.00784313725490196,2.573109e-2,,"docs/cutcell.md 'Measured acceptance' table (CPU 256^3 staircase max error); same row SDF 2.678142e-4"

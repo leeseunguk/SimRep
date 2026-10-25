@@ -1,0 +1,112 @@
+[
+ {
+  "run": "ch01",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch01\nmetrics:\n  char_in: 2029\n  char_out: 2032\n  change_rate: 4.0% (char-diff; sentence coverage 54%)\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 11 → 0\n  H-1 문두 접속사 '그래서': 2 → 1\n  E-2 단일 종결·직설 환원: 5건\n  I-2 '~에 있다/기록되어 있다' 과잉: 3건\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"SIMION은 전극이 만드는 전위를 격자 위에서 계산하고, 그 전기장과…\"\n    after: \"…계산하고 그 전기장과…\"\n  - id: A-7\n    before: \"계단형 전극은 전극 근처의 전위를 틀리게 만들고, 선형 보간은 전기장을 칸 경계에서 끊어지게 만든다.\"\n    a"
+ },
+ {
+  "run": "ch02",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch02\nmetrics:\n  char_in: 789\n  char_out: 784\n  change_rate: 3.3% (char-diff; sentence coverage 59%)\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 3 → 0\n  H-1 '그래서': 2 → 0\n  E-2 종결 변주: 2건\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"simrep-solve와 simrep-fly가 계산의 대부분을 맡고, 나머지는…\"\n    after: \"…맡고 나머지는…\"\n  - id: H-1\n    before: \"같은 코어를 … 함께 쓴다. 그래서 세 경로의 계산 결과가 같다.\"\n    after: \"이 코어를 … 함께 쓰기 때문에 세 경로의 계산 결과가 같다.\"\n  - id: C-11\n    befor"
+ },
+ {
+  "run": "ch03a",
+  "id": "P041",
+  "rejected": [
+   "protected tokens changed"
+  ],
+  "before": "표 3의 SimRep 행은 bench/refine-real.md의 End-to-end performance 절, SIMION 행은 bench/simion-baseline.md의 Refine 절에서 가져왔고, 배수는 이 문서에서 두 값을 나눈 것이다. GPU 풀이 시간에는 데이터 전송이 들어 있어 순수 커널 시간보다 크다. 그래서 GPU는 준비 시간을 포함해도 SIMION보다 9배 빠르다. CPU는 풀이만 비교하면 2.8배 빠르지만 준비 시간을 더하면 차이가 1.9배로 줄어든다. 정확도는 모든 격자점에서 엄격 설정 SIMION과 최대 6.4e-5 V 이내로 같았다. 반면 SIMION의 기본 설정은 엄격 설정과 최대 0.92 V가 달랐다. 이 차이 때문에 1장의 규칙대로 엄격 설정을 비교 기준으로 삼았다.",
+  "after": "표 3의 SimRep 행은 bench/refine-real.md의 End-to-end performance 절, SIMION 행은 bench/simion-baseline.md의 Refine 절에서 가져왔고 배수는 이 문서에서 두 값을 나눈 것이다. GPU 풀이 시간에는 데이터 전송이 들어 있어 순수 커널 시간보다 큰데 그래도 준비 시간을 포함해 SIMION보다 9배 빠르다. CPU는 풀이만 비교하면 2.8배 빠르지만 준비 시간을 더하면 차이가 1.9배로 줄어든다. 정확도는 모든 격자점에서 엄격 설정 SIMION과 최대 6.4e-5 V 이내로 같았다. 반면 SIMION의 기본 설정은 엄격 설정과 최대 0.92 V가 달랐다. 이 차이 때문에 1장의 규칙대로 엄격 설정을 비교 기준으로 삼았다."
+ },
+ {
+  "run": "ch03a",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch03a\nmetrics:\n  char_in: 4564\n  char_out: 4526\n  change_rate: 1.6% (char-diff; sentence coverage 44%)\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 19 → 0\n  H-1 '그래서': 5 → 0\n  A-10 '~할 수 있다' 과잉 단언 환원: 1건\n  E-2 종결 변주: 3건\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"공간전하가 없으면 … 되고, 공간전하가 있으면 …\"\n    after: \"… 되고 공간전하가 있으면 …\"\n  - id: H-1\n    before: \"그래서 거친 격자도 같은 에너지를 유지하고, 가는 전극이…\"\n    after: \"이 때문에 거친 격자도 같은 에너지를 유지하고 가는 전극이…\"\n  -"
+ },
+ {
+  "run": "ch03b",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch03b\nmetrics:\n  char_in: 351\n  char_out: 351\n  change_rate: 0.3% (char-diff; sentence coverage 17%)\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 1 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"SimRep은 식 (1)을 갤러킨 멀티그리드로 풀고, 반복 변화량이 아닌…\"\n    after: \"…풀고 반복 변화량이 아닌…\"\nresidual_findings: 없음 — 원문이 이미 간결하고 Do-NOT 제약이 넓어 근거 기반 수정 여지가 좁았음\ngrade_reason: \"A — S1 잔존 0건, char-diff 0.3%·문장 커버리지 17%, 자체검증 6항 통과.\"\n-->\n"
+ },
+ {
+  "run": "ch04a",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch04a\nmetrics:\n  char_in: 4443\n  char_out: 4377\n  change_rate: 2.0%\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 13 → 0\n  H-4 '즉' 남발: 2 → 0\n  I-1 '~것이다' 결말: 2 → 0\n  I-3 '~인지는' 완곡 도입: 1 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"함께 계산하고, 둘의 차이를 오차 추정으로 써서 다음 스텝 크기를 정한다.\"\n    after: \"함께 계산하고 둘의 차이를 오차 추정으로 써 다음 스텝 크기를 정한다.\"\n  - id: C-11\n    before: \"포함하며, 운동방정식은 식 (4)다.\"\n    after: \"포함한다. 운동방정식은 식 (4)다.\"\n  - id: H-4\n    befor"
+ },
+ {
+  "run": "ch04b",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch04b\nmetrics:\n  char_in: 1639\n  char_out: 1634\n  change_rate: 2.0%\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 4 → 0\n  I-1 '~것이다' 결말: 1 → 0\n  I-3 '~것이다' 해설체(개선 내용): 1 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"같은 적분기와 재구성을 쓰고, 앱의 실시간 미리보기는\"\n    after: \"같은 적분기와 재구성을 쓰고 앱의 실시간 미리보기는\"\n  - id: I-1\n    before: \"결과 패킷을 줄인 것이다.\"\n    after: \"개선은 두 가지다. ... 결과 패킷을 줄였다.\"\n  - id: 중복 어미\n    before: \"이 측정은 bench/fly-gpu.md의 Automatic "
+ },
+ {
+  "run": "ch05a",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch05a\nmetrics:\n  char_in: 4295\n  char_out: 4274\n  change_rate: 1.8%\n  self_check: 6/6\n  grade: B\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 17 → 0\n  A-10 '~할 수 있다' 남발: 3 → 1 (잔존 1건은 주의 표현 '다를 수 있다' 보호)\n  E-1 문장 길이 균일(장문 문장 분리): 5 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"둘을 곱해 기울기를 취하면 자기장 B(G)가 된다. 뒷식은 비오-사바르 법칙으로, ...\"\n    after: 연결어미 뒤 쉼표 15건 전량 제거 (예: \"~기준해이며, 일곱 경우\" → \"~기준해다. 일곱 경우\")\n  - id: A-10\n    before: \"자기장은 세 가지로 줄 수 있다.\"\n    after: \"자기장"
+ },
+ {
+  "run": "ch05b",
+  "id": "P122",
+  "rejected": [
+   "protected tokens changed"
+  ],
+  "before": "표 9는 docs/dielectric.md의 Automatic selection at the default residual tolerance 절에 있는 값을 합한 것이다. 이 측정은 다른 작업과 기계를 나눠 쓰는 동안 했다. 3D 구에서는 GPU 데이터 전송까지 넣어도 1.41 s로 SIMION보다 18배 빠르다. 장치는 측정한 교차점으로 고른다. 3D 격자에서 선형 유전체는 1,048,576점 이상, 비선형 유전체는 131,072점 이상이면 GPU를 쓴다(docs/dielectric.md의 Class-aware auto thresholds 절). 그림 12는 sphere_3dp의 결과다. 왼쪽 전위 단면에서 유전율 10인 구 안의 등전위선 간격이 넓어지는데, 이는 구가 분극되어 내부 전기장이 약해졌다는 뜻이다. 오른쪽은 축 위의 전기장으로, 바깥에서 걸어 준 1 V/mm가 구 표면 바깥에서 커지고 구 안에서 0.2572 V/mm로 줄어든다. SIMION과 SimRep의 두 선이 겹친다.",
+  "after": "표 9는 docs/dielectric.md의 Automatic selection at the default residual tolerance 절의 값을 합한 표다. 다른 작업과 기계를 나눠 쓰는 동안 측정했다. 3D 구에서는 GPU 데이터 전송까지 넣어도 1.41 s로 SIMION보다 18배 빠르다. GPU와 CPU 가운데 어느 쪽을 쓸지는 측정한 교차점으로 정한다. 3D 격자에서 선형 유전체는 1,048,576점 이상, 비선형 유전체는 131,072점 이상이면 GPU를 쓴다(docs/dielectric.md의 Class-aware auto thresholds 절). 그림 12는 sphere_3dp의 결과다. 왼쪽 전위 단면에서 유전율 10인 구 안의 등전위선 간격이 넓어진다. 구가 분극되어 내부 전기장이 약해졌기 때문이다. 오른쪽은 축 위의 전기장이다. 바깥에서 걸어 준 1 V/mm가 구 표면 바깥에서 커지고 구 안에서 0.2572 V/mm로 줄어든다. SIMION과 SimRep의 두 선이 겹친다."
+ },
+ {
+  "run": "ch05b",
+  "id": "P134",
+  "rejected": [
+   "protected tokens changed"
+  ],
+  "before": "식 (10)의 μᵣ은 상대 투자율, M은 자석의 자화(A/mm)다. 앞식은 자화가 만드는 자극을 원천으로 하는 포텐셜 방정식이고, 형태가 식 (8)과 같아서 유전체 솔버의 계수 계산을 그대로 쓴다. 뒷식은 그 포텐셜에서 자기장을 얻는 식이다. 이온이 날아가는 진공에서는 μᵣ = 1, M = 0이므로 뒷식이 식 (6)의 앞식으로 돌아가고, 결과를 기존 자기 PA 형식으로 저장해 그대로 날릴 수 있다. 이 식과 비행 규약은 docs/magnetostatics.md의 Equations and flight contract 절에 있다. 전류는 식 (11)의 벡터 포텐셜로 푼다.",
+  "after": "식 (10)의 μᵣ은 상대 투자율, M은 자석의 자화(A/mm)다. 앞식은 자화가 만드는 자극을 원천으로 하는 포텐셜 방정식이다. 형태가 식 (8)과 같아서 유전체 솔버의 계수 계산을 그대로 쓴다. 뒷식은 그 포텐셜에서 자기장을 얻는 식이다. 이온이 날아가는 진공에서는 μᵣ = 1이고 M = 0이므로 뒷식이 식 (6)의 앞식으로 돌아간다. 결과를 기존 자기 PA 형식으로 저장하면 그대로 날릴 수 있다. 이 식과 비행 규약은 docs/magnetostatics.md의 Equations and flight contract 절에 있다. 전류는 식 (11)의 벡터 포텐셜로 푼다."
+ },
+ {
+  "run": "ch05b",
+  "id": "P140",
+  "rejected": [
+   "negation/limit weakened"
+  ],
+  "before": "자석 설계는 흔히 COMSOL, Opera, CST, FEMM 같은 전자기 해석 프로그램으로 한다. 그 결과를 다시 계산하지 않고 바로 쓰도록, 이 프로그램들이 내보낸 자기장 격자 파일을 읽어 비행에 쓰는 기능을 넣었다. COMSOL의 Spreadsheet·Grid 형식, Opera의 .table, 일반 CSV·텍스트, 축대칭 (z, r, B_z, B_r) 표를 읽고, 길이 단위(mm, m, cm, inch)와 자기장 단위(G, T, mT), 위치·회전·배율 변환을 지정할 수 있다. 읽은 격자는 코일 지도와 같은 C2 보간으로 재구성하며, 다른 자기장 소스와 겹쳐 더한다. 사용법은 docs/bfield-import.md에 있다.",
+  "after": "자석 설계에는 흔히 COMSOL, Opera, CST, FEMM 같은 전자기 해석 프로그램을 쓴다. 이 프로그램들이 내보낸 자기장 격자 파일을 읽어 바로 비행에 쓰는 기능을 넣었다. COMSOL의 Spreadsheet·Grid 형식, Opera의 .table, 일반 CSV·텍스트, 축대칭 (z, r, B_z, B_r) 표를 읽고 길이 단위(mm, m, cm, inch)와 자기장 단위(G, T, mT), 위치·회전·배율 변환을 지정한다. 읽어 들인 격자는 코일 지도와 같은 C2 보간으로 재구성하고 다른 자기장 소스와 겹쳐 더한다. 사용법은 docs/bfield-import.md에 있다."
+ },
+ {
+  "run": "ch05b",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch05b\nmetrics:\n  char_in: 4584\n  char_out: 4563\n  change_rate: 5.8%\n  self_check: 6/6\n  grade: B\ncategories:\n  C-11 연결어미 뒤 쉼표: 12 → 0\n  I-1 '~한 것이다' 결말: 2 → 0\n  I-3 '~다는 뜻이다' 결말: 1 → 0\n  A-10 '~할 수 있다': 2 → 1\n  A-15 추상 주어 환원: 1 → 0\n  E-2 종결 다양화·장문 분리: 7 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"전위를 풀고, 그 전기장으로 유전율을 다시 계산하는 반복을 수렴할 때까지 되풀이한다.\"\n    after: \"전위를 풀고 그 전기장으로 유전율을 다시 계산하기를 수렴할 때까지 반복한다.\"\n  - id: I-3\n    before: \"등전위선 간격이 넓어지는데, 이는 구가 분극되어 내부 전기"
+ },
+ {
+  "run": "ch05c",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch05c\nmetrics:\n  char_in: 206\n  char_out: 199\n  change_rate: 2.7%\n  self_check: 6/6\n  grade: B\ncategories:  # before → after\n  A-10 '~할 수 있다' 남발: 1 → 0\n  A-5 '~에서 비교' 조사 다듬기: 1 → 0\n  E-1 문장 길이 균일(어구 다듬기): 1 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: A-10\n    before: \"외부 해석 프로그램의 자기장 지도도 읽어 쓸 수 있다.\"\n    after: \"외부 해석 프로그램의 자기장 지도도 읽어 쓴다.\"\n  - id: A-5\n    before: \"모두 SIMION 예제와 같은 정밀도에서 비교했다.\"\n    after: \"모두 SIMION 예제와 같은 정밀도로 비교했다.\"\nresidual_findings: 없음. 206자 요점정리 단일 문단이라 "
+ },
+ {
+  "run": "ch06",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch06\nmetrics:\n  char_in: 2309\n  char_out: 2291\n  change_rate: 0.9%\n  self_check: 6/6\n  grade: B\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 5 → 0\n  A-10 '~할 수 있다' 남발: 5 → 3 (잔존은 '~수 있는지/열 수 있어야/비교할 수 없으므로' 보호 대상)\n  E-1 문장 길이 균일(장문 문장 분리): 3 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"두 형식을 함께 쓸 수 있게 했다. 메모리 256 MiB와 명령 50억 개로 실행을 묶고, 파일 쓰기 같은 외부 접근은 막는다\"\n    after: \"두 형식을 함께 쓰게 했다. 메모리 256 MiB와 명령 50억 개로 실행을 묶고 파일 쓰기 같은 외부 접근은 막는다\"\n  - id: A-10\n    bef"
+ },
+ {
+  "run": "ch07",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch07\nmetrics:\n  char_in: 1749\n  char_out: 1746\n  change_rate: 5.3%\n  self_check: 6/6\n  grade: B\ncategories:\n  C-11 연결어미 뒤 쉼표: 6 → 0\n  A-10 '~할 수 있다': 2 → 1\n  A-11 '~을 위해': 1 → 0\n  E-2 종결 다양화·장문 분리: 5 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: A-11\n    before: \"쉬운 사용을 위해 다음을 넣었다. 처음 쓰는 사람을 위한 5단계 따라하기가 있고, 실제 템플릿으로 …\"\n    after: \"쉽게 쓰도록 다음을 넣었다. 처음 쓰는 사람을 위한 5단계 따라하기가 있다. 실제 템플릿으로 …\"\n  - id: C-11\n    before: \"이온 1,000개를 날리고, 넷째 장에서 TOF 히스토그램과 도착한 곳별 이온 수(…)를 본다.\"\n    after:"
+ },
+ {
+  "run": "ch08",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch08\nmetrics:\n  char_in: 706\n  char_out: 694\n  change_rate: 2.4%\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 4 → 0\n  I-1 '~모은 것이다' 결말: 2 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: I-1\n    before: \"한 그림에 모은 것이다.\"\n    after: \"한 그림에 모았다.\"\n  - id: C-11\n    before: \"나눈 값(로그축)이고, 색은 기능 분야다.\"\n    after: \"나눈 값(로그축)이고 색은 기능 분야다.\"\n  - id: C-11\n    before: \"비교하면, 큰 3D 전위 계산은\"\n    after: \"비교하면 큰 3D 전위 계산은\"\nresidual_findings: lexical_diversity z=+2.26 S"
+ },
+ {
+  "run": "ch09",
+  "id": "P186",
+  "rejected": [
+   "negation/limit weakened"
+  ],
+  "before": "이 보고서의 결론이 어디까지 성립하는지와, 아직 하지 않은 일을 정리한다.",
+  "after": "이 보고서의 결론이 어디까지 성립하는지와 아직 남은 일을 정리한다."
+ },
+ {
+  "run": "ch09",
+  "status": "done",
+  "summary": " v1.6.1\nrun_id: ch09\nmetrics:\n  char_in: 692\n  char_out: 673\n  change_rate: 3.6%\n  self_check: 6/6\n  grade: A\ncategories:  # before → after\n  C-11 연결어미 뒤 쉼표: 2 → 0\n  I-1 '~모은 것이다' 결말: 1 → 0\nself_check:\n  - 고유명사·수치·인용 100% 보존: ✅\n  - 변경률 30% 이하: ✅\n  - 장르 이탈 없음: ✅\n  - register 보존: ✅\n  - S1 잔존 0건: ✅\n  - 인공 표현 추가 없음: ✅\nhighlights:\n  - id: C-11\n    before: \"전기장은 약 1차이고, 곡면 유전체와 자성체 경계도 약 1차다.\"\n    after: \"전기장은 약 1차이고 곡면 유전체와 자성체 경계도 약 1차다.\"\n  - id: I-1\n    before: \"한계를 이 문서에서 모은 것이다.\"\n    after: \"한계를 모았다.\"\n  - id: A-8 유사\n    before: \"각 원본 문서에 표시되어 있다.\"\n    after: \"각 원본 문서에 표시했다.\"\nresidual_findings: "
+ }
+]

@@ -1,0 +1,30 @@
+
+const { useApp } = await import('/src/state/store.ts');
+const project = await import('/src/state/project.ts');
+const sim = await import('/src/scene/simulation.ts');
+const { useResults } = await import('/src/results/store.ts');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const a = __args || {};
+useApp.getState().setLang('ko'); useApp.getState().setThemePref('light');
+useApp.setState({ dirty: false });
+await project.newFromTemplate('quadrupole');
+const pa = () => useApp.getState().objects.find((x) => x.kind === 'pa' && x.visible);
+for (let i = 0; i < 600 && !pa()?.flight?.result; i++) await sleep(50);
+useApp.getState().updatePa(pa().id, (p) => ({ source: { ...p.source, count: a.count ?? 10000, drawCount: a.draw ?? 300 } }));
+await sleep(400);
+for (let k = 0; k < 30; k++) { await sim.flyNow(pa().id); const h = pa().flight.result.header; if (!h.fallback && h.ions === (a.count ?? 10000)) break; await sleep(1000); }
+useApp.getState().select(pa().id);
+useResults.getState().setOpen(false);
+useApp.setState({ toasts: [] });
+if (a.view) useApp.getState().requestView({ type: 'preset', view: a.view, fit: true });
+await sleep(800);
+const el = document.querySelector('input[type=range][aria-label^="#1"]');
+const sec = el?.closest('section') ?? el?.parentElement?.parentElement;
+let p = el?.parentElement;
+while (p && !(p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement;
+if (p && sec) p.scrollTop += sec.getBoundingClientRect().top - p.getBoundingClientRect().top - 8;
+await sleep(500);
+const rect = (e) => { const b = e.getBoundingClientRect(); return [b.x, b.y, b.width, b.height]; };
+const ranges = [...document.querySelectorAll('input[type=range][aria-label^="#"]')].map((r) => ({ label: r.getAttribute('aria-label'), min: r.min, max: r.max, step: r.step, value: r.value, rect: rect(r) }));
+const h = pa().flight.result.header;
+return { path: pa().path, info: [pa().info.nx, pa().info.ny, pa().info.nz], voltages: pa().voltages, ranges, header: { ions: h.ions, drawn: h.drawn, device: h.device?.name, precision: h.precision, fallback: h.fallback, tof: h.tof, surfaces: h.surfaces, flyMs: h.flyMs } };

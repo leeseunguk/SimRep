@@ -1,0 +1,217 @@
+[
+  {
+    "item": "eq:1",
+    "verdict": "verified",
+    "note": "ρ[C/mm³], ε₀=8.8541878128e-15 F/mm와 solve_poisson 경로를 추가했다. 차분식과 축 계수는 원문·구현과 일치한다."
+  },
+  {
+    "item": "eq:2",
+    "verdict": "verified",
+    "note": "s를 gauge-shifted RHS 노름과 영 RHS의 단위 전압 스텐실로 구분하고 τabs[V/mm²], τrel[무차원]을 정의했다. 판정식은 원문과 일치한다."
+  },
+  {
+    "item": "eq:4",
+    "verdict": "verified",
+    "note": "Jackson (1999) 12장을 물리 출처로 추가하고 문서 단위로의 변환, lib.rs 상수, c와 γ를 구분했다. Wiley의 장 목차와 기존 derivative 구현을 대조했다."
+  },
+  {
+    "item": "eq:7",
+    "verdict": "verified",
+    "note": "SI 속력·시간을 쓰는 식임을 명시했고 mm/μs 입력의 10⁻³ 변환, P/T/k_B/n/σ 단위를 정확히 추가했다."
+  },
+  {
+    "item": "eq:8",
+    "verdict": "verified",
+    "note": "조화평균을 nodal 입력으로 한정하고 cell PA의 면적 산술평균/from_cells 및 식 (1)의 전하 단위를 구분했다."
+  },
+  {
+    "item": "eq:11",
+    "verdict": "verified",
+    "note": "Az 저장 단위, 평면 발산인 축대칭 ψ 방정식, 공간적으로 일정한 μr에서만 독립 3D 성분을 푸는 조건을 추가했다."
+  },
+  {
+    "item": "table:1",
+    "verdict": "verified",
+    "note": "근거 없는 Windows 11/Ubuntu를 Windows + WSL2 Linux로 낮췄다. 나머지 환경 수치와 출처는 유지됐다."
+  },
+  {
+    "item": "table:2",
+    "verdict": "fix",
+    "note": "확장 요약임은 바로잡았으나 추가 구현 출처가 파일 묶음과 개요로만 남아 있다. solve 행에는 docs/dielectric.md의 Discretization and interfaces 및 docs/magnetostatics.md의 Equations and flight contract, fly 행에는 docs/physics-magnetic-collision.md의 Units and magnetic fields/HS1/SDS 및 docs/physics-space-charge.md의 Direct Coulomb/PIC and Poisson, cad 행에는 docs/step-import.md의 Kernel decision을 직접 연결하라. table:2의 source/장부도 description만으로 역할 전체를 뒷받침하는 듯 남기지 말라."
+  },
+  {
+    "item": "table:5",
+    "verdict": "fix",
+    "note": "GPU 수치의 Native precision study 출처와 보존 one-cell 46배는 추가됐다. 그러나 현재 four-cell CPU 정확도/시간과 보존된 1,000개 GPU 정확도 제어가 다른 측정이라는 설명은 아직 없다. 표 옆에 CPU 행은 Main integration의 four-cell 기본값, GPU 행은 Native precision study의 보존 1,000개 정확도 제어이며 동일 설정의 CPU/GPU 직접 비교가 아니라고 적어라."
+  },
+  {
+    "item": "table:11",
+    "verdict": "verified",
+    "note": "GEM 요약, FLY2 결과 표, PA Validation and Windows process hygiene, IOB SIMION 작업대, ION read_particles를 사용 지점에서 구분했다. 개수는 원문과 같다."
+  },
+  {
+    "item": "table:13",
+    "verdict": "fix",
+    "note": "행별 파일과 보존 one-cell 표지는 추가됐으나 원본 절은 빠져 있다. 각 출처 셀에 실제 measured 절을 붙여라: 전위 End-to-end performance/Large-array tight reference, 경계 Equal memory budget, einzel Retained one-cell baseline, 4중극 Compute time at achieved precision/V3 compute overhead and verification, 자기장 Actual matched-population compute, 충돌 HS1 and SDS statistical checks, 유전체 Automatic selection at the default residual tolerance/Speed at matched estimated physical accuracy, 공간전하 Matched-precision compute verdict and defaults/Retained one-cell baseline, 자기 포텐셜 Audit results/Hardware GPU and uniform-field follow-up/Uniform Az root cause and fix."
+  },
+  {
+    "item": "table:14",
+    "verdict": "fix",
+    "note": "Nsight Compute와 Graphics/Systems 구분 및 두 누락 파일은 바로잡았다. 하지만 행별 근거 절이 여전히 없다. 최소한 정확한 표면 GPU 행에 docs/geometry-pipeline.md의 Outputs and flying, 외부 자기장 행에 docs/bfield-import.md의 Accepted data를 직접 연결하고, 나머지 행도 현재 파일 묶음 대신 해당 절(예: Equations and flight contract, Export surfaces and fields, Cached-power Horner specialization/Phase replay and generated shader evidence)로 연결하라."
+  },
+  {
+    "item": "fig:4",
+    "verdict": "verified",
+    "note": "양쪽 패널의 전위/전기장 오차 및 단위 길이 좌표를 구분했다. 기존 수렴 차수는 유지됐다."
+  },
+  {
+    "item": "fig:5",
+    "verdict": "verified",
+    "note": "앱 201×41/.5 mm/0·80·0 V/100 eV와 벤치 91×20/1 mm/0·110·0 V/200 eV를 별개로 구분했고 단면 캡션으로 바로잡았다."
+  },
+  {
+    "item": "fig:6",
+    "verdict": "verified",
+    "note": "최대 오차 약 .0202 mm와 오차가 크게 줄어든다는 표현으로 고쳤다. 원 CSV의 .0201896089 mm 및 RMS와 맞는다."
+  },
+  {
+    "item": "fig:9",
+    "verdict": "verified",
+    "note": "현재 그림의 단일 재실행 .836→.243 s를 명시했다. 끝점·보정 오차 수치는 보존 데이터와 같다."
+  },
+  {
+    "item": "fig:15",
+    "verdict": "verified",
+    "note": "endpoint/TOF 패널과 단위, 3D 실선/축대칭 점선을 구분했고 섹터 TOF의 비단조 감소도 밝혔다."
+  },
+  {
+    "item": "fig:17",
+    "verdict": "verified",
+    "note": "한 무작위 정의에서 나온 두 관측량으로 바로잡았다. 결정적 231개와 두 KS 값은 보존 데이터와 같다."
+  },
+  {
+    "item": "fig:19",
+    "verdict": "verified",
+    "note": "135 ms를 PA#/cuts 생성에 붙여 전위 풀이와 구분했다. 이온 1,000개 및 750/230/20 집계는 유지됐다."
+  },
+  {
+    "item": "fig:22",
+    "verdict": "verified",
+    "note": "분야별 시간 포함 범위와 유전체 1e-12 보존 제어를 캡션에서 구분했고 F02-speed.csv의 비선형 관측량도 7개로 수정됐다."
+  },
+  {
+    "item": "claim:three-frontends-identical",
+    "verdict": "verified",
+    "note": "동일 입력·형상·적분기·정밀도에서 같은 물리 구현을 쓴다고 한정했고 앱 GPU f32/CPU f64 차이를 명시했다. 결과의 무조건 동일성을 주장하지 않는다."
+  },
+  {
+    "item": "claim:large-array-origin",
+    "verdict": "fix",
+    "note": "sc3d_x2가 별도 GEM에서 생성됐다는 출처는 고쳤다. 다만 설치 예제에는 큰 3D 배열이 없다는 문장은 원문의 범위를 넓힌다. SIMION 설치 예제의 examples/performance_tests에는 큰 3D 배열이 없어 별도 두 구 껍질 GEM을 gem2pa로 만들었다고 고쳐라(bench/simion-baseline.md의 Large 3D refine case는 그 디렉터리만 말한다)."
+  },
+  {
+    "item": "claim:refine-ratios-and-accuracy",
+    "verdict": "verified",
+    "note": "전위 차이의 실제 근거인 Large-array tight reference and CPU/GPU agreement 절을 수치 옆에 추가했다. 시간과 배수는 기존 원표와 같다."
+  },
+  {
+    "item": "claim:cutcell-example-length-unit",
+    "verdict": "verified",
+    "note": "반지름 .31/.83을 [−1,1] 영역의 단위 길이로 고쳤다. 그림의 무차원 h와 일치한다."
+  },
+  {
+    "item": "claim:cutcell-overhead",
+    "verdict": "verified",
+    "note": "시간 증가를 약 9~38%로 고쳤고 staircase 129³/257³을 같은 예산 안의 최대 격자로 구분했다. 오차 배수는 원문과 같다."
+  },
+  {
+    "item": "claim:boris-choice-and-phase",
+    "verdict": "verified",
+    "note": "자기장에서도 RK45가 기본이고 Boris는 선택임을 밝혔다. 균일 B의 속력/에너지 보존과 2차 위상 오차 및 표 8의 RK45를 정확히 구분했다."
+  },
+  {
+    "item": "claim:einzel-historical-compute",
+    "verdict": "verified",
+    "note": "46배의 분모 .224 s를 보존된 예전 one-cell 설정으로 명시하고 현재 four-cell 10k 계산 시간과 분리했다."
+  },
+  {
+    "item": "claim:surface-overhead",
+    "verdict": "verified",
+    "note": "같은 cut-cell 장의 .0977 s 대비 1.34배와 표 6의 .0658 s 대비 1.99배를 분리했다. 뒤의 .98/1.04배와 각 경우 7회 반복 내부 동일성도 이전 구현과의 동일성으로 확대하지 않는다."
+  },
+  {
+    "item": "claim:gpu-threshold-summary",
+    "verdict": "verified",
+    "note": "4,096개 자동 선택을 전기장만 있고 native f64를 지원하는 GPU로 한정했다. 자기장 auto CPU와 명시적 GPU 지원도 5.1절에 구분되어 있다."
+  },
+  {
+    "item": "claim:dielectric-same-residual",
+    "verdict": "verified",
+    "note": "잔차 1e-10은 SimRep에만, 반복 전압 변화 1e-7 V는 SIMION strict에 적용한다고 명확히 구분했다."
+  },
+  {
+    "item": "claim:nonlinear-refinement-and-speed",
+    "verdict": "verified",
+    "note": "h=2/1/.5/.25 mm와 최종 2배 격자=.25 mm를 정확히 썼다. 같은 극한이라는 판단과 연속 극한 추정 기준을 구분하고 일곱 관측량의 추정 오차가 SIMION 기본 이하인 가장 싼 시험 설정으로 속도 결론을 한정했다."
+  },
+  {
+    "item": "claim:direct-coulomb-and-pic-source",
+    "verdict": "verified",
+    "note": "103개/.249 s/RMS 1e-4의 출처를 default-flight의 Retained one-cell baseline으로 고쳤다. PIC는 GPU PIC agreement and compute time을 따로 인용하고 전역 스텝 3회의 짧은 검사라고 밝혔다."
+  },
+  {
+    "item": "claim:entire-installed-corpus",
+    "verdict": "verified",
+    "note": "GEM/FLY2 전수, IOB 148개 및 PA 정제·왕복 표본을 형식별로 구분해 전체 설치 파일을 모두 검증했다는 일반화를 없앴다."
+  },
+  {
+    "item": "claim:simion-model-import-absence",
+    "verdict": "verified",
+    "note": "SIMION의 GEM STL 가져오기를 인정하고 추가 지원을 OBJ/PLY/3MF/glTF 및 STEP/IGES B-rep으로 구체화했다."
+  },
+  {
+    "item": "claim:cad-preparation-times",
+    "verdict": "verified",
+    "note": "B-rep 준비 시간을 .46~6.38 s, 삼각형을 .0099~.068 s로 고쳤다. RMS 개선과 고리 최대 오차 예외도 정확히 구분했다."
+  },
+  {
+    "item": "claim:gem-summary-count",
+    "verdict": "verified",
+    "note": "GEM 254개 일치+include 조각 7개, FLY2 97개 ordered+57개 statistical을 구분했다. CAD 오차 개선도 RMS로 한정했다."
+  },
+  {
+    "item": "claim:autosave-interval",
+    "verdict": "verified",
+    "note": "자동 저장을 변경 후 1.5초가 지나면 실행한다고 고쳐 debounce와 주기 저장의 혼동을 없앴다."
+  },
+  {
+    "item": "claim:surface-ion-identities",
+    "verdict": "verified",
+    "note": "개별 20개 이온의 on/off 행선지 동일성을 주장하는 문장을 없앴다. 현재는 E2 20→0 및 750/230/20→751/249라는 캡처에서 확인된 집계 변화만 말하므로 기존 미확인 사유가 해소됐다."
+  },
+  {
+    "item": "claim:summary-universal-accuracy",
+    "verdict": "verified",
+    "note": "대표 비교마다 각 절의 기준을 충족했다는 결론으로 한정했다. 저장 포텐셜·연속 극한 추정·분포 검정과 beam의 내부 구현 동등성 미검증을 구분한다."
+  },
+  {
+    "item": "claim:remaining-magnetic-gpu",
+    "verdict": "verified",
+    "note": "자기장 GPU는 구현되어 --device gpu로 실행된다고 밝히고 남은 일은 성능 개선/자동 선택 재검토라고 고쳤다. 정확한 표면 GPU 미구현과 구분했다."
+  },
+  {
+    "item": "claim:bibliography-occt",
+    "verdict": "verified",
+    "note": "STEP Translator/OCCT 8.0.1/접근일 2026-10-24와 빌드 SDK 7.7.0을 구분했다. 현재 공식 URL을 다시 열어 문서 제목과 8.0.1 배너를 확인했다."
+  },
+  {
+    "item": "claim:bibliography-simion-help",
+    "verdict": "verified",
+    "note": "Scientific Instrument Services 2024a/b/c를 본문과 참고문헌에 대응시켰고 magnetic_potential.html, dielectric.html, collision_hs1.lua의 제목·버전·설치 경로를 추가했다. Jackson 1999도 식 (4)와 서지에서 대응한다."
+  },
+  {
+    "item": "claim:summary-use-point-sources",
+    "verdict": "fix",
+    "note": "3·4·6·8장의 수치 사용 지점 출처는 추가됐다. 그러나 5장 요점 정리의 자기 포텐셜 22건 모두 빨랐다는 문장은 Audit results만 인용하며 그 표의 uniform Az는 0.18배다. 그 자리의 출처를 docs/magnetostatics.md의 Audit results 및 Uniform Az root cause and fix로 바꾸어 후속 .704 ms/34.1배 제어까지 연결하라. 이전 verified 항목의 회귀 표본도 대조했다: 식 3/5/6/9/10, 표 3/4/6/7/8/9/10/12의 수치·source가 이전 검토본과 같고, step-policy/GPU100k/Horner/자동 교차점/자기장 기준·중앙값·CPU-GPU/HS1-SDS/유전체 합계·문턱/자기 포텐셜/설치 크기 문단의 숫자와 출처 경로도 유지됐다. 윤문으로 새 수치 오류는 발견하지 못했다."
+  }
+]

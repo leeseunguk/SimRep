@@ -1,0 +1,25 @@
+[P148] 이 장에서 배울 것
+
+[P149] SIMION 사용자가 가진 파일(PA, GEM, FLY2, ION, 작업대)과 3D 모델(STL, STEP, IGES)을 얼마나 그대로 쓸 수 있는지 정리한다.
+
+[P150] 새 프로그램을 쓰려면 기존 SIMION 작업 파일을 그대로 열 수 있어야 한다. 그래서 설치된 SIMION 예제 파일 전체를 SIMION 자신의 결과와 하나씩 비교했다. 표 11이 그 결과다.
+
+[P152] 표 11의 GEM 결과는 docs/gem-validation.md, FLY2 결과는 docs/fly2-validation.md, PA 결과는 bench/refine-real.md, IOB는 docs/dev/frontend.md의 SIMION 작업대 절에서 가져왔다. GEM과 FLY2 파일은 사실상 Lua 프로그램이다. GEM은 반복문과 함수로 전극을 그리고, FLY2는 분포 함수로 입자를 만든다. 그래서 Lua 5.1.5를 제한된 실행 환경으로 넣어 두 형식이 함께 쓰게 했다. 메모리 256 MiB와 명령 50억 개로 실행을 묶고, 파일 쓰기 같은 외부 접근은 막는다(docs/gem.md). 무작위 분포를 쓰는 FLY2는 SIMION과 난수 순서가 달라 이온 하나하나를 비교할 수 없으므로, 씨앗값 8개로 KS 검정을 해 분포가 같은지 확인했다(docs/fly2-validation.md). 그림 16는 Lua 반복문으로 전극을 그리는 hexapole.gem을 1408×705 격자로 변환한 결과다. 확대한 오른쪽 그림에서 SimRep의 전극 칸과 SIMION의 전극점(검은 점)이 하나도 어긋나지 않는다.
+
+[C153] 그림 16. Lua 반복문을 쓰는 GEM 파일(hexapole.gem)을 simrep gem2pa로 변환한 전극 단면. 출처: figures/F19.png, 명령은 figure-ledger.json의 F19.
+
+[P154] FLY2는 입자 목록 자체를 비교했다. 그림 17의 위쪽은 출발 위치와 시각을 격자로 정한 결정적 정의(bngrid.fly2, 입자 231개)로, SIMION이 만든 목록(주황 원)과 SimRep 목록(파랑 점)이 모든 입자에서 겹치고 모든 열의 최대 차이가 1.1e-16이다. 아래쪽은 무작위 정의 두 개다. 가우스 분포로 뽑은 출발 시각(KS p = 0.60)과 원판에 고르게 뽑은 반지름 제곱(KS p = 0.75) 모두 SIMION의 분포와 구별되지 않는다.
+
+[C155] 그림 17. FLY2 입자 출발 위치: SIMION이 만든 목록과 SimRep이 만든 목록. 출처: figures/F20.png, 자료는 figure-ledger.json의 F20.
+
+[P156] SIMION에 없는 기능으로 3D 모델 가져오기를 넣었다. STL, OBJ, PLY, 3MF, glTF 메시는 그대로 읽어 전극으로 쓴다(docs/mesh-io.md). STEP과 IGES는 OpenCascade 라이브러리로 읽는다(Open Cascade SAS, n.d.). CAD 모델은 정확한 B-rep 표면으로 거리를 계산하거나, 삼각형으로 나눈 표면을 쓸 수 있다. 표 12은 해석해가 있는 세 형상을 같은 격자에서 두 방식으로 풀었을 때의 전위 오차다.
+
+[P158] 표 12은 docs/step-import.md의 Measured accuracy and timing 절에서 가져왔다. 정확한 표면이 RMS 오차를 1.5~6배 줄인다. 다만 B-rep 거리 계산은 준비 시간이 수 초 걸려 삼각형 방식보다 훨씬 느리다. 그림 18은 앱의 가져오기 마법사에서 두 구로 된 STEP 파일(pair.step)을 연 실제 화면이다. OpenCascade가 고체 두 개를 읽어 둘 다 정상 B-rep이라고 확인하고, 사용자는 단위와 부품별 전극 번호·전압을 정한다. 다음 단계에서 격자 간격 추천을 받고 cut-cell과 격자 정렬 방식 가운데 하나를 고른다.
+
+[C159] 그림 18. 앱의 가져오기 마법사에서 STEP 파일(pair.step)을 여는 화면. 출처: figures/F18.png, 캡처 조건은 figure-ledger.json의 F18.
+
+[P160] 내보내기는 전극 표면(STL, OBJ, glTF), 전위장(VTK의 VTI·VTS), 궤적(CSV, VTP), 등전위면으로 할 수 있다(docs/mesh-io.md). 원래 계획에 있던 STEP 내보내기는 아직 넣지 않았다.
+
+[P161] 요점 정리
+
+[P162] SIMION 예제의 GEM 261개와 FLY2 154개를 불일치 없이 읽고, PA와 작업대 파일도 그대로 쓴다. 메시와 STEP·IGES 모델을 전극으로 가져올 수 있으며, CAD의 정확한 표면은 삼각형 표면보다 전위 오차가 작다.

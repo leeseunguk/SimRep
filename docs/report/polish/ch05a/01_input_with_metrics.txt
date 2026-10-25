@@ -1,0 +1,59 @@
+[정량 사전 점수 v1.6 / KatFish baseline]
+risk_band: medium  (score 4)
+genre: report
+char_count: 4295
+warning: baseline_genre_null:report->essay
+
+[지표]
+- comma_inclusion_rate: 0.47  (z=+1.21 vs report 인간 baseline)  · S2 시그널
+- comma_usage_rate: 0.76  (z=-0.51 vs report 인간 baseline)
+- ending_comma_rate: 0.81  (z=+9.77 vs report 인간 baseline)  ★ S1 트리거
+- comma_segment_length: 6.40  (z=+0.97 vs report 인간 baseline)
+- conclusion_pivot_count: 0
+- safe_balance_count: 0
+- hanja_nominalizer_density: 0.006  (z=-1.81 vs report 인간 baseline)
+- lexical_diversity: 0.72  (z=+1.46 vs report 인간 baseline)  · S2 시그널
+
+[근거 사용 가이드]
+- 위 점수는 *근거 보조*다. 단독 판정 금지(보고서 명시).
+- z>1.0 지표는 quick-rules.md S1·S2 패턴과 교차 확인 후 윤문할 것.
+- ending_comma_rate가 ★ S1 트리거인 경우 C-11(연결어미 뒤 쉼표) 우선 손질.
+- conclusion_pivot 매치 토큰은 D-1·H-1 처방 적용 대상.
+
+[원문 시작]
+[P096] 이 장에서 배울 것
+
+[P097] 자기장, 중성 기체 충돌, 유전체, 공간전하, 재료가 있는 자기장 계산을 어떻게 넣었는지와, 각각을 SIMION과 같은 정밀도에서 비교한 결과를 정리한다.
+
+[P098] SIMION은 정전기 비행 외에도 자기장, 기체 충돌, 유전체, 공간전하를 다룬다. 이 장의 기능은 모두 같은 원칙으로 검증했다. 먼저 해석해나 독립 기준해로 우리 계산의 수렴을 보이고, 같은 기준해에 SIMION 결과를 대어 정밀도를 맞춘 뒤 계산 시간을 비교한다.
+
+[P100] 자기장은 세 가지로 줄 수 있다. 균일한 자기장, 자극 형상을 풀어 얻은 자기 스칼라 포텐셜 배열(자기 PA), 그리고 전류가 흐르는 코일이다. 자기 PA와 코일의 자기장은 식 (6)으로 계산한다.
+
+[P102] 식 (6)의 앞식에서 p는 자기 PA에 저장된 스칼라 포텐셜, n_g는 PA 머리말의 배율로, 둘을 곱해 기울기를 취하면 자기장 B(G)가 된다. 뒷식은 비오-사바르 법칙으로, 전류 I(A)가 흐르는 도선 조각 dℓ이 거리 r만큼 떨어진 점에 만드는 자기장을 더한다. 이 문서의 단위계(G, mm, A)에서는 μ₀/4π가 1 G·mm/A가 된다. 원형 코일은 타원 적분으로 정확히 계산한다. 두 식과 단위 규약은 docs/physics-magnetic-collision.md의 Units and magnetic fields 절에 있고, 구현은 crates/simrep-fly/src/physics/magnetic.rs의 Coil::field_gauss 함수다. SIMION의 자기 포텐셜 정의는 SIMION 도움말 magnetic_potential.html(/mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html)을 따랐다.
+
+[P103] 코일이 100개인 솔레노이드에서는 이온이 한 스텝 갈 때마다 코일 100개의 타원 적분을 더해야 해서 느렸다. 그래서 비행 전에 한 번, 솔레노이드의 축대칭을 이용해 (축 방향, 반지름) 격자 위에 자기장을 미리 계산해 두는 코일 지도를 만들었다. 지도는 간격 0.0625 mm이고, 반지름 성분은 축 근처에서도 정확하도록 Bᵣ/r 형태로 저장한다. 지도를 쓰기 전에 영역마다 격자점 사이 512곳에서 정확한 계산과 비교하고, 최대 차이가 2e-9 G 이하일 때만 지도를 쓴다. 코일 자기장은 이온이 바꾸지 않는 외부 장이므로 지도로 바꿔도 물리는 같고, 차이는 보간 오차뿐이다. 이 내용은 bench/magnetic-cpu.md의 Implementation and profile 절에 있다. 그림 9는 그 검사 결과다. 왼쪽은 이온 100개를 지도와 정확한 계산으로 각각 날렸을 때의 도착 위치 차이(로그축)로, 모두 4e-7 mm 이하이고 계산 시간은 0.852 s에서 0.199 s로 줄었다. 오른쪽은 지도의 세 영역에서 표본 512개로 잰 최대 오차이며, 모두 허용선(2e-9 G, 상대 5e-10) 아래에 있다.
+
+[C104] 그림 9. 솔레노이드 코일 지도의 검증: 이온별 도착 위치 차이(왼쪽)와 영역별 보정 오차(오른쪽). 현재 빌드에서 실행한 검사 결과를 그렸다. 실행 기록은 figure-ledger.json의 F12. 출처: figures/F12.png.
+
+[P105] SIMION 자기장 예제 7개를 같은 이온 출발 조건으로 날려 비교했다. 정확도 기준은 정확한 비오-사바르 계산이나 원래 자기 PA로 스텝 0.0025 μs, 허용 오차 1e-12로 날린 기준해이며, 일곱 경우 모두 도착 위치와 비행시간이 기존 정확도 기준 안에 들었다. 표 8은 계산 시간이다.
+
+[P107] 표 8은 bench/magnetic-cpu.md의 Actual matched-population compute 절에서 가져왔다. SIMION은 세 번, SimRep은 다섯 번 측정한 중앙값이고, SimRep은 CPU 16코어다. 일곱 예제 모두 SimRep이 빠르다. 그림 10은 자기 섹터 예제를 실제로 날린 결과다. 왼쪽 궤적에서 이온이 자기장 영역에서 원호를 그리며 약 90도 휘어 세 곳의 끝점에 닿고, SIMION의 끝점(네모)과 겹친다. 오른쪽은 이온 15개의 SIMION과의 차이로, 위치는 0.01 mm 이하, 비행시간은 0.0003 μs 이하다.
+
+[C108] 그림 10. 자기 섹터 예제의 이온 궤적(SimRep CLI 실행 결과). 실행 명령은 figure-ledger.json의 F11. 출처: figures/F11.png.
+
+[P109] 자기장 계산은 GPU보다 CPU가 빨랐다. RTX 3070의 배정밀도 연산은 단정밀도의 1/64로 느리고, 자기 PA 보간과 코일 계산은 배정밀도가 필요하기 때문이다. 자기 섹터 3dp 1만 개에서 GPU는 4.03 s, CPU는 1.14 s였다(bench/fly-gpu.md의 Magnetic fields and neutral gas 절). 그래서 --device auto는 자기장 비행에 CPU를 고른다. 배정밀도가 빠른 GPU에서는 결과가 다를 수 있다.
+
+[P111] 기체 속 이온은 기체 분자와 부딪혀 방향과 에너지가 바뀐다. SIMION 예제의 두 모델을 구현했다. HS1은 단단한 공 충돌 모델로, 이온과 기체 분자의 상대 속도로 충돌 빈도를 정하고 무작위로 충돌을 일으킨다. 한 스텝 Δt 동안의 충돌 확률은 식 (7)이다.
+
+[P113] 식 (7)의 n은 압력 P와 온도 T로 정한 기체 수밀도(단위 부피당 분자 수), σ는 충돌 단면적(m²), ⟨|v − v_g|⟩는 이온과 기체 분자의 평균 상대 속력이다. 셋을 곱한 ν가 단위 시간당 충돌 횟수이고, Δt 동안 한 번 이상 충돌할 확률이 P_coll이다. 기체가 짙거나 이온이 빠를수록 ν가 커져 자주 부딪힌다. 이 식은 SIMION에 들어 있는 examples/collision_hs1/collision_hs1.lua의 규칙을 이 문서의 기호로 옮긴 것이고, 정리는 docs/physics-magnetic-collision.md의 HS1 절, 구현은 crates/simrep-fly/src/physics/collision.rs의 collision_rate_per_us 함수다. SDS는 대기압처럼 충돌이 아주 잦은 경우를 위한 통계적 확산 모델로, SIMION의 mbmr.dat 표를 그대로 쓴다.
+
+[P114] 무작위 모델은 이온 하나하나가 아니라 분포로 비교했다. SIMION과 SimRep으로 각각 이온 4,096개를 날리고, 도착 위치와 에너지 분포가 같은지 콜모고로프-스미르노프(KS) 검정으로 확인했다. 그림 11은 HS1에서 50 μs 뒤 x 위치와 운동 에너지의 누적 분포를 SIMION, SimRep CPU, SimRep GPU로 겹쳐 그린 것이다. 세 곡선이 거의 하나로 겹친다. SIMION과의 KS 검정 p값은 위치 성분에서 0.38~0.98, 에너지에서 0.38로 5% 기준에서 같은 분포라는 가설을 기각하지 않았고, CPU와 GPU 사이도 마찬가지다. SDS도 p값 0.36~1로 같았다. 이 값은 docs/physics-magnetic-collision.md의 Statistical results 절에 있다. 계산 시간은 HS1이 SimRep 0.304 s 대 SIMION 9.96 s, SDS가 0.006 s 대 1.23 s였다.
+
+[C115] 그림 11. HS1 충돌 모델에서 이온 4,096개의 50 μs 뒤 위치·에너지 누적 분포(SIMION, SimRep CPU, SimRep GPU). 출처: figures/F13.png, 자료와 명령은 figure-ledger.json의 F13.
+
+[P117] 유전체는 전기장 안에서 분극되어 전위 분포를 바꾸는 절연체다. 유전율이 위치마다 다르면 식 (1) 대신 식 (8)을 푼다.
+
+[P119] 식 (8)의 εᵣ은 상대 유전율, ρ_f는 자유 전하 밀도다. 앞식은 전기 변위의 발산이 자유 전하와 같다는 가우스 법칙이고, εᵣ이 모든 곳에서 1이면 식 (1)로 돌아간다. 뒷식은 이웃한 두 격자점의 유전율로 둘을 잇는 계수를 정하는 조화평균이다. 조화평균을 쓰면 유전체 경계에서 전기 변위의 수직 성분이 연속이라는 조건이 자연스럽게 지켜지고, 행렬이 대칭으로 남아 3장의 멀티그리드를 그대로 쓸 수 있다. 이 이산화는 docs/dielectric.md의 Discretization and interfaces 절에 있고, 구현은 crates/simrep-solve/src/dielectric.rs의 harmonic 함수다. SIMION의 유전체 정의는 도움말 dielectric.html을 따랐다.
+
+[P120] SIMION 유전체 예제 세 개를 같은 잔차 1e-10으로 풀었다. 표 9는 자동으로 고른 장치의 재료 준비, 계층 구성, 풀이 시간을 합한 값이다.
+[원문 끝]

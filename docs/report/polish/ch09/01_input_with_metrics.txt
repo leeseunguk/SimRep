@@ -1,0 +1,35 @@
+[정량 사전 점수 v1.6 / KatFish baseline]
+risk_band: medium  (score 4)
+genre: report
+char_count: 692
+warning: baseline_genre_null:report->essay
+
+[지표]
+- comma_inclusion_rate: 0.69  (z=+2.47 vs report 인간 baseline)  ★ S1 트리거
+- comma_usage_rate: 1.23  (z=+0.14 vs report 인간 baseline)
+- ending_comma_rate: 0.60  (z=+7.11 vs report 인간 baseline)  ★ S1 트리거
+- comma_segment_length: 5.38  (z=+0.49 vs report 인간 baseline)
+- conclusion_pivot_count: 0
+- safe_balance_count: 0
+- hanja_nominalizer_density: 0.000  (z=-2.00 vs report 인간 baseline)
+- lexical_diversity: 0.89  (z=+4.82 vs report 인간 baseline)  ★ S1 트리거
+
+[근거 사용 가이드]
+- 위 점수는 *근거 보조*다. 단독 판정 금지(보고서 명시).
+- z>1.0 지표는 quick-rules.md S1·S2 패턴과 교차 확인 후 윤문할 것.
+- ending_comma_rate가 ★ S1 트리거인 경우 C-11(연결어미 뒤 쉼표) 우선 손질.
+- conclusion_pivot 매치 토큰은 D-1·H-1 처방 적용 대상.
+
+[원문 시작]
+[P185] 이 장에서 배울 것
+
+[P186] 이 보고서의 결론이 어디까지 성립하는지와, 아직 하지 않은 일을 정리한다.
+
+[P187] 결론에는 다음 조건이 붙는다. 첫째, 정확도 기준해는 촘촘한 격자로 얻은 수치 기준이며 연속 해의 엄밀한 상한이 아니다. 둘째, cut-cell은 전위에서 2차 정확도이지만 전극 표면 바로 옆 전기장은 약 1차이고, 곡면 유전체와 자성체 경계도 약 1차다. 셋째, 유전체와 자기 포텐셜, 앱의 측정 일부는 다른 작업과 기계를 나눠 쓰는 동안 했다. 이 사실은 각 원본 문서에 표시되어 있다. 넷째, 측정 장비는 RTX 3070 한 대이며, 배정밀도가 빠른 GPU에서는 CPU와 GPU의 선택 기준이 달라진다.
+
+[P189] 표 14은 docs/PLAN.md, docs/magnetostatics.md, bench/fly-gpu.md, docs/mesh-io.md에 기록된 한계를 이 문서에서 모은 것이다. 이 가운데 자기장 GPU 비행은 배정밀도 연산이 빠른 GPU나 혼합 정밀도 방식으로 다시 볼 수 있고, 정확한 표면의 GPU 비행은 메시 교차 계산을 GPU로 옮기면 된다.
+
+[P190] 요점 정리
+
+[P191] 결론은 수치 기준해, RTX 3070 한 대, 일부 공유 기계 측정이라는 조건 위에서 성립한다. 자기장과 정확한 표면의 GPU 비행, STEP 내보내기, 비선형 자성체가 남은 일이다.
+[원문 끝]

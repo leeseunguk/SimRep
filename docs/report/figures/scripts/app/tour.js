@@ -1,0 +1,22 @@
+
+const { useApp } = await import('/src/state/store.ts');
+const { useWizard } = await import('/src/state/wizard.ts');
+const project = await import('/src/state/project.ts');
+const { useTour, TOUR_STEPS } = await import('/src/state/tour.ts');
+const { useResults } = await import('/src/results/store.ts');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+useWizard.setState({ wizard: null });
+useApp.getState().setLang('ko'); useApp.getState().setThemePref('light');
+useApp.setState({ dirty: false, toasts: [] });
+useResults.getState().setOpen(false);
+useTour.getState().start();
+await sleep(800);
+const step0 = TOUR_STEPS[useTour.getState().step];
+if (__args.stop === 'template') return { step: step0 };
+await project.newFromTemplate('einzel');
+const pa = () => useApp.getState().objects.find((x) => x.kind === 'pa' && x.template === 'einzel');
+for (let i = 0; i < 600 && !pa()?.flight?.result; i++) await sleep(50);
+for (let i = 0; i < 100 && TOUR_STEPS[useTour.getState().step] === 'template'; i++) await sleep(50);
+useApp.setState({ toasts: [] });
+await sleep(1500);
+return { step0, step: TOUR_STEPS[useTour.getState().step], mode: useTour.getState().mode, voltages: pa().voltages };
