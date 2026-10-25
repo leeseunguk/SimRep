@@ -17,9 +17,11 @@ shell formatting is checked separately from the root workspace.
 `AtomicU64::try_update` (stable since Rust 1.95.0) replaces the identically
 behaving `fetch_update`, deprecated in Rust 1.99.0. See the
 [Rust 1.95 atomic API](https://doc.rust-lang.org/1.95.0/std/sync/atomic/struct.AtomicU64.html#method.try_update).
-The Rust pin remains: local Rust 1.99.1 Clippy rejects pre-existing constant
-`chunks_exact` calls in `simrep-gem` with `chunks_exact_to_as_chunks`; the
-1.95.0 workspace and Python-feature Clippy checks pass.
+The Rust pin remains: local Rust 1.99.1 workspace and Python-feature Clippy
+reject pre-existing constant `chunks_exact` calls in `simrep-gem`
+(`geometry.rs:945`, `raster.rs:130`, `stl.rs:106,133`) with
+`chunks_exact_to_as_chunks`. The changed Lua crate passes Clippy on 1.99.1,
+and the 1.95.0 workspace and Python-feature Clippy checks pass.
 
 The histogram-axis test checks the selected decade within one binary64 ULP
 and verifies that it brackets half the smallest positive bin. Node 22.23.4
@@ -34,14 +36,16 @@ demo E2E tests after the assertion change; product arithmetic is unchanged.
 Rust and Python install Mesa lavapipe and disable Gallivm AVX-512 with
 `GALLIUM_OVERRIDE_CPU_CAPS=avx` and `LP_NATIVE_VECTOR_WIDTH=256`. Despite its
 name, Mesa's `avx` tier retains AVX2/F16C/FMA and disables all AVX-512 features.
-The first limits ISA selection; the second fixes the shader vector width. Width alone
-does not disable AVX instructions, as explained in the
+The first limits ISA selection; the second fixes the shader vector width.
+Width alone does not disable AVX instructions, as explained in the
 [LLVMpipe environment-variable documentation](https://docs.mesa3d.org/drivers/llvmpipe.html#environment-variables).
 The ISA override values are documented in
 [Mesa environment variables](https://docs.mesa3d.org/envvars.html#envvar-GALLIUM_OVERRIDE_CPU_CAPS).
 Both jobs log the host CPU model and flags, the requested cap/width, and
 `vulkaninfo --summary`, whose `deviceName` includes Mesa's chosen vector width.
-`GALLIUM_DUMP_CPU=1` also audits the post-override capability flags. The
+`GALLIUM_DUMP_CPU=1` on the Vulkan probe command also audits the post-override
+capability flags. It is not set for tests: the process-start dump otherwise
+pollutes Python/CLI exact-output parity checks. The
 [Mesa 26.0.8 CPU override](https://gitlab.freedesktop.org/mesa/mesa/-/blob/60e95b787857afbc9a00b693b91c0d9c8923a430/src/util/u_cpu_detect.c#L603-691)
 applies before vector-width selection in
 [`lp_bld_init_common.c`](https://gitlab.freedesktop.org/mesa/mesa/-/blob/60e95b787857afbc9a00b693b91c0d9c8923a430/src/gallium/auxiliary/gallivm/lp_bld_init_common.c#L68-80).
@@ -50,8 +54,8 @@ passes the cleared AVX-512 flags to LLVM explicitly. LLVM still detects the
 host CPU for scheduling; this is an ISA/vector cap, not a CPU-model override.
 `GALLIVM_PERF` has `no_avx` but no AVX-512-only switch, and
 `GALLIVM_LLC_OPTIONS` is debug-build-only, so neither is used.
-Rust also executes the Vulkan kernel smoke check. This verifies software Vulkan, not physical GPU
-performance. The 15 external-fixture tests remain ignored, and Python hardware
+Rust also executes the Vulkan kernel smoke check. This verifies software
+Vulkan, not physical GPU performance. The 15 external-fixture tests remain ignored, and Python hardware
 GPU numeric parity tests report skips. CAD/OCCT and Windows installer/hardware
 checks remain the explicit local paths below.
 

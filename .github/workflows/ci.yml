@@ -25,7 +25,6 @@ jobs:
       # Mesa's "avx" tier retains AVX2/FMA but disables every AVX-512 feature.
       GALLIUM_OVERRIDE_CPU_CAPS: avx
       LP_NATIVE_VECTOR_WIDTH: "256"
-      GALLIUM_DUMP_CPU: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
@@ -48,7 +47,7 @@ jobs:
           printf 'Gallivm ISA cap=%s; requested vector width=%s bits\n' \
             "$GALLIUM_OVERRIDE_CPU_CAPS" "$LP_NATIVE_VECTOR_WIDTH"
           # deviceName reports Mesa's actual chosen vector width.
-          vulkaninfo --summary
+          GALLIUM_DUMP_CPU=1 vulkaninfo --summary
       - name: Check workspace formatting
         run: cargo fmt --all -- --check
       - name: Check native shell formatting
@@ -70,7 +69,6 @@ jobs:
     env:
       GALLIUM_OVERRIDE_CPU_CAPS: avx
       LP_NATIVE_VECTOR_WIDTH: "256"
-      GALLIUM_DUMP_CPU: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -96,7 +94,7 @@ jobs:
           lscpu | grep -E 'Architecture:|Model name:|Flags:'
           printf 'Gallivm ISA cap=%s; requested vector width=%s bits\n' \
             "$GALLIUM_OVERRIDE_CPU_CAPS" "$LP_NATIVE_VECTOR_WIDTH"
-          vulkaninfo --summary
+          GALLIUM_DUMP_CPU=1 vulkaninfo --summary
       - name: Build Python extension and CLI
         run: |
           python -m venv .venv
