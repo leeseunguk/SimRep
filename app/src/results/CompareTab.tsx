@@ -7,7 +7,7 @@ import { Switch } from "../components/ui/Switch";
 import { useI18n } from "../i18n";
 import { paElectrodes } from "../scene/electrodes";
 import type { PaObject } from "../state/store";
-import { autoBins, extent, fwhm, histogram, padRange, QUANTITIES, resolvingPower, runOf, select, stats, UNITS, type Quantity, type RunData } from "./analysis";
+import { autoBins, extent, fwhm, histogram, histYRange, padRange, QUANTITIES, resolvingPower, runOf, select, stats, UNITS, type Quantity, type RunData } from "./analysis";
 import { digitsFor, Select, Tool, useBinOptions, useFigure, useFilterOptions, useQuantityLabel } from "./common";
 import { Chart } from "./plot/ChartView";
 import type { ChartSpec, Layer } from "./plot/chart";
@@ -102,16 +102,14 @@ export function CompareTab({ o }: { o: PaObject }) {
 
   const spec = useMemo<ChartSpec | null>(() => {
     if (!data) return null;
-    let max = 0;
-    for (const r of data.rows) for (const c of r.h.counts) max = Math.max(max, c);
     // Kept runs first, the current run on top.
     const layers: Layer[] = [...data.rows]
       .reverse()
       .map((r) => ({ kind: "hist", lo: r.h.lo, hi: r.h.hi, counts: r.h.counts, stroke: r.s.color, width: r.s.current ? theme.lineW * 1.5 : theme.lineW }) as Layer);
-    const minY = view.normalize ? 1e-6 : 0.5;
+    const yr = histYRange(data.rows.map((r) => r.h.counts), view.log, view.normalize);
     return {
       x: { label: label(q), domain: data.range },
-      y: { label: t(view.normalize ? "results.axis.fraction" : "results.axis.ions"), domain: view.log ? [minY, max * 2] : [0, (max || 1) * 1.08], log: view.log },
+      y: { label: t(view.normalize ? "results.axis.fraction" : "results.axis.ions"), domain: yr.domain, log: view.log, floor: yr.floor },
       layers,
       legend: data.rows.map((r) => ({ label: r.s.label, color: r.s.color })),
     };

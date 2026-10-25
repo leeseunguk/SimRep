@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoBins, extent, fwhm, heat, histogram, nearestIon, padRange, resolvingPower, stats } from "./analysis";
+import { autoBins, extent, fwhm, heat, histogram, histYRange, nearestIon, padRange, resolvingPower, stats } from "./analysis";
 
 describe("histogram statistics", () => {
   it("bins inclusive of both edges", () => {
@@ -16,6 +16,14 @@ describe("histogram statistics", () => {
     expect(f.right).toBeCloseTo(3.5, 12);
     expect(resolvingPower(f)).toBeCloseTo(2.5 / 4, 12);
     expect(fwhm({ lo: 0, hi: 1, counts: new Float64Array(5) })).toBeNull();
+  });
+
+  it("starts a normalized log axis below the smallest fraction, a count axis at 0.5", () => {
+    const fractions = [new Float64Array([0, 1e-4, 0.6]), new Float64Array([0.25, 0, 0.75])];
+    expect(histYRange(fractions, true, true)).toEqual({ domain: [1e-5, 1.5], floor: 1e-5 });
+    const counts = [new Float64Array([0, 3, 40])];
+    expect(histYRange(counts, true, false)).toEqual({ domain: [0.5, 80], floor: 0.5 });
+    expect(histYRange(counts, false, false).domain).toEqual([0, 40 * 1.08]);
   });
 
   it("reports population statistics", () => {

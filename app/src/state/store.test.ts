@@ -64,6 +64,15 @@ describe("results store", () => {
     expect(useResults.getState().snapshots).toHaveLength(MAX_SNAPSHOTS);
   });
 
+  it("never gives two kept runs the same colour once the oldest are dropped", () => {
+    const run = { n: 0 } as RunData;
+    for (let i = 0; i < MAX_SNAPSHOTS * 2 + 1; i++) {
+      useResults.getState().keep(pa("a"), run, `run ${i}`);
+      const colors = useResults.getState().snapshots.map((s) => s.color);
+      expect(new Set(colors).size).toBe(colors.length);
+    }
+  });
+
   it("opens the panel when a tab is chosen and remembers it", () => {
     useResults.getState().setOpen(false);
     useResults.getState().setTab("table");

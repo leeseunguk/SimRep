@@ -136,6 +136,25 @@ export function histogram(values: ArrayLike<number>, lo: number, hi: number, bin
   return { lo, hi, counts };
 }
 
+/**
+ * y range for overlaid histograms. Linear: from 0 with 8% headroom. Log: from `floor`, 0.5 for ion
+ * counts; for fractions (normalized) the decade at or below half the smallest non-zero bin, so a bin
+ * of one ion still shows and the axis bottom carries a tick label.
+ */
+export function histYRange(counts: ArrayLike<number>[], log: boolean, fractions: boolean): { domain: [number, number]; floor: number } {
+  let max = 0;
+  let min = Infinity;
+  for (const c of counts) {
+    for (let i = 0; i < c.length; i++) {
+      const v = c[i]!;
+      max = Math.max(max, v);
+      if (v > 0) min = Math.min(min, v);
+    }
+  }
+  const floor = fractions && Number.isFinite(min) ? 10 ** Math.floor(Math.log10(min / 2)) : 0.5;
+  return { domain: log ? [floor, max * 2] : [0, (max || 1) * 1.08], floor };
+}
+
 export interface Stats {
   n: number;
   mean: number;

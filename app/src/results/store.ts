@@ -108,12 +108,14 @@ export const useResults = create<ResultsState>()((set, get) => ({
   view: (key, patch) => set((s) => ({ [key]: { ...s[key], ...patch } }) as Partial<ResultsState>),
   keep: (o, run, detail) =>
     set((s) => {
-      const used = new Set(s.snapshots.map((x) => x.color));
+      // Drop the oldest first, then take a colour none of the remaining runs uses.
+      const kept = s.snapshots.slice(-(MAX_SNAPSHOTS - 1));
+      const used = new Set(kept.map((x) => x.color));
       const color = [0, 1, 2, 3, 4].find((c) => !used.has(c)) ?? 0;
       if (s.snapshots.length === 0) nextSnapshot = 1;
       const id = nextSnapshot++;
       const snap: Snapshot = { id, label: `${o.fileName} · #${id}`, detail, time: Date.now(), run, color, visible: true };
-      return { snapshots: [...s.snapshots, snap].slice(-MAX_SNAPSHOTS) };
+      return { snapshots: [...kept, snap] };
     }),
   patchSnapshot: (id, patch) => set((s) => ({ snapshots: s.snapshots.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
   removeSnapshot: (id) => set((s) => ({ snapshots: s.snapshots.filter((x) => x.id !== id) })),
