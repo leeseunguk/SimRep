@@ -1,0 +1,137 @@
+#version 450
+layout(local_size_x=128) in;
+layout(set=0,binding=0,std430) readonly buffer Parameters { double param[]; };
+layout(set=0,binding=1,std430) readonly buffer Particles { double ions[]; };
+layout(set=0,binding=2,std430) buffer Heads { uint heads[]; };
+layout(set=0,binding=3,std430) buffer Next { uint links[]; };
+layout(set=0,binding=4,std430) readonly buffer Mask { uint fixed[]; };
+layout(set=0,binding=5,std430) buffer PotentialSource { double phi[]; };
+layout(set=0,binding=6,std430) buffer Electric { double electric[]; };
+layout(set=0,binding=7,std430) readonly buffer PushInput { double push_input[]; };
+layout(set=0,binding=8,std430) buffer Output { double output_data[]; };
+layout(set=0,binding=9,std430) buffer Cells { uint cells[]; };
+uvec3 dims() { return uvec3(uint(param[0]),uint(param[1]),uint(param[2])); }
+uint index3(uvec3 c) { uvec3 d=dims(); return c.x+d.x*(c.y+d.y*c.z); }
+dvec3 spacing() { return dvec3(param[4],param[5],param[6]); }
+dvec3 origin() { return dvec3(param[8],param[9],param[10]); }
+dvec3 position(uint i) { return dvec3(ions[8u*i],ions[8u*i+1u],ions[8u*i+2u]); }
+dvec3 mesh_position(dvec3 p) {
+    dvec3 q=p-origin();
+    if(param[17]>double(0.0)) q=dvec3(length(q.xy)-param[18],q.z,double(0.0));
+    return q/spacing();
+}
+uvec3 lower_node(dvec3 u) {
+    uvec3 d=dims();
+    return uvec3(uint(clamp(floor(u.x),double(0.0),double(d.x-2u))),
+        uint(clamp(floor(u.y),double(0.0),double(d.y-2u))),
+        d.z==1u ? 0u : uint(clamp(floor(u.z),double(0.0),double(d.z-2u))));
+}
+double weight(dvec3 u,uvec3 c) {
+    dvec3 w=max(dvec3(double(0.0)),dvec3(double(1.0))-abs(u-dvec3(c)));
+    return w.x*w.y*(dims().z==1u ? double(1.0) : w.z);
+}
+dvec3 gathered(uint i) {
+    dvec3 u=mesh_position(position(i));
+    uvec3 lo=lower_node(u);
+    dvec3 result=dvec3(double(0.0));
+    for(uint z=0u;z<(dims().z==1u ? 1u:2u);z++)
+    for(uint y=0u;y<2u;y++) for(uint x=0u;x<2u;x++) {
+        uvec3 c=lo+uvec3(x,y,z);
+        uint j=index3(c);
+        result+=weight(u,c)*dvec3(electric[3u*j],electric[3u*j+1u],electric[3u*j+2u]);
+    }
+    if(param[17]>double(0.0)) {
+        dvec3 q=position(i)-origin();
+        double r=length(q.xy);
+        result=r==double(0.0) ? dvec3(double(0.0),double(0.0),result.y)
+            : dvec3(result.x*q.x/r,result.x*q.y/r,result.y);
+    }
+    return result;
+}
+void main() {
+    uint i=gl_GlobalInvocationID.x+gl_NumWorkGroups.x*128u*gl_GlobalInvocationID.y;
+    uvec3 d=dims();
+    uint count=d.x*d.y*d.z;
+#ifdef CELL
+    if(i>=uint(param[3])) return;
+    if(i==0u) cells[0]=uint(param[3]);
+    cells[i+1u]=index3(lower_node(mesh_position(position(i))));
+#endif
+#ifdef DEPOSIT
+    if(i>=count) return;
+    if(fixed[i]!=0u) { phi[i]=double(0.0); return; }
+    uvec3 c=uvec3(i%d.x,i/d.x%d.y,i/(d.x*d.y));
+    double charge=double(0.0);
+    for(uint z=0u;z<(d.z==1u?1u:2u);z++) for(uint y=0u;y<2u;y++) for(uint x=0u;x<2u;x++) {
+        uvec3 delta=uvec3(x,y,z);
+        if(any(lessThan(c,delta))) continue;
+        uvec3 cell=c-delta;
+        if(cell.x>=d.x-1u || cell.y>=d.y-1u || (d.z>1u && cell.z>=d.z-1u)) continue;
+        uint link=heads[index3(cell)];
+        while(link!=0u) {
+            uint j=link-1u;
+            charge+=ions[8u*j+3u]*weight(mesh_position(position(j)),c);
+            link=links[j];
+        }
+    }
+    dvec3 h=spacing();
+    double volume=h.x*h.y*h.z;
+    if(c.x==0u || c.x==d.x-1u) volume*=double(0.5);
+    if(c.y==0u || c.y==d.y-1u) volume*=double(0.5);
+    if(d.z>1u && (c.z==0u || c.z==d.z-1u)) volume*=double(0.5);
+    if(param[17]>double(0.0)) {
+        double r=param[18]+double(c.x)*h.x;
+        double lo=c.x==0u ? param[18] : r-double(0.5)*h.x;
+        double hi=c.x==d.x-1u ? r : r+double(0.5)*h.x;
+        volume=param[19]*(hi*hi-lo*lo)*h.y;
+        if(c.y==0u || c.y==d.y-1u) volume*=double(0.5);
+    }
+    phi[i]=charge/(volume*param[13]*param[7]);
+#endif
+#ifdef FIELD
+    if(i>=count) return;
+    uvec3 c=uvec3(i%d.x,i/d.x%d.y,i/(d.x*d.y));
+    uvec3 stride=uvec3(1u,d.x,d.x*d.y);
+    for(uint a=0u;a<3u;a++) {
+        double e=double(0.0);
+        if(d[a]>1u && !(fixed[i]==0u && (c[a]==0u || c[a]==d[a]-1u))
+            && !(param[17]>double(0.0) && param[18]==double(0.0) && a==0u && c.x==0u)) {
+            uint lo=c[a]==0u?0u:c[a]-1u;
+            uint hi=min(c[a]+1u,d[a]-1u);
+            e=-(phi[i+(hi-c[a])*stride[a]]-phi[i-(c[a]-lo)*stride[a]])/(double(hi-lo)*spacing()[a]);
+        }
+        electric[3u*i+a]=e;
+    }
+#endif
+#ifdef GATHER
+    if(i>=uint(param[3])) return;
+    dvec3 e=gathered(i);
+    for(uint a=0u;a<3u;a++) output_data[8u*i+a]=e[a];
+#endif
+#ifdef PUSH
+    if(i>=uint(param[3])) return;
+    uint k=16u*i;
+    dvec3 p=dvec3(push_input[k],push_input[k+1u],push_input[k+2u]);
+    dvec3 v=dvec3(push_input[k+4u],push_input[k+5u],push_input[k+6u]);
+    double ratio=push_input[k+7u], h=push_input[k+11u];
+    dvec3 e=gathered(i)+dvec3(push_input[k+8u],push_input[k+9u],push_input[k+10u]);
+    dvec3 b=dvec3(push_input[k+12u],push_input[k+13u],push_input[k+14u]);
+    bool rel=push_input[k+15u]>double(0.0);
+    double gamma=rel ? double(1.0)/sqrt(double(1.0)-dot(v,v)/(param[16]*param[16])) : double(1.0);
+    dvec3 impulse=double(0.5)*h*ratio*param[14]*e;
+    dvec3 minus=gamma*v+impulse;
+    double gm=rel ? sqrt(double(1.0)+dot(minus,minus)/(param[16]*param[16])):double(1.0);
+    dvec3 t=double(0.5)*h*ratio*param[15]*b/gm;
+    dvec3 s=double(2.0)*t/(double(1.0)+dot(t,t));
+    dvec3 prime=minus+cross(minus,t);
+    dvec3 u=minus+cross(prime,s)+impulse;
+    double gn=rel?sqrt(double(1.0)+dot(u,u)/(param[16]*param[16])):double(1.0);
+    dvec3 next_v=u/gn;
+    dvec3 next_p=p+double(0.5)*h*(v+next_v);
+    for(uint a=0u;a<3u;a++) {
+        output_data[8u*i+a]=next_p[a];
+        output_data[8u*i+4u+a]=next_v[a];
+    }
+    output_data[8u*i+3u]=push_input[k+3u]+h;
+#endif
+}

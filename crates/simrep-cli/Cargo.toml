@@ -1,0 +1,32 @@
+[package]
+name = "simrep-cli"
+description = "Batch command-line runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+cad = ["dep:simrep-cad", "simrep-cad/occt"]
+
+[[bin]]
+name = "simrep"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
+pollster = "1.0.1"
+rayon = "1.11"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+simrep-core.workspace = true
+simrep-geom.workspace = true
+simrep-fly.workspace = true
+simrep-io.workspace = true
+simrep-gem.workspace = true
+simrep-mesh.workspace = true
+simrep-solve.workspace = true
+simrep-cad = { path = "../simrep-cad", optional = true }
+
+[dev-dependencies]
+tempfile = "3"

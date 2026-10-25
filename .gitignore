@@ -1,0 +1,19 @@
+target/
+node_modules/
+dist/
+# OCCT runtime staged for the Windows installer (tools/win/stage-occt.ps1)
+app/src-tauri/bundle-occt/
+*.log
+/oracle-out/
+__pycache__/
+.omo/
+# Technical report: build intermediates and lead-only symlinks into the repo
+docs/report/build/trial*
+docs/report/build/trial_render/
+docs/report/build/render/
+docs/report/build/cover.docx
+docs/report/manuscript.trial.json
+/docs/report/docs
+/docs/report/bench
+/docs/report/crates
+/docs/report/tools

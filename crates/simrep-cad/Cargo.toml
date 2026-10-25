@@ -1,0 +1,29 @@
+[package]
+name = "simrep-cad"
+description = "Optional OpenCascade B-rep electrode import"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+occt = ["dep:cc"]
+
+[dependencies]
+simrep-geom.workspace = true
+simrep-mesh.workspace = true
+
+[build-dependencies]
+cc = { version = "1", optional = true }
+
+[dev-dependencies]
+simrep-solve.workspace = true
+tempfile = "3"
+
+[[example]]
+name = "cad_accuracy"
+required-features = ["occt"]
+
+[[example]]
+name = "cad_inspect"
+required-features = ["occt"]

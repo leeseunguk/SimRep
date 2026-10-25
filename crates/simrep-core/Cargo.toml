@@ -1,0 +1,8 @@
+[package]
+name = "simrep-core"
+description = "Grid, potential array, geometry and shared types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]

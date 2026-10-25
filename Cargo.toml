@@ -1,0 +1,18 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "UNLICENSED"
+
+[workspace.dependencies]
+simrep-core = { path = "crates/simrep-core" }
+simrep-io = { path = "crates/simrep-io" }
+simrep-gem = { path = "crates/simrep-gem" }
+simrep-mesh = { path = "crates/simrep-mesh" }
+simrep-solve = { path = "crates/simrep-solve" }
+simrep-geom = { path = "crates/simrep-geom" }
+simrep-fly = { path = "crates/simrep-fly" }
+simrep-lua = { path = "crates/simrep-lua" }

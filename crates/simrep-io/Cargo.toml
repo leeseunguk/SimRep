@@ -1,0 +1,10 @@
+[package]
+name = "simrep-io"
+description = "SIMION file formats (.pa, .fly2, .gem, .rec) and STL"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+simrep-core.workspace = true
+simrep-lua.workspace = true

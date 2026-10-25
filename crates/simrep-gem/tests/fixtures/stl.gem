@@ -1,0 +1,3 @@
+pa_define{25,11,11,dx=0.5}
+e(1){stl("two_tetrahedra.stl")}
+e(2){stl("two_tetrahedra.stl",8,2,2)}

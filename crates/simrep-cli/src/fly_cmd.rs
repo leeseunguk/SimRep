@@ -1,0 +1,1400 @@
+use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{self, BufReader, BufWriter, Write};
+use std::path::PathBuf;
+use std::time::Instant;
+
+use clap::{Args, ValueEnum};
+use serde::Deserialize;
+use simrep_fly::{
+    ELECTRIC_ACCELERATION, Field, FlightOptions, GridField, InstanceField, Particle,
+    Reconstruction, SPEED_OF_LIGHT, SplatReason, VoltageExpression, fly_many,
+    gpu::{DeviceType, Gpu},
+    physics::{
+        BeamOptions, BeamTermination, ChargeMode, DirectCharge, EnsembleOptions, GpuPic, PicMesh,
+        SpaceCharge,
+        collision::{CollisionModel, Hs1, fly_many_collisional},
+        fly_beam, fly_ensemble,
+        magnetic::{
+            Electromagnetic, ImportedMagneticMap, MapPlacement, OutsideMap, PreparedMagneticField,
+            VectorPotential,
+        },
+    },
+    surface::{SurfaceAccuracy, SurfaceModel},
+};
+use simrep_io::{Fly2Context, Fly2Field, Fly2Instance, read_fast_adjust, read_particles_in};
+use simrep_solve::gpu::GpuResult;
+use simrep_solve::magnetostatics::{FieldFile as MagneticFieldFile, Formulation};
+use simrep_solve::mg::{Geometry, Grid, Options as PoissonOptions};
+
+const GPU_COMPUTE_THRESHOLD: usize = 4096;
+const GPU_PIC_THRESHOLD: usize = 100_000;
+const HS1_GPU_COMPUTE_THRESHOLD: usize = 10_000;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum FlyDevice {
+    Auto,
+    Cpu,
+    Gpu,
+}
+
+impl FlyDevice {
+    fn requests_gpu(self, ions: usize, crossover: Option<usize>) -> bool {
+        self == Self::Gpu || self == Self::Auto && crossover.is_some_and(|n| ions >= n)
+    }
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum SpaceChargeMethod {
+    Direct,
+    Pic,
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum ChargeModeName {
+    Factor,
+    Coulombic,
+    Beam,
+}
+
+#[derive(Args)]
+pub struct FlyOptions {
+    /// Auto uses the measured compute crossover; CPU for small beams.
+    #[arg(long, value_enum, default_value = "auto")]
+    device: FlyDevice,
+    #[arg(long, value_enum, default_value = "vulkan")]
+    backend: crate::Backend,
+    /// SIMION PA or PA0; sibling PA1..PAN supply fast-adjust voltage changes.
+    #[arg(long)]
+    pa: Option<PathBuf>,
+    /// Continuous electrode sidecar; defaults to the PA's sibling .cuts.json.
+    #[arg(long, requires = "pa", conflicts_with = "no_cuts")]
+    cuts: Option<PathBuf>,
+    /// Disable sibling .cuts.json pickup and use staircase collisions.
+    #[arg(long)]
+    no_cuts: bool,
+    /// SIMION ION CSV or sandboxed, context-aware FLY2 definitions.
+    #[arg(long)]
+    particles: PathBuf,
+    /// Electrode=volts overrides, for example --voltage 1=0,2=110,3=0.
+    #[arg(long, value_delimiter = ',', value_parser = voltage)]
+    voltage: Vec<(usize, f64)>,
+    /// Per-electrode voltage expression at absolute time t (microseconds).
+    #[arg(long, value_parser = expression_assignment)]
+    voltage_expr: Vec<(usize, String)>,
+    /// Named expression parameter, for example --param frequency=0.14 (cycles/us).
+    #[arg(long, value_parser = parameter)]
+    param: Vec<(String, f64)>,
+    /// JSON voltage run settings: {"parameters":{...},"voltage_expr":{"2":"..."}}.
+    #[arg(long)]
+    run_file: Option<PathBuf>,
+    /// Workbench position in mm of the unmirrored PA origin.
+    #[arg(long, default_value = "0,0,0", value_parser = numbers::<3>, allow_hyphen_values = true)]
+    origin: [f64; 3],
+    /// PA unit X,Y,Z directions in workbench coordinates, column by column.
+    #[arg(long, default_value = "1,0,0,0,1,0,0,0,1", value_parser = numbers::<9>, allow_hyphen_values = true)]
+    axes: [f64; 9],
+    #[arg(long, default_value_t = 1.0)]
+    scale: f64,
+    /// xmin,ymin,zmin,xmax,ymax,zmax in mm; permits field-free drift outside PA.
+    #[arg(long, value_parser = numbers::<6>, allow_hyphen_values = true)]
+    bounds: Option<[f64; 6]>,
+    /// Detector nx,ny,nz,d: nx*x+ny*y+nz*z=d, in workbench mm.
+    #[arg(long, value_parser = numbers::<4>, allow_hyphen_values = true)]
+    plane: Option<[f64; 4]>,
+    /// CSV output path; omitted writes records to stdout.
+    #[arg(long)]
+    output: Option<PathBuf>,
+    /// Override automatic field-aware absolute (mm, mm/us) and relative tolerances.
+    #[arg(long)]
+    tolerance: Option<f64>,
+    /// Override the automatic geometry/physics step ceiling (microseconds).
+    #[arg(long)]
+    max_step_us: Option<f64>,
+    #[arg(long, default_value_t = 100.0)]
+    duration_us: f64,
+    /// Disable relativistic dynamics (SIMION enables them by default).
+    #[arg(long)]
+    nonrelativistic: bool,
+    /// Use the original global cubic spline, including metal nodes.
+    #[arg(long)]
+    global_cubic: bool,
+    /// Historical nearest-node electrode voxels instead of occupied PA cells.
+    #[arg(long)]
+    nearest_node_collisions: bool,
+    /// Disable calibrated CPU coil maps and sum exact Biot-Savart filaments.
+    #[arg(long)]
+    exact_coils: bool,
+    /// External regular-grid vector B exports; repeated maps superpose.
+    #[arg(long)]
+    bfield_map: Vec<PathBuf>,
+    #[arg(long, default_value = "auto", value_parser = ["auto", "comsol", "opera", "csv", "txt", "axisymmetric"])]
+    bfield_map_format: String,
+    /// Coordinate,flux units: mm/G (default), m/T, cm/mT or inch/G.
+    #[arg(long, value_parser = map_units)]
+    bfield_map_units: Option<(simrep_io::bfield::LengthUnit, simrep_io::bfield::FluxUnit)>,
+    /// origin xyz(mm), rotation columns(9), positive geometric scale.
+    #[arg(long, value_parser = numbers::<13>, allow_hyphen_values = true)]
+    bfield_map_transform: Option<[f64; 13]>,
+    /// Zero-based source columns x,y,z,Bx,By,Bz (or z,r,Bz,Br).
+    #[arg(long, value_delimiter = ',')]
+    bfield_map_columns: Option<Vec<usize>>,
+    #[arg(long)]
+    bfield_map_delimiter: Option<char>,
+    #[arg(long, default_value = "error", value_parser = ["error", "zero", "clamp"])]
+    bfield_map_outside: String,
+    /// Axial-vector mirror planes through source grid minima; x,y,z or axial z.
+    #[arg(long, value_delimiter = ',', value_parser = ["x", "y", "z"])]
+    bfield_map_mirror: Vec<String>,
+    /// Report finite-difference nodal div B; diagnostic, not an accuracy bound.
+    #[arg(long)]
+    bfield_map_divergence: bool,
+    /// CPU curl-A field sidecar (.mag.json), additive with magnetic PAs/coils.
+    #[arg(long)]
+    magnetic_vector_potential: Vec<PathBuf>,
+    #[command(flatten)]
+    physics: crate::physics_cmd::PhysicsOptions,
+    /// Coupled equal-time ensemble; beam instead uses leader-normal planes.
+    #[arg(long, value_enum)]
+    space_charge: Option<SpaceChargeMethod>,
+    #[arg(long, value_enum, default_value = "factor",
+        requires_ifs([("factor", "space_charge"), ("coulombic", "space_charge")]))]
+    charge_mode: ChargeModeName,
+    /// Factor multiplier or total absolute represented charge in coulombs.
+    #[arg(long, default_value_t = 1.0)]
+    charge_amount: f64,
+    /// Total absolute steady line current; requires --charge-mode beam.
+    #[arg(long)]
+    beam_current_a: Option<f64>,
+    /// Direct Plummer or beam line-cloud radius in mm (zero = singular sources).
+    #[arg(long, default_value_t = 0.0)]
+    charge_softening_mm: f64,
+    /// Full Cartesian PIC mesh dimensions; requires explicit --bounds.
+    #[arg(long, value_delimiter = ',', default_values_t = [33usize,33,33])]
+    pic_dims: Vec<usize>,
+    #[arg(long)]
+    space_charge_step_fraction: Option<f64>,
+}
+
+impl FlyOptions {
+    fn compute_crossover(
+        &self,
+        has_magnetic: bool,
+        collision: Option<&CollisionModel>,
+    ) -> Option<usize> {
+        if has_magnetic {
+            return None;
+        }
+        let default = Hs1::default();
+        match collision {
+            None => Some(GPU_COMPUTE_THRESHOLD),
+            Some(CollisionModel::Hs1(hs))
+                if self.pa.is_none()
+                    && self.bounds.is_none()
+                    && self.plane.is_none()
+                    && self.space_charge.is_none()
+                    && self.duration_us == 50.0
+                    && self.max_step_us == Some(0.05)
+                    && self.tolerance.is_none()
+                    && matches!(
+                        self.physics.integrator,
+                        crate::physics_cmd::Integration::Rk45
+                    )
+                    && self.physics.step_us == FlightOptions::default().initial_step_us
+                    && hs.gas.pressure_pa == default.gas.pressure_pa
+                    && hs.gas.temperature_k == default.gas.temperature_k
+                    && hs.gas.mass_amu == default.gas.mass_amu
+                    && hs.gas.velocity_mm_per_us == default.gas.velocity_mm_per_us
+                    && hs.cross_section_m2 == default.cross_section_m2
+                    && hs.mean_free_path_mm == default.mean_free_path_mm
+                    && hs.steps_per_mean_free_time == default.steps_per_mean_free_time =>
+            {
+                Some(HS1_GPU_COMPUTE_THRESHOLD)
+            }
+            _ => None,
+        }
+    }
+}
+
+pub(crate) fn numbers<const N: usize>(text: &str) -> Result<[f64; N], String> {
+    let values = text
+        .split(',')
+        .map(|s| {
+            s.trim()
+                .parse::<f64>()
+                .map_err(|_| "expected comma-separated numbers".to_owned())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if values.iter().any(|v| !v.is_finite()) {
+        return Err("coordinates must be finite".into());
+    }
+    values
+        .try_into()
+        .map_err(|_| format!("expected {N} comma-separated numbers"))
+}
+
+fn map_units(
+    text: &str,
+) -> Result<(simrep_io::bfield::LengthUnit, simrep_io::bfield::FluxUnit), String> {
+    use simrep_io::bfield::{FluxUnit as B, LengthUnit as L};
+    let (length, flux) = text
+        .split_once('/')
+        .ok_or("expected coordinate/flux units, for example mm/G")?;
+    let length = match length.to_ascii_lowercase().as_str() {
+        "mm" => L::Mm,
+        "m" => L::M,
+        "cm" => L::Cm,
+        "inch" | "in" => L::Inch,
+        _ => return Err("length unit must be mm, m, cm or inch".into()),
+    };
+    let flux = match flux.to_ascii_lowercase().as_str() {
+        "g" | "gauss" => B::Gauss,
+        "t" | "tesla" => B::Tesla,
+        "mt" => B::Millitesla,
+        _ => return Err("flux unit must be G, T or mT".into()),
+    };
+    Ok((length, flux))
+}
+
+fn load_magnetic_maps(options: &FlyOptions) -> GpuResult<Vec<ImportedMagneticMap>> {
+    use simrep_io::bfield::{self, Format, ReadOptions};
+    let format = match options.bfield_map_format.as_str() {
+        "comsol" => Format::Comsol,
+        "opera" => Format::Opera,
+        "axisymmetric" => Format::Axisymmetric,
+        "csv" | "txt" => Format::Delimited,
+        _ => Format::Auto,
+    };
+    let read_options = ReadOptions {
+        format,
+        length_unit: options.bfield_map_units.map(|u| u.0),
+        flux_unit: options.bfield_map_units.map(|u| u.1),
+        columns: options.bfield_map_columns.clone(),
+        delimiter: options.bfield_map_delimiter,
+    };
+    let mut maps = Vec::new();
+    for path in &options.bfield_map {
+        let data = bfield::read(path, &read_options)?;
+        let mut placement = MapPlacement::default();
+        let rotation = options.bfield_map_transform.map_or(placement.axes, |t| {
+            std::array::from_fn(|a| std::array::from_fn(|b| t[3 + 3 * a + b]))
+        });
+        let frame = if data.axisymmetric {
+            [[0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+        } else {
+            placement.axes
+        };
+        placement.axes = std::array::from_fn(|a| {
+            std::array::from_fn(|b| (0..3).map(|c| rotation[c][b] * frame[a][c]).sum())
+        });
+        let translation = options
+            .bfield_map_transform
+            .map_or([0.0; 3], |t| [t[0], t[1], t[2]]);
+        placement.scale = options.bfield_map_transform.map_or(1.0, |t| t[12]);
+        placement.origin_mm = std::array::from_fn(|a| {
+            translation[a]
+                + placement.scale
+                    * (0..3)
+                        .map(|c| placement.axes[c][a] * data.origin_mm[c])
+                        .sum::<f64>()
+        });
+        placement.outside = match options.bfield_map_outside.as_str() {
+            "zero" => OutsideMap::Zero,
+            "clamp" => OutsideMap::Clamp,
+            _ => OutsideMap::Error,
+        };
+        for mirror in &options.bfield_map_mirror {
+            let axis = match mirror.as_str() {
+                "x" => 0,
+                "y" => 1,
+                _ => 2,
+            };
+            if data.axisymmetric {
+                if axis != 2 {
+                    return Err("axisymmetric map only supports axial z mirror".into());
+                }
+                placement.mirrors[0] = Some([1, -1, 1]);
+            } else {
+                placement.mirrors[axis] =
+                    Some(std::array::from_fn(|c| if c == axis { 1 } else { -1 }));
+            }
+        }
+        let map = ImportedMagneticMap::from_nodes(
+            data.dims,
+            data.spacing_mm,
+            data.values_gauss,
+            data.axisymmetric,
+            placement,
+        )?;
+        if options.bfield_map_divergence {
+            let report = map.divergence_report();
+            eprintln!(
+                "BFIELD_MAP_DIVERGENCE,file={},nodes={},max_abs_gauss_per_mm={:.9e},rms_gauss_per_mm={:.9e},normalized_max={:.9e}",
+                path.display(),
+                report.nodes,
+                report.max_abs_gauss_per_mm,
+                report.rms_gauss_per_mm,
+                report.normalized_max
+            );
+            if report.normalized_max > 0.01 {
+                eprintln!(
+                    "warning: {} has normalized nodal div B > 0.01; inspect export units, noise and resolution",
+                    path.display()
+                );
+            }
+        }
+        eprintln!(
+            "BFIELD_MAP,file={},dims={:?},spacing_mm={:?},units={:?}/{:?},outside={}{}",
+            path.display(),
+            data.dims,
+            data.spacing_mm,
+            data.length_unit,
+            data.flux_unit,
+            options.bfield_map_outside,
+            if options.bfield_map_outside == "error" {
+                " (exit stops with OutsideGrid)"
+            } else {
+                ""
+            }
+        );
+        maps.push(map);
+    }
+    Ok(maps)
+}
+
+fn voltage(text: &str) -> Result<(usize, f64), String> {
+    let (number, volts) = text.split_once('=').ok_or("expected electrode=volts")?;
+    let number = number.parse().map_err(|_| "invalid electrode number")?;
+    let volts: f64 = volts.parse().map_err(|_| "invalid electrode voltage")?;
+    if !volts.is_finite() {
+        return Err("electrode voltage must be finite".into());
+    }
+    Ok((number, volts))
+}
+
+fn expression_assignment(text: &str) -> Result<(usize, String), String> {
+    let (n, expression) = text
+        .split_once('=')
+        .ok_or("expected electrode=expression")?;
+    let n = n.parse().map_err(|_| "invalid electrode number")?;
+    if expression.trim().is_empty() {
+        return Err("voltage expression is empty".into());
+    }
+    Ok((n, expression.to_owned()))
+}
+
+fn parameter(text: &str) -> Result<(String, f64), String> {
+    let (name, value) = text.split_once('=').ok_or("expected name=value")?;
+    let value: f64 = value.parse().map_err(|_| "invalid parameter value")?;
+    if !value.is_finite() {
+        return Err("parameter must be finite".into());
+    }
+    Ok((name.to_owned(), value))
+}
+
+#[derive(Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct VoltageRun {
+    parameters: BTreeMap<String, f64>,
+    voltage_expr: BTreeMap<usize, String>,
+    physics: crate::physics_cmd::PhysicsRun,
+}
+
+pub fn run(options: FlyOptions) -> GpuResult<()> {
+    let start = Instant::now();
+    let mut run: VoltageRun = match &options.run_file {
+        Some(path) => serde_json::from_reader(BufReader::new(File::open(path)?))?,
+        None => VoltageRun::default(),
+    };
+    run.parameters.extend(options.param.iter().cloned());
+    run.voltage_expr
+        .extend(options.voltage_expr.iter().cloned());
+    let expressions = run
+        .voltage_expr
+        .into_iter()
+        .map(|(n, source)| VoltageExpression::parse(&source, &run.parameters).map(|e| (n, e)))
+        .collect::<Result<BTreeMap<_, _>, _>>()?;
+    if options.pa.is_none() && (!options.voltage.is_empty() || !expressions.is_empty()) {
+        return Err("electrode voltages require --pa".into());
+    }
+    let read_electric = |adjustments: &[(usize, f64)]| match &options.pa {
+        Some(path) if adjustments.is_empty() => simrep_io::read_pa(path).map(|file| file.array),
+        Some(path) => read_fast_adjust(path, adjustments),
+        None => Ok(simrep_core::PotentialArray::new(1, 1, 1)),
+    };
+    let beam_mode = matches!(options.charge_mode, ChargeModeName::Beam);
+    if beam_mode && (options.beam_current_a.is_none() || options.space_charge.is_some()) {
+        return Err(
+            "beam needs --beam-current-a and cannot be combined with --space-charge".into(),
+        );
+    }
+    if !beam_mode && options.beam_current_a.is_some() {
+        return Err("--beam-current-a requires --charge-mode beam".into());
+    }
+    if beam_mode && options.device == FlyDevice::Gpu {
+        return Err("leader-plane beam integration requires --device cpu or auto".into());
+    }
+    let cuts_path = options.cuts.clone().or_else(|| {
+        options
+            .pa
+            .as_ref()
+            .map(|path| path.with_extension("cuts.json"))
+            .filter(|path| !options.no_cuts && path.is_file())
+    });
+    let surface = cuts_path
+        .as_ref()
+        .map(|path| -> GpuResult<SurfaceModel> {
+            Ok(
+                SurfaceModel::from_reader(BufReader::new(File::open(path)?))?
+                    .with_tolerance(options.tolerance.unwrap_or(1e-12) / options.scale)?,
+            )
+        })
+        .transpose()?;
+    if let Some(surface) = &surface {
+        if options.device == FlyDevice::Gpu
+            && !matches!(options.space_charge, Some(SpaceChargeMethod::Pic))
+        {
+            return Err("surface collisions require CPU; use --device cpu or auto, or --no-cuts for staircase GPU flying".into());
+        }
+        eprintln!(
+            "surface: {} ({})",
+            cuts_path.as_ref().unwrap().display(),
+            match surface.accuracy() {
+                SurfaceAccuracy::ApproximateV1 =>
+                    "APPROXIMATE v1 reconstruction from link intersections",
+                SurfaceAccuracy::SampledSdf => "APPROXIMATE sampled SDF (v2); CPU",
+                SurfaceAccuracy::SourceGeometry => "source geometry (v3); CPU",
+            }
+        );
+    }
+    let axes = std::array::from_fn(|a| std::array::from_fn(|b| options.axes[3 * a + b]));
+    let bounds = options
+        .bounds
+        .map(|b| [[b[0], b[1], b[2]], [b[3], b[4], b[5]]]);
+    let plane = options.plane.map(|p| ([p[0], p[1], p[2]], p[3]));
+    let (mut magnetic, collision, seed) =
+        options
+            .physics
+            .prepare(run.physics, options.origin, axes, options.scale, bounds)?;
+    magnetic.maps.extend(load_magnetic_maps(&options)?);
+    for path in &options.magnetic_vector_potential {
+        let header: MagneticFieldFile = serde_json::from_reader(BufReader::new(File::open(path)?))?;
+        if header.version != 1 || header.formulation == Formulation::Scalar {
+            return Err(
+                "vector-potential sidecar requires version 1 and a vector formulation".into(),
+            );
+        }
+        let parent = path.parent().unwrap_or(std::path::Path::new("."));
+        let field = if header.formulation == Formulation::CartesianA {
+            let paths = header
+                .components
+                .ok_or("Cartesian A sidecar requires three component paths")?;
+            let arrays = [
+                simrep_io::read_pa(parent.join(&paths[0]))?.array,
+                simrep_io::read_pa(parent.join(&paths[1]))?.array,
+                simrep_io::read_pa(parent.join(&paths[2]))?.array,
+            ];
+            VectorPotential::cartesian(
+                arrays,
+                header.ng,
+                options.origin,
+                axes,
+                options.scale,
+                bounds,
+            )?
+        } else {
+            if header.components.is_some() {
+                return Err("only Cartesian A sidecars may name three components".into());
+            }
+            VectorPotential::placed(
+                simrep_io::read_pa(parent.join(header.potential))?.array,
+                header.formulation,
+                header.ng,
+                options.origin,
+                axes,
+                options.scale,
+                bounds,
+            )?
+        };
+        magnetic
+            .vector_potentials
+            .push(field.with_material_cells(header.solid_cells)?);
+    }
+    let cpu_only_magnetic = !magnetic.vector_potentials.is_empty()
+        || magnetic
+            .arrays
+            .iter()
+            .chain(&magnetic.support)
+            .any(|pa| pa.has_material_cells());
+    if cpu_only_magnetic && options.device == FlyDevice::Gpu {
+        return Err(
+            "vector potentials and magnetic material cells require --device cpu or auto".into(),
+        );
+    }
+    let particle_data = if options
+        .particles
+        .extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("ion"))
+    {
+        simrep_io::read_ion(&options.particles)?
+    } else {
+        let mut launch_adjustments: BTreeMap<_, _> = options.voltage.iter().copied().collect();
+        launch_adjustments.extend(expressions.iter().map(|(&n, e)| (n, e.evaluate(0.0))));
+        let array = read_electric(&launch_adjustments.into_iter().collect::<Vec<_>>())?;
+        let instances = options
+            .pa
+            .as_ref()
+            .map(|_| Fly2Instance {
+                origin_mm: options.origin,
+                axes,
+                scale: options.scale,
+                spacing_mm: [array.dx_mm, array.dy_mm, array.dz_mm],
+                dimensions: [array.nx, array.ny, array.nz],
+                electrodes: Some(array.electrodes.clone().into()),
+                ..Default::default()
+            })
+            .into_iter()
+            .collect();
+        let reconstruction = if options.global_cubic {
+            Reconstruction::GlobalCubic
+        } else {
+            Reconstruction::BoundaryAware
+        };
+        let source = InstanceField::new(
+            GridField::with_reconstruction(array, reconstruction)?,
+            options.origin,
+            axes,
+            options.scale,
+            bounds,
+            plane,
+        )?;
+        let provider = |_, point| {
+            let sample = source.sample(point, 0.0);
+            Ok(Fly2Field {
+                potential_v: sample.potential_v,
+                electric_v_per_mm: sample.electric_v_per_mm,
+                magnetic_gauss: magnetic.sample(point, 0.0).magnetic_gauss,
+                electrode: matches!(source.status(point), Some(SplatReason::Electrode { .. })),
+            })
+        };
+        read_particles_in(
+            &options.particles,
+            &Fly2Context {
+                instances,
+                field: Some(&provider),
+                seed,
+                ..Default::default()
+            },
+        )?
+    };
+    let has_magnetic = magnetic.uniform_gauss != [0.0; 3]
+        || !magnetic.arrays.is_empty()
+        || !magnetic.vector_potentials.is_empty()
+        || !magnetic.coils.is_empty()
+        || !magnetic.maps.is_empty();
+    let crossover = if beam_mode || cpu_only_magnetic || has_magnetic || magnetic.support.is_some()
+    {
+        None
+    } else {
+        match options.space_charge {
+            Some(SpaceChargeMethod::Pic) => Some(GPU_PIC_THRESHOLD),
+            Some(SpaceChargeMethod::Direct) => None,
+            None => options.compute_crossover(
+                has_magnetic || magnetic.support.is_some(),
+                collision.as_ref(),
+            ),
+        }
+    };
+    let init = Instant::now();
+    let request_gpu = !beam_mode && options.device.requests_gpu(particle_data.len(), crossover);
+    let gpu = if (surface.is_none() || matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
+        && request_gpu
+    {
+        match pollster::block_on(Gpu::new(options.backend.backends()))? {
+            None if options.device == FlyDevice::Gpu => {
+                return Err("no adapter available for GPU flying".into());
+            }
+            Some(gpu)
+                if options.device == FlyDevice::Auto
+                    && (gpu.info.device_type == DeviceType::Cpu
+                        || !gpu.has_f64()
+                        || collision.is_some() && gpu.info.name != "NVIDIA GeForce RTX 3070") =>
+            {
+                None
+            }
+            gpu => gpu,
+        }
+    } else {
+        None
+    };
+    let initialization = init.elapsed();
+    let use_gpu = gpu.is_some();
+    eprintln!(
+        "device: {}, requested: {:?}, auto_gpu_threshold: {:?} (measured compute-only class calibration)",
+        if use_gpu { "gpu" } else { "cpu" },
+        options.device,
+        crossover,
+    );
+    let reconstruction = if options.global_cubic {
+        Reconstruction::GlobalCubic
+    } else {
+        Reconstruction::BoundaryAware
+    };
+    let grid_field = |array| -> Result<GridField, simrep_fly::FlyError> {
+        let field = GridField::with_reconstruction(array, reconstruction)?;
+        Ok(if options.nearest_node_collisions {
+            field.with_nearest_node_collisions()
+        } else {
+            field
+        })
+    };
+    let mut bases = Vec::new();
+    let mut dynamic_bases = Vec::new();
+    let mut adjustments: BTreeMap<_, _> = options.voltage.iter().copied().collect();
+    adjustments.extend(expressions.keys().map(|&n| (n, 0.0)));
+    let adjustments: Vec<_> = adjustments.into_iter().collect();
+    let array = if use_gpu && options.space_charge.is_none() {
+        // read_fast_adjust owns all SIMION normalization/background rules.
+        // Differencing zero/unit adjustments obtains the same unit basis
+        // without duplicating those file-format rules in the flyer.
+        let zeros: Vec<_> = adjustments.iter().map(|&(n, _)| (n, 0.0)).collect();
+        let background = read_electric(&zeros)?;
+        for &(n, _) in &adjustments {
+            let zero = read_electric(&[(n, 0.0)])?;
+            let mut unit = read_electric(&[(n, 1.0)])?;
+            for (v, z) in unit.potentials.iter_mut().zip(zero.potentials) {
+                *v -= z;
+            }
+            let basis = grid_field(unit)?;
+            if let Some(e) = expressions.get(&n) {
+                dynamic_bases.push((basis, e.clone()));
+            } else {
+                bases.push(basis);
+            }
+        }
+        background
+    } else {
+        for (&n, expression) in &expressions {
+            let zero = read_electric(&[(n, 0.0)])?;
+            let mut unit = read_electric(&[(n, 1.0)])?;
+            for (v, z) in unit.potentials.iter_mut().zip(zero.potentials) {
+                *v -= z;
+            }
+            dynamic_bases.push((grid_field(unit)?, expression.clone()));
+        }
+        read_electric(&adjustments)?
+    };
+    let grid = grid_field(array)?;
+    let mut field = InstanceField::new(grid, options.origin, axes, options.scale, bounds, plane)?
+        .with_voltage_expressions(dynamic_bases)?;
+    if let Some(surface) = surface {
+        field = field.with_surface(std::sync::Arc::new(surface))?;
+    }
+    if use_gpu && matches!(options.space_charge, Some(SpaceChargeMethod::Direct)) {
+        return Err("direct Coulomb physics requires --device cpu".into());
+    }
+    if (beam_mode || options.space_charge.is_some()) && collision.is_some() {
+        return Err("space charge does not support collision models".into());
+    }
+    let nonrelativistic = options.nonrelativistic || collision.is_some();
+    let weights = particle_data
+        .iter()
+        .map(|p| p.charge_weight)
+        .collect::<Vec<_>>();
+    let particles = particle_data
+        .into_iter()
+        .map(|p| {
+            if nonrelativistic {
+                Particle::from_energy(
+                    p.mass_amu,
+                    p.charge_e,
+                    p.position_mm,
+                    p.energy_ev,
+                    p.direction,
+                    p.birth_time_us,
+                )
+            } else {
+                Particle::from_relativistic_energy(
+                    p.mass_amu,
+                    p.charge_e,
+                    p.position_mm,
+                    p.energy_ev,
+                    p.direction,
+                    p.birth_time_us,
+                )
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let flight_options = FlightOptions {
+        integrator: options.physics.integrator.into(),
+        automatic_tolerance: options.tolerance.is_none(),
+        relative_tolerance: options.tolerance.unwrap_or(1e-12),
+        position_tolerance_mm: options.tolerance.unwrap_or(1e-12),
+        velocity_tolerance_mm_per_us: options.tolerance.unwrap_or(1e-12),
+        initial_step_us: options
+            .physics
+            .step_us
+            .min(options.max_step_us.unwrap_or(f64::MAX)),
+        max_step_us: options.max_step_us.unwrap_or(f64::MAX),
+        duration_us: options.duration_us,
+        relativistic: !nonrelativistic,
+        ..FlightOptions::default()
+    };
+    let mut beam_terminations = None;
+    let cpu_magnetic = if gpu.is_none() || beam_mode || options.space_charge.is_some() {
+        Some(if options.exact_coils {
+            PreparedMagneticField::exact(&magnetic)
+        } else {
+            magnetic.prepare_coil_map(bounds)?
+        })
+    } else {
+        None
+    };
+    if let Some(prepared) = &cpu_magnetic {
+        for (region, c) in prepared.calibration().iter().enumerate() {
+            eprintln!(
+                "cpu_coil_map: region={region}, nodes={}, max_abs_gauss={:.6e}, max_relative={:.6e}, accepted={}",
+                c.nodes, c.max_absolute_gauss, c.max_relative, c.accepted
+            );
+        }
+    }
+    let (results, setup, flight) = if beam_mode {
+        let field = Electromagnetic {
+            electric: field,
+            magnetic: cpu_magnetic.unwrap(),
+        };
+        let setup = start.elapsed();
+        let report = fly_beam(
+            &field,
+            &particles,
+            &BeamOptions {
+                flight: flight_options,
+                current_a: options.beam_current_a.unwrap(),
+                charge_weights: weights,
+                softening_mm: options.charge_softening_mm,
+                space_charge_step_fraction: options
+                    .space_charge_step_fraction
+                    .unwrap_or_else(|| BeamOptions::default().space_charge_step_fraction),
+                ..BeamOptions::default()
+            },
+        )?;
+        eprintln!(
+            "beam_semantics: SIMION-documented beam semantics; global_steps: {}, rejected: {}",
+            report.ensemble.global_steps, report.ensemble.rejected_steps
+        );
+        beam_terminations = Some(report.terminations);
+        (report.ensemble.results, setup, report.ensemble.compute_time)
+    } else if let Some(method) = options.space_charge {
+        let mut space_charge = match method {
+            SpaceChargeMethod::Direct => SpaceCharge::Direct(DirectCharge {
+                softening_mm: options.charge_softening_mm,
+            }),
+            SpaceChargeMethod::Pic => {
+                let bounds = bounds.ok_or("PIC requires --bounds covering the full ensemble")?;
+                let dims: [usize; 3] = options
+                    .pic_dims
+                    .clone()
+                    .try_into()
+                    .map_err(|_| "PIC needs three dimensions")?;
+                if dims.iter().any(|&n| n < 3) {
+                    return Err("PIC dimensions must each be at least three".into());
+                }
+                let count = dims
+                    .into_iter()
+                    .try_fold(1usize, usize::checked_mul)
+                    .ok_or("PIC mesh size overflow")?;
+                let spacing =
+                    std::array::from_fn(|a| (bounds[1][a] - bounds[0][a]) / (dims[a] - 1) as f64);
+                let fixed: Vec<_> = (0..count)
+                    .map(|i| {
+                        let c = [
+                            i % dims[0],
+                            (i / dims[0]) % dims[1],
+                            i / (dims[0] * dims[1]),
+                        ];
+                        let p = std::array::from_fn(|a| bounds[0][a] + c[a] as f64 * spacing[a]);
+                        (0..3).any(|a| c[a] == 0 || c[a] + 1 == dims[a])
+                            || matches!(
+                                field.status(p),
+                                Some(
+                                    SplatReason::Electrode { .. }
+                                        | SplatReason::SurfaceElectrode { .. }
+                                )
+                            )
+                    })
+                    .collect();
+                let mesh = PicMesh::new(
+                    Grid {
+                        dims,
+                        spacing,
+                        geometry: Geometry::Planar,
+                    },
+                    bounds[0],
+                    fixed,
+                    PoissonOptions {
+                        relative_tolerance: options.tolerance.unwrap_or(1e-12),
+                        ..PoissonOptions::default()
+                    },
+                )?;
+                if let Some(gpu) = &gpu {
+                    let solver_gpu = simrep_solve::gpu::Gpu::from_device(
+                        gpu.device().clone(),
+                        gpu.queue().clone(),
+                        gpu.info.clone(),
+                    );
+                    SpaceCharge::GpuPic(Box::new(GpuPic::new(solver_gpu, mesh, particles.len())?))
+                } else {
+                    SpaceCharge::Pic(Box::new(mesh))
+                }
+            }
+        };
+        let field = Electromagnetic {
+            electric: field,
+            magnetic: cpu_magnetic.unwrap(),
+        };
+        let setup = start.elapsed();
+        let report = fly_ensemble(
+            &field,
+            &particles,
+            &EnsembleOptions {
+                flight: flight_options,
+                charge_mode: match options.charge_mode {
+                    ChargeModeName::Factor => ChargeMode::Factor(options.charge_amount),
+                    ChargeModeName::Coulombic => ChargeMode::Coulombic(options.charge_amount),
+                    ChargeModeName::Beam => unreachable!(),
+                },
+                charge_weights: weights,
+                space_charge_step_fraction: options.space_charge_step_fraction.unwrap_or(0.1),
+            },
+            &mut space_charge,
+        )?;
+        eprintln!(
+            "ensemble_global_steps: {}, rejected: {}",
+            report.global_steps, report.rejected_steps
+        );
+        (report.results, setup, report.compute_time)
+    } else if let Some(gpu) = &gpu {
+        eprintln!(
+            "Adapter: {} ({:?}, {:?})",
+            gpu.info.name, gpu.info.backend, gpu.info.device_type
+        );
+        let mut resident = if has_magnetic || collision.is_some() {
+            gpu.prepare_physics(&field, &bases, &magnetic, collision.as_ref(), seed)?
+        } else {
+            gpu.prepare(&field, &bases)?
+        };
+        let voltages: Vec<_> = std::iter::once(1.0)
+            .chain(
+                adjustments
+                    .iter()
+                    .filter(|(n, _)| !expressions.contains_key(n))
+                    .map(|&(_, v)| v),
+            )
+            .chain(std::iter::repeat_n(0.0, expressions.len()))
+            .collect();
+        resident.set_voltages(&voltages)?;
+        let setup = start.elapsed();
+        let report = resident.fly(&particles, &flight_options)?;
+        eprintln!(
+            "gpu_init_s: {:.6}, gpu_setup_s: {:.6}, gpu_upload_s: {:.6}, gpu_fly_s: {:.6}, gpu_readback_s: {:.6}",
+            initialization.as_secs_f64(),
+            (resident.timings.setup + report.timings.setup).as_secs_f64(),
+            (resident.timings.upload + report.timings.upload).as_secs_f64(),
+            report.timings.fly.as_secs_f64(),
+            report.timings.readback.as_secs_f64(),
+        );
+        eprintln!(
+            "GPU precision: {}; compute clock: {}",
+            if gpu.has_f64() {
+                "native f64, tolerance floor 1e-13"
+            } else {
+                "f32, tolerance floor 2e-7, two-float TOF"
+            },
+            if gpu.has_timestamps() {
+                "GPU pass timestamps"
+            } else {
+                "submission-through-completion (timestamps unavailable)"
+            },
+        );
+        (report.results, setup, report.timings.fly)
+    } else {
+        let field = Electromagnetic {
+            electric: field,
+            magnetic: cpu_magnetic.unwrap(),
+        };
+        let setup = start.elapsed();
+        let flight_start = Instant::now();
+        let results = if let Some(model) = &collision {
+            fly_many_collisional(&field, &particles, &flight_options, model, seed)?
+        } else {
+            fly_many(&field, &particles, &flight_options)?
+        };
+        (results, setup, flight_start.elapsed())
+    };
+    let writer: Box<dyn Write> = match options.output {
+        Some(path) => Box::new(File::create(path)?),
+        None => Box::new(io::stdout().lock()),
+    };
+    let mut writer = BufWriter::new(writer);
+    writeln!(
+        writer,
+        "ion,tof_us,x_mm,y_mm,z_mm,ke_ev,reason,electrode_number,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us"
+    )?;
+    let mut splats = 0;
+    for (i, (particle, result)) in particles.iter().zip(&results).enumerate() {
+        let p = result.final_state.position_mm;
+        let v2 = result
+            .final_state
+            .velocity_mm_per_us
+            .iter()
+            .map(|v| v * v)
+            .sum::<f64>();
+        let ke = if nonrelativistic {
+            particle.mass_amu * v2 / (2.0 * ELECTRIC_ACCELERATION)
+        } else {
+            let inverse_gamma = (1.0 - v2 / SPEED_OF_LIGHT.powi(2)).sqrt();
+            particle.mass_amu * v2 / (ELECTRIC_ACCELERATION * inverse_gamma * (1.0 + inverse_gamma))
+        };
+        let reason = match beam_terminations.as_ref().map(|t| t[i]) {
+            Some(BeamTermination::Diverged) => "beam_diverged",
+            Some(BeamTermination::LeaderStopped) => "beam_leader_stopped",
+            _ => match result.splat_reason {
+                SplatReason::Electrode { .. } | SplatReason::SurfaceElectrode { .. } => "electrode",
+                SplatReason::OutsideGrid => "outside",
+                SplatReason::StopPlane => "plane",
+                SplatReason::TimeLimit => "time_limit",
+                SplatReason::StepLimit => "step_limit",
+                SplatReason::StepUnderflow => "step_underflow",
+                SplatReason::NonFinite => "nonfinite",
+            },
+        };
+        if matches!(
+            result.splat_reason,
+            SplatReason::Electrode { .. }
+                | SplatReason::SurfaceElectrode { .. }
+                | SplatReason::OutsideGrid
+                | SplatReason::StopPlane
+        ) {
+            splats += 1;
+        }
+        writeln!(
+            writer,
+            "{},{:.15e},{:.15e},{:.15e},{:.15e},{:.15e},{},{},{:.15e},{:.15e},{:.15e}",
+            i + 1,
+            result.tof_us,
+            p[0],
+            p[1],
+            p[2],
+            ke,
+            reason,
+            match result.splat_reason {
+                SplatReason::SurfaceElectrode { number } => number.to_string(),
+                _ => String::new(),
+            },
+            result.final_state.velocity_mm_per_us[0],
+            result.final_state.velocity_mm_per_us[1],
+            result.final_state.velocity_mm_per_us[2],
+        )?;
+    }
+    writer.flush()?;
+    eprintln!(
+        "ions: {}, splats: {}, setup_s: {:.6}, fly_s: {:.6}, total_s: {:.6}, ions_per_s: {:.0}",
+        particles.len(),
+        splats,
+        setup.as_secs_f64(),
+        flight.as_secs_f64(),
+        start.elapsed().as_secs_f64(),
+        particles.len() as f64 / flight.as_secs_f64()
+    );
+    eprintln!(
+        "accepted_steps: {}, rejected_steps: {}",
+        results.iter().map(|r| r.accepted_steps).sum::<usize>(),
+        results.iter().map(|r| r.rejected_steps).sum::<usize>()
+    );
+    let beam_stops = beam_terminations.as_ref().map_or(0, |terms| {
+        let leader_allowed = results.first().is_some_and(|r| {
+            matches!(
+                r.splat_reason,
+                SplatReason::Electrode { .. }
+                    | SplatReason::SurfaceElectrode { .. }
+                    | SplatReason::OutsideGrid
+                    | SplatReason::StopPlane
+            ) || options.physics.allow_time_limit && r.splat_reason == SplatReason::TimeLimit
+        });
+        if leader_allowed {
+            terms
+                .iter()
+                .filter(|&&t| t == BeamTermination::LeaderStopped)
+                .count()
+        } else {
+            0
+        }
+    });
+    let time_limits = results
+        .iter()
+        .enumerate()
+        .filter(|(i, r)| {
+            r.splat_reason == SplatReason::TimeLimit
+                && beam_terminations
+                    .as_ref()
+                    .is_none_or(|t| matches!(t[*i], BeamTermination::Flight(_)))
+        })
+        .count();
+    let completed = splats
+        + beam_stops
+        + if options.physics.allow_time_limit {
+            time_limits
+        } else {
+            0
+        };
+    if completed != particles.len() {
+        return Err(format!(
+            "{} particles did not reach an allowed termination; inspect CSV reasons",
+            particles.len() - completed
+        )
+        .into());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[derive(Parser)]
+    struct TestCli {
+        #[command(flatten)]
+        fly: FlyOptions,
+    }
+
+    #[test]
+    fn placement_and_voltages_parse_without_losing_negative_values() {
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--pa",
+            "lens.pa0",
+            "--particles",
+            "ions.ion",
+            "--voltage",
+            "1=0,2=-110",
+            "--bounds=-101,-19,-19,291,19,19",
+            "--plane",
+            "1,1,0,80",
+            "--global-cubic",
+            "--nearest-node-collisions",
+        ])
+        .unwrap();
+        assert_eq!(cli.fly.voltage, [(1, 0.0), (2, -110.0)]);
+        assert_eq!(cli.fly.bounds.unwrap()[0], -101.0);
+        assert_eq!(cli.fly.plane.unwrap(), [1.0, 1.0, 0.0, 80.0]);
+        assert!(cli.fly.global_cubic);
+        assert!(cli.fly.nearest_node_collisions);
+        assert_eq!(cli.fly.device, FlyDevice::Auto);
+        assert!(numbers::<3>("1,2").is_err());
+        assert!(voltage("2=NaN").is_err());
+    }
+
+    #[test]
+    fn gpu_device_is_additive() {
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--pa",
+            "lens.pa0",
+            "--particles",
+            "ions.ion",
+            "--device",
+            "gpu",
+        ])
+        .unwrap();
+        assert_eq!(cli.fly.device, FlyDevice::Gpu);
+        assert!(matches!(cli.fly.backend, crate::Backend::Vulkan));
+    }
+
+    #[test]
+    fn beam_current_and_gpu_pic_modes_parse_additively() {
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--particles",
+            "ions.ion",
+            "--charge-mode",
+            "beam",
+            "--beam-current-a",
+            "1e-5",
+        ])
+        .unwrap();
+        assert!(matches!(cli.fly.charge_mode, ChargeModeName::Beam));
+        assert_eq!(cli.fly.beam_current_a, Some(1e-5));
+        assert!(cli.fly.space_charge.is_none());
+        let pic = TestCli::try_parse_from([
+            "fly",
+            "--particles",
+            "ions.ion",
+            "--space-charge",
+            "pic",
+            "--charge-mode",
+            "coulombic",
+            "--device",
+            "gpu",
+        ])
+        .unwrap();
+        assert!(matches!(pic.fly.space_charge, Some(SpaceChargeMethod::Pic)));
+        assert_eq!(pic.fly.device, FlyDevice::Gpu);
+        assert!(
+            TestCli::try_parse_from([
+                "fly",
+                "--particles",
+                "ions.ion",
+                "--charge-mode",
+                "coulombic",
+            ])
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn automatic_device_uses_the_compute_crossover_and_respects_overrides() {
+        let measured = Some(GPU_COMPUTE_THRESHOLD);
+        assert!(!FlyDevice::Auto.requests_gpu(0, measured));
+        assert!(!FlyDevice::Auto.requests_gpu(GPU_COMPUTE_THRESHOLD - 1, measured));
+        assert!(FlyDevice::Auto.requests_gpu(GPU_COMPUTE_THRESHOLD, measured));
+        assert!(!FlyDevice::Cpu.requests_gpu(GPU_COMPUTE_THRESHOLD, measured));
+        assert!(FlyDevice::Gpu.requests_gpu(0, None));
+        assert!(!FlyDevice::Auto.requests_gpu(usize::MAX, None));
+    }
+
+    #[test]
+    fn hs1_auto_crossover_is_limited_to_the_measured_profile() {
+        let mut options = TestCli::try_parse_from([
+            "fly",
+            "--particles",
+            "ions.ion",
+            "--duration-us",
+            "50",
+            "--max-step-us",
+            "0.05",
+        ])
+        .unwrap()
+        .fly;
+        let model = CollisionModel::Hs1(Hs1::default());
+        let measured = options.compute_crossover(false, Some(&model));
+        assert_eq!(measured, Some(10_000));
+        assert!(!FlyDevice::Auto.requests_gpu(9_999, measured));
+        assert!(FlyDevice::Auto.requests_gpu(10_000, measured));
+        assert_eq!(options.compute_crossover(true, Some(&model)), None);
+        options.physics.integrator = crate::physics_cmd::Integration::Boris;
+        assert_eq!(options.compute_crossover(false, Some(&model)), None);
+        options.physics.integrator = crate::physics_cmd::Integration::Rk45;
+        let mut changed = Hs1::default();
+        changed.gas.pressure_pa *= 2.0;
+        assert_eq!(
+            options.compute_crossover(false, Some(&CollisionModel::Hs1(changed))),
+            None
+        );
+        options.max_step_us = None;
+        assert_eq!(options.compute_crossover(false, Some(&model)), None);
+        options.max_step_us = Some(0.05);
+        options.pa = Some("lens.pa0".into());
+        assert_eq!(options.compute_crossover(false, Some(&model)), None);
+    }
+
+    #[test]
+    fn waveform_run_settings_and_cli_arguments() {
+        let run: VoltageRun = serde_json::from_str(
+            r#"{"parameters":{"f":0.14},"voltage_expr":{"2":"100*cos(2*pi*f*t)"}}"#,
+        )
+        .unwrap();
+        let e = VoltageExpression::parse(&run.voltage_expr[&2], &run.parameters).unwrap();
+        assert_eq!(e.evaluate(0.0), 100.0);
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--pa",
+            "a.pa0",
+            "--particles",
+            "p.ion",
+            "--voltage-expr",
+            "2=100*sin(2*pi*f*t)",
+            "--voltage-expr",
+            "3=-5",
+            "--param",
+            "f=0.14",
+            "--run-file",
+            "run.json",
+        ])
+        .unwrap();
+        assert_eq!(cli.fly.voltage_expr.len(), 2);
+        assert_eq!(cli.fly.param, [("f".to_owned(), 0.14)]);
+        assert_eq!(cli.fly.run_file, Some(PathBuf::from("run.json")));
+        assert!(serde_json::from_str::<VoltageRun>(r#"{"unknown":5}"#).is_err());
+    }
+
+    #[test]
+    fn magnetic_and_collision_inputs_are_additive() {
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--particles",
+            "ions.ion",
+            "--bfield=0,0,100",
+            "--integrator",
+            "boris",
+            "--step-us",
+            "0.0001",
+            "--collision",
+            "hs1",
+            "--pressure-pa",
+            "0.53",
+            "--gas-velocity=-0.01,0,0",
+            "--allow-time-limit",
+            "--exact-coils",
+        ])
+        .unwrap();
+        assert!(cli.fly.pa.is_none());
+        assert!(cli.fly.physics.allow_time_limit);
+        assert!(cli.fly.exact_coils);
+        assert_eq!(cli.fly.physics.step_us, 0.0001);
+        let run: VoltageRun = serde_json::from_str(
+            r#"{
+            "physics":{"uniform_gauss":[0,0,10],"coils":[
+                {"kind":"loop","center_mm":[0,0,0],"normal":[0,0,1],"radius_mm":30,"current_a":100}
+            ]}
+        }"#,
+        )
+        .unwrap();
+        assert_eq!(run.physics.uniform_gauss, [0.0, 0.0, 10.0]);
+        assert_eq!(run.physics.coils.len(), 1);
+        assert!(serde_json::from_str::<VoltageRun>(r#"{"physics":{"unknown":1}}"#).is_err());
+    }
+
+    #[test]
+    fn external_maps_cli_units_columns_placement_and_axisymmetric_frame() {
+        use std::io::Write as _;
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "0,0,2,3,2,1\n0,0,3,3,2,1").unwrap();
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--particles",
+            "ions.ion",
+            "--bfield-map",
+            file.path().to_str().unwrap(),
+            "--bfield-map-format",
+            "csv",
+            "--bfield-map-units",
+            "mm/mT",
+            "--bfield-map-columns",
+            "2,1,0,5,4,3",
+            "--bfield-map-transform",
+            "10,20,30,0,1,0,0,0,1,1,0,0,2",
+            "--bfield-map-outside",
+            "clamp",
+            "--bfield-map-divergence",
+        ])
+        .unwrap();
+        let maps = load_magnetic_maps(&cli.fly).unwrap();
+        let b = maps[0].sample([10.0, 25.0, 30.0], 0.0).magnetic_gauss;
+        assert_eq!(b, [30.0, 10.0, 20.0]);
+        assert_eq!(cli.fly.compute_crossover(true, None), None);
+        let mut file = tempfile::NamedTempFile::new().unwrap();
+        writeln!(file, "0 0 100 0\n1 0 100 0\n0 1 100 0\n1 1 100 0").unwrap();
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--particles",
+            "ions.ion",
+            "--bfield-map",
+            file.path().to_str().unwrap(),
+            "--bfield-map-format",
+            "axisymmetric",
+        ])
+        .unwrap();
+        let maps = load_magnetic_maps(&cli.fly).unwrap();
+        assert_eq!(
+            maps[0].sample([0.2, 0.3, 0.5], 0.0).magnetic_gauss,
+            [0.0, 0.0, 100.0]
+        );
+        assert!(map_units("bad/T").is_err());
+        assert!(map_units("mm/bad").is_err());
+    }
+
+    #[test]
+    fn external_maps_are_available_to_fly2_field_queries() {
+        let directory = tempfile::tempdir().unwrap();
+        let map = directory.path().join("uniform.csv");
+        let particles = directory.path().join("ions.fly2");
+        let output = directory.path().join("flight.csv");
+        std::fs::write(&map, "0,0,0,2,3,4\n").unwrap();
+        std::fs::write(
+            &particles,
+            "local bx,by,bz=simion.wb:bfield(0,0,0)\n\
+             assert(bx==2 and by==3 and bz==4)\n\
+             particles { standard_beam {n=1, mass=100, charge=0, ke=1} }\n",
+        )
+        .unwrap();
+        let cli = TestCli::try_parse_from([
+            "fly",
+            "--device",
+            "auto",
+            "--particles",
+            particles.to_str().unwrap(),
+            "--bfield-map",
+            map.to_str().unwrap(),
+            "--duration-us",
+            "0.01",
+            "--allow-time-limit",
+            "--output",
+            output.to_str().unwrap(),
+        ])
+        .unwrap();
+        run(cli.fly).unwrap();
+        let csv = std::fs::read_to_string(output).unwrap();
+        assert_eq!(csv.lines().count(), 2);
+        assert_eq!(
+            csv.lines().nth(1).unwrap().split(',').nth(6),
+            Some("time_limit")
+        );
+    }
+
+    #[test]
+    fn external_map_cli_flight_stops_at_boundary_and_zero_extends() {
+        let directory = tempfile::tempdir().unwrap();
+        let map = directory.path().join("uniform.csv");
+        let ions = directory.path().join("ions.ion");
+        let output = directory.path().join("flight.csv");
+        std::fs::write(
+            &map,
+            "x[mm],y[mm],z[mm],Bx[G],By[G],Bz[G]\n0,0,0,0,0,10\n1,0,0,0,0,10\n",
+        )
+        .unwrap();
+        std::fs::write(&ions, "0,100,0,0.5,0,0,0,0,1\n").unwrap();
+        for policy in ["error", "zero"] {
+            let cli = TestCli::try_parse_from([
+                "fly",
+                "--device",
+                "cpu",
+                "--particles",
+                ions.to_str().unwrap(),
+                "--bfield-map",
+                map.to_str().unwrap(),
+                "--bfield-map-outside",
+                policy,
+                "--duration-us",
+                "2",
+                "--nonrelativistic",
+                "--allow-time-limit",
+                "--output",
+                output.to_str().unwrap(),
+            ])
+            .unwrap();
+            run(cli.fly).unwrap();
+            let csv = std::fs::read_to_string(&output).unwrap();
+            let row: Vec<_> = csv.lines().nth(1).unwrap().split(',').collect();
+            let x = row[2].parse::<f64>().unwrap();
+            if policy == "error" {
+                assert_eq!(row[6], "outside");
+                assert!((x - 1.0).abs() < 1e-11);
+            } else {
+                assert_eq!(row[6], "time_limit");
+                assert!(x > 1.0);
+            }
+        }
+    }
+}

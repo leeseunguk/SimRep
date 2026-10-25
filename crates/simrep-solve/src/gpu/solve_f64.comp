@@ -1,0 +1,62 @@
+#version 450
+layout(local_size_x=128) in;
+layout(set=0,binding=0,std140) uniform Params {
+    uvec4 dims;
+    uvec4 coarse;
+    uvec4 offsets;
+} p;
+layout(set=0,binding=1,std430) readonly buffer Matrix { double matrix[]; };
+layout(set=0,binding=2,std430) buffer Potential { double x[]; };
+layout(set=0,binding=3,std430) buffer Rhs { float rhs[]; };
+layout(set=0,binding=4,std430) buffer Norm { double norms[]; };
+layout(set=0,binding=5,std430) readonly buffer Correction { float correction[]; };
+layout(set=0,binding=6,std430) readonly buffer Mask { float mask[]; };
+void main() {
+    uint lane=gl_GlobalInvocationID.x+gl_NumWorkGroups.x*128u*gl_GlobalInvocationID.y;
+    uint n=p.dims.x*p.dims.y*p.dims.z;
+#ifdef UPDATE
+    uint i=lane;
+    if(i<n && mask[p.offsets.w+i]<=0.0) x[i]+=double(correction[i]);
+#else
+    // Each invocation reduces a strided set. Adjacent lanes still access
+    // adjacent cells, without GLSL barrier()'s extra subgroup requirements.
+    uint workers=(n+127u)/128u;
+    if(lane>=workers) return;
+    double maximum=double(0.0);
+    for(uint i=lane;i<n;i+=workers) {
+    double r=double(0.0);
+        if(mask[p.offsets.w+i]<=0.0) {
+            uvec3 c=uvec3(i%p.dims.x,i/p.dims.x%p.dims.y,i/(p.dims.x*p.dims.y));
+            uvec3 stride=uvec3(1u,p.dims.x,p.dims.x*p.dims.y);
+            double w=double(1.0);
+            float tag=mask[p.offsets.w+i];
+            if(tag<0.0) {
+                uint base=p.offsets.w+8u*(uint(-tag)-1u);
+                double boundary=matrix[base+6u];
+                r=matrix[base+7u];
+                for(uint a=0u;a<3u;a++) {
+                    uint k=p.offsets[a]+3u*c[a];
+                    double minus=matrix[base+2u*a], plus=matrix[base+2u*a+1u];
+                    boundary-=minus+plus;
+                    if(c[a]>0u) r+=minus*(x[i-stride[a]]-x[i]);
+                    if(c[a]+1u<p.dims[a]) r+=plus*(x[i+stride[a]]-x[i]);
+                    w*=matrix[k+2u];
+                }
+                r-=boundary*x[i];
+            } else {
+            for(uint a=0u;a<3u;a++) {
+                uint k=p.offsets[a]+3u*c[a];
+                if(c[a]>0u) r+=matrix[k]*(x[i-stride[a]]-x[i]);
+                if(c[a]+1u<p.dims[a]) r+=matrix[k+1u]*(x[i+stride[a]]-x[i]);
+                w*=matrix[k+2u];
+            }
+            }
+            rhs[i]=float(w*r);
+        } else rhs[i]=0.0;
+        // max() alone can discard NaN and falsely report convergence.
+        if(isnan(r) || isinf(r)) r=double(uintBitsToFloat(0x7f800000u));
+        maximum=max(maximum,abs(r));
+    }
+    norms[lane]=maximum;
+#endif
+}

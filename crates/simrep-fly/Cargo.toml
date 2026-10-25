@@ -1,0 +1,32 @@
+[package]
+name = "simrep-fly"
+description = "Field interpolation, integrators and particle flying (CPU/GPU)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+# Diagnostic, one-source-at-a-time rounding experiments; no production knobs.
+precision-study = []
+
+[dependencies]
+bytemuck = { version = "1.25.2", features = ["derive"] }
+pollster = "1.0.1"
+rayon = "1.12.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+simrep-core.workspace = true
+simrep-geom.workspace = true
+simrep-gem.workspace = true
+simrep-mesh.workspace = true
+base64 = "0.22"
+bincode = "1.3"
+simrep-solve.workspace = true
+wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "vulkan", "dx12", "wgsl"] }
+
+[dev-dependencies]
+simrep-io.workspace = true
+
+[[test]]
+name = "gpu_pic"
+harness = false

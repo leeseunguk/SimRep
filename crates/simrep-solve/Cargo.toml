@@ -1,0 +1,33 @@
+[package]
+name = "simrep-solve"
+description = "Potential solvers: multigrid (CPU/GPU), cut-cell, residual correction"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+simrep-geom.workspace = true
+simrep-core.workspace = true
+simrep-io.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bytemuck = "1.25.2"
+pollster = "1.0.1"
+rayon = "1.12.0"
+wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "dx12", "vulkan", "wgsl", "glsl"] }
+
+[[test]]
+name = "gpu_smoke"
+harness = false
+
+[[test]]
+name = "gpu_multigrid"
+harness = false
+
+[[test]]
+name = "dielectric_gpu"
+harness = false
+
+[[test]]
+name = "gpu_poisson"
+harness = false

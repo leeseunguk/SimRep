@@ -1,0 +1,14 @@
+[package]
+name = "simrep-gem"
+description = "SIMION GEM constructive geometry parser and PA rasterizer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+simrep-core.workspace = true
+simrep-io.workspace = true
+simrep-geom.workspace = true
+serde = { version = "1", features = ["derive"] }
+mlua = { version = "0.11.6", features = ["lua51", "vendored", "send"] }
+simrep-lua.workspace = true

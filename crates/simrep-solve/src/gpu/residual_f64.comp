@@ -1,0 +1,24 @@
+#version 450
+// WGSL has no f64 type. Naga translates this native GLSL kernel to SPIR-V.
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+layout(set = 0, binding = 0, std430) readonly buffer Potential { double potential[]; };
+layout(set = 0, binding = 1, std430) readonly buffer Rhs { double rhs[]; };
+layout(set = 0, binding = 2, std430) buffer Residual { double residual[]; };
+
+void main() {
+    uvec3 p = gl_GlobalInvocationID;
+    uint n = 64u;
+    if (any(greaterThanEqual(p, uvec3(n)))) {
+        return;
+    }
+    uint i = p.x + n * (p.y + n * p.z);
+    if (any(equal(p, uvec3(0u))) || any(equal(p, uvec3(n - 1u)))) {
+        residual[i] = double(0.0);
+        return;
+    }
+    double laplacian = potential[i - 1u] + potential[i + 1u]
+        + potential[i - n] + potential[i + n]
+        + potential[i - n * n] + potential[i + n * n]
+        - double(6.0) * potential[i];
+    residual[i] = rhs[i] - laplacian;
+}

@@ -1,0 +1,13 @@
+#version 450
+layout(local_size_x=128) in;
+layout(set=0,binding=0,std430) readonly buffer Input { double input_values[]; };
+layout(set=0,binding=1,std430) buffer Output { double output_values[]; };
+void main() {
+    uint i=gl_GlobalInvocationID.x+gl_NumWorkGroups.x*128u*gl_GlobalInvocationID.y;
+    uint workers=uint(output_values.length());
+    if(i>=workers) return;
+    double v=double(0.0);
+    for(uint j=i;j<uint(input_values.length());j+=workers)
+        v=max(v,input_values[j]);
+    output_values[i]=v;
+}

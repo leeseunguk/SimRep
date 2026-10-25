@@ -1,0 +1,9 @@
+[package]
+name = "simrep-geom"
+description = "Signed-distance electrode geometry"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rayon = "1.11"
