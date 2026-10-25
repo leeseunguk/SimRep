@@ -2,6 +2,16 @@
 
 작성일: 2026-10-23
 
+## 현재 상태 (2026-10-25)
+
+이 문서는 초기 설계를 보존한 것으로, 일부가 현재 구현과 다르다. 구현된 방정식의 현재 명세는 [`spec/equations.md`](spec/equations.md)를 본다. 달라진 점:
+
+- **전기장 재구성**: 3.2의 tricubic/텍스처 설계 대신, 전극 경계를 아는 칸은 축별 6계수 Hermite 재구성(5차, C2), 전극이 없는 격자는 global cubic을 쓴다(`crates/simrep-fly/src/field.rs`). GPU는 텍스처 샘플링이 아니라 셰이더에서 다항식을 직접 평가한다.
+- **GPU 셰이더 언어**: f32 커널은 WGSL이지만, WGSL에 f64 타입이 없어 f64 잔차·솔브·PIC 커널은 GLSL을 Naga로 변환한 `.comp` 파일이다(`crates/simrep-solve/src/gpu/`).
+- **앱 위치**: `crates/simrep-app` 크레이트는 없다. Tauri 코어는 `app/src-tauri`, 프런트엔드는 `app/src`다.
+- **완료된 항목**: 아래 2단계에서 '남음'으로 적은 `tof`와 RF 검증은 완료됐다(`bench/fly-rf-tof.md`, `bench/default-flight.md`). 현재 workspace 크레이트는 11개이며 GEM·메시·CAD가 각각 전용 크레이트(`simrep-gem`, `simrep-mesh`, `simrep-cad`)로 나뉘었다.
+- 아래에서 더 이상 현재 상태를 설명하지 않는 줄에는 '(대체됨 → ...)' 표시를 붙였다.
+
 ## 1. 목표
 
 - SIMION-2024의 핵심 기능(전위 배열 계산, 이온 비행, 기하 입력, 시간 가변 전압, 공간전하)을 수행하는 네이티브 시뮬레이터.
@@ -47,8 +57,8 @@ SIMION: 균일 격자, 계단형 전극, SOR 반복, f64.
 ### 3.2 전기장 보간
 
 - SIMION: 전위 격자에서 선형 보간 → 장이 격자 경계에서 불연속, 적분기 오차의 주원인.
-- 여기서는 **tricubic(또는 3차 B-spline) 보간**을 기본으로 한다. 장이 C1 연속이라 적응형 적분기가 큰 스텝을 안정적으로 잡는다. 속도와 정밀도 둘 다 이득.
-- GPU에서는 텍스처 샘플링 + 보정 방식으로 tricubic을 구현한다(메모리 접근 8회 → 하드웨어 보간 활용).
+- 여기서는 **tricubic(또는 3차 B-spline) 보간**을 기본으로 한다. 장이 C1 연속이라 적응형 적분기가 큰 스텝을 안정적으로 잡는다. 속도와 정밀도 둘 다 이득. (대체됨 → 현재 상태 메모: 전극 경계 인식 6계수 Hermite + global cubic)
+- GPU에서는 텍스처 샘플링 + 보정 방식으로 tricubic을 구현한다(메모리 접근 8회 → 하드웨어 보간 활용). (대체됨 → WGSL 셰이더에서 다항식 직접 평가)
 
 ### 3.3 이온 비행
 
@@ -103,9 +113,9 @@ crates/
   simrep-core/      격자, PA 포맷, 기하 표현, 공통 타입
   simrep-solve/     멀티그리드(GPU/CPU), cut-cell, 잔차 보정
   simrep-fly/       보간, 적분기, 이온 비행(GPU/CPU)
-  simrep-io/        SIMION .pa/.pa0/.fly2/.gem/.rec 읽기, STL
+  simrep-io/        SIMION .pa/.pa0/.fly2/.gem/.rec 읽기, STL  (대체됨 → GEM은 simrep-gem, STL/메시는 simrep-mesh)
   simrep-cli/       배치 실행 CLI
-  simrep-app/       Tauri 앱 (Rust 쪽 커맨드, IPC)
+  simrep-app/       Tauri 앱 (Rust 쪽 커맨드, IPC)  (대체됨 → 크레이트 없음, app/src-tauri)
 app/                TypeScript(React) 프런트: 3D 뷰어(WebGPU), 패널, 템플릿
 tools/
   simion-oracle/    SIMION --nogui 배치 실행 + 결과 비교 스크립트
@@ -142,12 +152,12 @@ docs/
 | 6단계 | 마감: 사용성 테스트 반영, 설치 패키지, 문서/튜토리얼 |
 
 ### 2단계: 이온 비행 (2~3주)
-- tricubic 보간, RK45, Boris. CPU f64 경로 먼저, GPU 경로 다음.
+- tricubic 보간(대체됨 → 경계 인식 6계수 Hermite 재구성), RK45, Boris. CPU f64 경로 먼저, GPU 경로 다음.
 - 해석해 검증: 균일 자기장 사이클로트론 궤도(반경·주기), 조화 트랩 진동수, 평행판 TOF. 상대 오차 1e-7(CPU), 1e-5(GPU) 목표.
 - SIMION 비교: `einzel`, `quad`, `tof` 예제의 최종 위치/비행 시간. SIMION의 자체 오차 범위 안에서 일치.
 - fast adjust 중첩 + 수식 DSL(RF 4중극 `quad` 예제로 검증).
 - 완료 조건: 이온 비행이 SIMION 대비 **10배 이상 빠름**. 정밀도 조건 동시 만족.
-- **현황(2026-10-23, einzel)**: 정확도는 8배 격자 기준 위치 오차 RMS 0.225 mm vs SIMION 1.106 mm로 **달성**. GPU 비행 계산 시간 1만 개 8.9 ms / 10만 개 29 ms vs SIMION 2.2초 / 21.5초로 **달성**. CLI 프로세스 전체 10만 개 0.58초(37배). `tof`와 RF(`performance_tests/8_rf_tests`, `quad`는 Lua 미연결이라 부적합) 검증은 남음. 상세: `bench/fly-real.md`, `bench/fly-gpu.md`.
+- **현황(2026-10-23, einzel)**: 정확도는 8배 격자 기준 위치 오차 RMS 0.225 mm vs SIMION 1.106 mm로 **달성**. GPU 비행 계산 시간 1만 개 8.9 ms / 10만 개 29 ms vs SIMION 2.2초 / 21.5초로 **달성**. CLI 프로세스 전체 10만 개 0.58초(37배). `tof`와 RF(`performance_tests/8_rf_tests`, `quad`는 Lua 미연결이라 부적합) 검증은 남음. (대체됨 → 완료, `bench/fly-rf-tof.md`·`bench/default-flight.md` 참조) 상세: `bench/fly-real.md`, `bench/fly-gpu.md`.
 
 ### 3단계: SIMION 넘어서는 정밀도 (3~4주)
 - cut-cell 경계 스텐실. 구/원통 해석해로 격자 수렴 차수 2차 확인(계단형은 1차).

@@ -10,6 +10,9 @@ The docs are copyrighted and live **outside the repo**; nothing from them is cop
 
 All CHM paths below are relative to `simion_docs_raw/`.
 
+SimRep's own implemented equations, with units, citations, code locations and tests, are in
+[`equations.md`](equations.md).
+
 ## Important gap
 
 The CHM is the *Supplemental Documentation*, not the SIMION User Manual. Several core specs

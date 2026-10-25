@@ -182,7 +182,9 @@ the latter accepts numbered `Arc<dyn simrep_geom::SignedDistance>` sources
 without resampling. For source geometry with PA symmetry or a nonzero source
 origin, call `.with_pa_domain(&array, source_origin_mm)` before attaching it.
 Attach either with `InstanceField::with_surface`.
-Field reconstruction remains independent of collision geometry. Grid exits,
+Field reconstruction remains independent of collision geometry (its boundary-aware
+quintic Hermite math is described in `crates/simrep-fly/README.md` and
+`docs/spec/equations.md`). Grid exits,
 workbench bounds, detector planes, placement, scaling, mirrors and cylindrical
 axial-x/radial-y revolution retain their event semantics.
 `SplatReason::SurfaceElectrode { number }` reports the physical electrode number;

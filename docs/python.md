@@ -114,9 +114,15 @@ cargo test --workspace --release
 ```
 
 Use `SIMREP_BIN=/absolute/path/to/simrep` when the CLI has a different output
-directory. The pytest CLI parity cases invoke the real CLI with identical PA,
-ION/FLY2, detector, integration and tolerance settings, then compare every CSV
-result column. No SIMION installation or downloaded example data are needed.
+directory. Flight cases using `compare_flight` in `tests/test_cli_parity.py`
+invoke the real CLI with matching inputs and settings, then compare every CSV
+result column. `test_fly_equals_cli_output` in `tests/test_simrep.py` covers
+ION/FLY2 inputs and compares reason, ion, TOF, position and kinetic energy.
+GPU numeric parity (PIC, magnetic PA/coils, HS1/SDS and sampled trajectories)
+requires a hardware GPU and is explicitly skipped when none is available.
+The separately named software-adapter refusal test checks that both CLI and
+Python reject explicit GPU flight; it is not a numeric comparison.
+No SIMION installation or downloaded example data are needed.
 The suite also covers metadata/PA0 trailers, NumPy lifetimes, anisotropic
 spacing, cylindrical refinement, fast-adjust disk parity, GEM, OBJ, analytic
 cut cells, voltage expressions, trajectories, magnetic fields and direct/PIC

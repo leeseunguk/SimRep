@@ -24,7 +24,7 @@ SimRep은 SIMION의 방식을 그대로 옮기지 않았습니다.
 | 전위 풀이 | SOR 반복, 변화량으로 수렴 판정 | **멀티그리드**, 방정식 잔차로 수렴 판정 |
 | 전기장 | 선형 보간(칸 경계에서 끊김) | 칸 경계에서도 **매끄러운** 5차 재구성 |
 | 전극 충돌 | 계단 모양 | 원래 형상과의 **정확한 교점** 계산 |
-| 계산 장치 | CPU | CPU 멀티코어 + GPU, 측정한 기준으로 자동 선택 |
+| 계산 장치 | CPU | CPU 멀티코어 + GPU, `--device auto`는 측정한 기준으로 선택(현재 자기장 비행은 항상 CPU) |
 
 ---
 
@@ -39,7 +39,7 @@ SimRep은 SIMION의 방식을 그대로 옮기지 않았습니다.
 
 | 비교 | 정확도 | SIMION 대비 속도 |
 |---|---|---|
-| 1,737만 점 3D 전위 계산 (GPU) | 엄격 설정 SIMION과 6.4e-5 V 이내 | **19.3배** (준비 포함 9.1배) |
+| 1,737만 점 3D 전위 계산 (GPU) | 엄격 설정 SIMION과 최대 6.42e-5 V 차이 | **19.3배** (준비 포함 9.1배) |
 | einzel 렌즈 이온 비행 | 오차가 4.9배 작음 | 기본 품질 SIMION보다 **11.5배** |
 | 3D 4중극, 정확한 표면 경로 | 도착 위치 오차 약 700배 감소 | **71배** |
 | 중성 기체 충돌 HS1 / SDS | 분포 검정 통과 | **54배 / 251배** |
@@ -99,18 +99,25 @@ cargo build --release -p simrep-cli
 ./target/release/simrep --help
 ```
 
+STEP/IGES CAD 가져오기는 OpenCascade(OCCT)가 필요하고 기본 빌드에는 들어 있지 않습니다.
+`cargo build --release -p simrep-cli --features cad`로 빌드하세요. 상세는 [`docs/step-import.md`](docs/step-import.md)에 있습니다.
+Windows 설치 파일에는 CAD 기능이 이미 포함되어 있습니다.
+
 자주 쓰는 명령(파일 이름은 예시입니다):
 
 ```sh
 # SIMION GEM 파일을 전위 배열(PA#)로 변환 (GEM 안의 Lua 전처리 포함)
 simrep gem2pa quadrupole.gem
 
-# 전위 계산(refine). 장치는 기본값 auto가 측정한 기준으로 고릅니다
+# 전위 계산(refine). auto는 유전체 재료가 있을 때만 측정한 교차점 기준으로 GPU를 쓰고,
+# 이런 일반 정전기 입력은 CPU로 돕니다. GPU 19.3배 결과 재현에는 --device gpu가 필요합니다
 simrep refine quadrupole.pa#
 
 # GEM·메시·CAD 형상을 실제 표면 그대로 풀고, 정확한 표면 파일(.cuts.json)까지 만들기
-# --electrode 부품이름=전극번호:전압 (부품 이름은 GEM/메시/CAD 파일 안의 이름)
-simrep refine-geometry quadrupole.gem --electrode <부품이름>=1:2.5 --out quadrupole
+# GEM에서는 --electrode 소스전극값=전극번호:전압 형식으로, 파일 안의 모든 전극에 정확히 하나씩 지정합니다
+simrep refine-geometry bench/quadrupole.gem --electrode 1=1:2.5 --electrode 2=2:-2.5 --electrode 3=3:0 --out quadrupole
+# 메시·CAD 입력에서는 소스전극값 대신 부품 이름(이름이 없으면 인덱스)을 씁니다
+# 예: simrep refine-geometry housing.stl --grid 121,37,37 --electrode housing=1:2.5 --out housing
 
 # 이온 비행: 전극 전압을 바꿔 가며 날리기 (.cuts.json이 옆에 있으면 자동으로 씀)
 simrep fly --pa quadrupole.pa0 --particles ions.ion --voltage 1=2.5,2=-2.5
@@ -164,7 +171,7 @@ result = simrep.fly(field, "ions.ion")          # 이온 비행
 |---|---|
 | `crates/` | Rust 계산 코어 11개 크레이트(솔버, 비행, 파일 입출력, GEM/Lua, 메시, CAD, CLI, Python) |
 | `app/` | 데스크톱 앱(Tauri 2 + React + WebGPU) |
-| `docs/` | 설계 문서와 검증 기록. 시작점은 [`docs/PLAN.md`](docs/PLAN.md) |
+| `docs/` | 설계 문서와 검증 기록. 시작점은 [`docs/PLAN.md`](docs/PLAN.md), 구현된 방정식 명세는 [`docs/spec/equations.md`](docs/spec/equations.md) |
 | `bench/` | SIMION과의 속도·정확도 비교 기록 |
 | `docs/report/` | 최종 기술 보고서(DOCX/PDF), 그림, 출처 장부 |
 | `tools/` | 빌드·비교·Windows 도구 |
@@ -175,7 +182,7 @@ result = simrep.fly(field, "ions.ion")          # 이온 비행
 
 ## 알아 두면 좋은 한계
 
-- 측정은 RTX 3070 한 대 기준입니다. 이 카드는 배정밀도(FP64)가 단정밀도의 1/64로 느려서, 자기장 비행은 자동 선택이 CPU입니다. FP64가 빠른 GPU에서는 선택이 달라질 수 있습니다.
+- 측정은 RTX 3070 한 대 기준입니다. 자기장 비행은 `--device auto`에서 GPU 종류와 무관하게 항상 CPU로 계산됩니다. 지원되는 조합에서는 `--device gpu`로 명시 선택할 수 있고(벡터 포텐셜과 자성 재료 경로는 CPU 전용), 일반 정전기 refine도 auto는 유전체 재료가 있을 때만 GPU를 씁니다. 다른 GPU에서 자동 선택을 바꾸려면 그 카드로 교차점을 다시 측정하고 정책을 갱신해야 합니다.
 - 정확한 표면을 쓰는 비행은 아직 CPU 전용입니다.
 - SIMION 작업대의 Lua 사용자 프로그램은 지원하지 않습니다. 시간 가변 전압과 검출은 설정과 수식으로 대신합니다.
 - STEP 내보내기, 비선형 B-H 자성체는 아직 없습니다.

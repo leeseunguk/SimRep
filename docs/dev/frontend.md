@@ -123,9 +123,26 @@ cd /mnt/c && timeout 3000 '/mnt/c/Program Files/nodejs/node.exe' 'C:\Users\lsu10
 
 ```bash
 cd app
-npm run typecheck   # tsc --noEmit
+npm run typecheck   # tsc --noEmit (앱) + tsconfig.test.json (테스트·설정, Node 타입)
 npm run build       # 타입 검사 + 프로덕션 번들 (dist/)
+npm test            # vitest: 순수 로직 단위 테스트 (Node, GPU·브라우저 불필요)
+npm run e2e         # Playwright: 데모 모드 스모크 테스트 (헤드리스 Chromium)
+npm run check:flight # npm test 중 STR4 → f64 분석 → CSV 검사(src/scene/flight.test.ts)만 실행
 ```
+
+- **`npm test`**(`vitest.config.ts`, `src/**/*.test.ts`): 패킷 디코더(STR4·SPA1·SPQ1, STR4의 f64 끝 상태 경우 포함), 분석·CSV, 그래프 도우미(`results/plot/chart.ts`), refine 진행·잔차 그래프 모델, 스토어(`useApp`, `useResults`), i18n(키·자리표시 일치), 거부 문구(`src/refusals.ts`: Rust가 보내는 모든 `Reason::new("…")` 코드에 `reason.<코드>` 문구가 있는지 Rust 소스를 읽어 확인), 데모 픽스처 디코딩. Node 24는 `localStorage`가 없어 `src/test/setup.ts`가 메모리 버전을 둔다.
+- **선택지 동기화**: UI가 고르게 하는 값(refine 장치, 비행 정밀도, 전극 충돌 규칙, 빔 모양, PA 내보내기 형식, 템플릿, 마법사 만들기 방식, CAD 표면)은 `src/scene/options.ts` 목록에서 나오고 컨트롤과 `backend.ts` 타입이 그 목록을 쓴다. Rust `src-tauri/src/options.rs`(테스트 전용 모듈)가 같은 목록을 두고, `options_match_the_commands`가 값마다 실제 커맨드가 받는지(serde 열거형, 템플릿, PA 형식) 확인하며 열거형에 변형을 더하면 이름 함수의 match가 컴파일되지 않지만 `OPTIONS` 목록과 길이 상수를 그대로 둬도 테스트는 통과한다. 즉 목록에 있는 값이 명령에 수용되고 Rust JSON/TS 목록이 동기화됨을 보증하되, 모든 enum 변형이 목록에 제공됨까지는 보증하지 않는다. `options_json_is_current`가 `src/scene/engineOptions.json`이 그 목록과 같은지 보고, `src/scene/options.test.ts`가 UI 목록을 그 JSON과 비교한다. 목록을 바꾼 뒤 JSON은 `SIMREP_WRITE_OPTIONS=1 cargo test options`(앱 크레이트)로 다시 쓴다. 앱에는 고를 수 있는 적분기(integrator)가 없어 목록에도 없다.
+- **데모 모드**(`npm run dev:demo` = `vite --mode demo`, `.env.demo`의 `VITE_SIMREP_DEMO=1`): `src/demo/ipc.ts`가 `@tauri-apps/api/mocks`로 Tauri IPC를 바꿔 앱을 데스크톱처럼 띄우고, 실제 네이티브 코어에서 녹화한 패킷(`src/demo/fixtures/einzel.json`: 아인젤 템플릿 .pa#, refine 채널 메시지 52개(V-사이클마다 progress 하나, 해 3개), 풀린 .pa0, fast adjust, 실시간(GPU f32)·정밀(CPU f64) 비행과 최종 속도, 이온 시계열)을 돌려준다. 그래서 실제 디코더·스토어·화면이 GPU나 Rust 없이 돈다. refine 메시지는 60 ms 간격으로 다시 보내 수렴 그래프가 자라는 것을 볼 수 있다. 주소에 `?replay=manual`을 붙이면 타이머 대신 `window.__simrepDemo.step(job)`이 메시지를 하나씩 보낸다(e2e용). 취소하면 실제 코어처럼 다음 메시지로 `cancelled` 하나만 보내고 나머지 재생을 멈춘다. 아인젤 템플릿만 있고, 전압·이온 설정을 바꿔도 녹화한 장과 비행이 그대로 온다. 저장 대화상자는 기본 경로를 돌려주고 `write_bytes` 본문은 `window.__simrepDemo.writes`에 남는다(파일은 쓰지 않음). 상태 표시줄 버전에 `(demo)`가 붙는다. `main.tsx`가 `src/demo/boot.ts`를 가장 먼저 불러오므로(`isTauri()`를 모듈을 불러올 때 보는 `scene/simulation.ts`, `results/trace.ts`보다 앞) 플래그가 없는 프로덕션 빌드에는 데모 코드와 픽스처가 들어가지 않는다(`dist/`에 `__simrepDemo` 없음 확인). Rust 쪽은 데모와 무관하다.
+- **픽스처 다시 녹화**: 위 2절처럼 Vite(1420)와 debug 앱을 CDP 포트 9333으로 띄운 뒤 `cd /mnt/c && node.exe "$(wslpath -w app/scripts/capture-demo-fixtures.mjs)" "$(wslpath -w app/src/demo/fixtures/einzel.json)" < /dev/null`. 스크립트가 템플릿을 만들고 같은 커맨드를 불러 패킷을 모으며, 헤더의 로컬 폴더는 `C:\Users\demo\Documents\SimRep\einzel`로 바꾼다. 패킷 형식을 바꾸면 다시 녹화한다(`src/demo/fixtures.test.ts`가 어긋남을 잡는다).
+- **`npm run e2e`**(`playwright.config.ts`, `e2e/*.spec.ts`): 데모 모드 Vite를 1430 포트로 띄우고 헤드리스 Chromium(1280×800, en-US)으로 돈다. refine은 `?replay=manual`로 테스트가 메시지를 하나씩 보내고, 커맨드는 `__simrepDemo.answered(cmd, n)`(n번째 응답까지 기다림)로 기다리므로 실행 속도에 기대는 중간 상태나 고정 대기가 없다. `e2e/refine.spec.ts`는 정상 완료(메시지 52개, 마지막 `done`)와 첫 메시지 뒤 취소(`start`·`progress`·`cancelled`만, UI 진행 표시 사라짐, 비행 없음)를 따로 검사한다. `e2e/smoke.spec.ts`는 시작 화면 → 아인젤 템플릿 → refine(수렴 그래프가 나타났다 사라짐) → 다시 비행 → TOF 히스토그램 → 내보내기 메뉴의 끝 상태 CSV(머리 + 이온 40행) → 다크/라이트 테마를 실제 클릭으로 거치고, 페이지 오류가 없어야 통과한다. WebGPU 어댑터가 없으면 3D 뷰는 대신 카드를 보여 주고 나머지는 그대로 돈다. 처음 한 번 `npx playwright install chromium`이 필요하다. 실패하면 `test-results/`에 trace가 남는다.
+
+`check:flight`는 별도 검사가 아니라 `npm test`에 들어 있는 `src/scene/flight.test.ts`만
+골라 실행하는 바로 가기다(같은 6개 경우이므로 `npm test`와 따로 세지 않는다). 같은 f32가 되는
+100 / 100.000001 µs가 패킷 디코딩, 필터, 통계, CSV 왕복 뒤에도 구별되는지 확인한다. 표면 번호 폭
+1/2/4 B와 f64 시작점 정렬이 다른 패킷을 모두 검사한다.
+네이티브 인코딩·속도 보관·도착 TOF 통계 회귀 검사는 별도 workspace의
+`cargo test --manifest-path app/src-tauri/Cargo.toml`로 실행한다
+(이 PC에서는 위 Windows 툴체인·C: target 경로를 사용한다).
 
 ## 구조 요약
 
@@ -283,6 +300,8 @@ app/src-tauri/
 - 솔버: 자동(기본) / GPU / CPU. 자동은 26만(2¹⁸) 점 이상일 때 Vulkan GPU, 그보다 작으면 CPU를 쓴다(작은 배열은 GPU 준비 시간이 풀이보다 길다. einzel 1,820점: GPU 1.18 s, CPU 16 ms). GPU가 없거나 버퍼 한도를 넘으면 CPU로 이어서 풀고 이유를 알린다.
 - 백그라운드 스레드가 해(전극별 .pa1..N 또는 .pa_ + 번호 전극, SIMION 규약대로 10000 V 기준)를 차례로 푼다. 솔버는 끝나야 보고하므로 웜 스타트 V-cycle 묶음으로 나눠 돌린다: 1회(곧바로 거친 해), 2회, 그다음은 측정한 호출당 준비 시간과 사이클당 시간으로 약 1.5초마다 갱신되도록(준비 시간의 4배 이상) 크기를 정한다.
 - 진행은 Tauri `Channel`로 온다: JSON(`start/progress/stageDone/device/done/cancelled/error`)과 바이너리 미리보기(`"SPV1" | u32 단계 | f32 전위`). 미리보기는 단면에 바로 그려지므로 수렴하는 동안 그림이 선명해진다(미리보기는 지금 푸는 해 자체라 범례가 0–10000 V일 수 있다). 패널에 단계, 사이클, 잔차 그래프, 경과 시간, 장치가 보이고 뷰포트 아래 칩에도 같은 진행과 **취소**가 있다.
+- **수렴 그래프**(속성 패널 refine 진행 영역과 가져오기 마법사): `progress`는 V-사이클마다 하나(사이클 0 = 시작 장)이고 묶음 하나의 사이클들이 그 묶음이 끝날 때 함께 온다(Rust 테스트 `every_v_cycle_residual_is_streamed`). `start`가 목표 잔차(`tolerance`)와 `maxCycles`를 싣는다. 그래프는 결과 패널과 같은 그림 엔진(`results/plot`, Canvas 2D, `--plot-*` 토큰)으로 그린다: 로그 y축(자릿수 눈금 `1e-4`), 지금 푸는 해는 강조색, 앞서 푼 해는 축 색, 목표는 점선. y 범위는 항상 목표 아래까지라 수렴하는 동안 눈금이 튀지 않는다. 높이는 토큰 `--refine-chart-h`(136 px). 예전의 축 없는 SVG 스파크라인을 대신한다. 그림 엔진이 이제 처음 화면에서 필요해서 본 청크로 옮겨졌다(결과 패널 청크 53 → 41 kB).
+- **거부와 대체**(`src/refusals.ts`): 요청을 거부하거나 다르게 실행한 곳(실시간 비행의 CPU 대체, GPU refine의 CPU 대체, 시작 때 GPU 없음, 비행 불가(미해결 .pa#, 자기장 배열, refine 중, 이온 파일 없음, 브라우저), 열 수 없는 파일, 브라우저 미리보기)은 모두 이 모듈을 거친다. 거부 하나는 `what`(무슨 일이 있었나)과 `why`(원인과 할 일. 대부분 네이티브 코어의 `reason.<코드>`)이고, 한 줄이면 `refusal.line`("{what}. {why}")으로 보인다. refine이 CPU로 넘어가면 예전에는 툴팁에만 있던 이유를 진행 영역에 경고색 문장으로 보여 준다.
 - 허용 오차는 상대 잔차 1e-10, 최대 200 사이클. 모든 해가 수렴한 뒤에만 파일을 쓴다(취소/오류면 아무것도 안 씀). 끝나면 .pa0을 연 것처럼 객체가 바뀌고 전압 슬라이더가 생긴다.
 - 17,373,979점 3D(`_bench3d/sc3d_x2.pa#`, RTX 3070): 첫 미리보기 약 1.0 s, 풀이 약 3.5 s, 파일 쓰기 포함 4.9 s.
 
@@ -292,7 +311,7 @@ app/src-tauri/
 - **이온**: 빔(개수, 질량 amu, 전하, 에너지 eV, 위치, 방향 방위/고도, 원뿔 반각, 점/선/원판 분포) 또는 `.ion`/`.fly2` 파일. 이온 수는 1천/1만/10만 빠른 선택이 있고 최대 100만 개다. **정밀도** 카드(실시간 GPU · f32 / 정밀 CPU · f64)와 **그릴 궤적 수**(기본 300, 최대 1만)를 고른다. 작업대 상자(기본: 배열 경계)를 따로 두고, 시간 제한과 **전극 충돌** 규칙을 접이식("시간 제한과 전극 충돌")으로 둔다. 전극 충돌은 **모든 모서리**(기본, SIMION과 같음: 모서리 격자점이 모두 전극인 칸에 들어가면 멈춤) / **가까운 점**(전극 격자점마다 둘레 반 칸, 예전 SimRep 방식)이고, 요청의 `collision`(`allCorners`/`nearestNode`)으로 Rust가 `GridField::with_nearest_node_collisions()`를 모든 전압 기저에 똑같이 적용한다(CPU 장 캐시와 GPU 상주 장의 키에 포함). 프로젝트에 이 값이 없으면 모든 모서리다. 가져오기 마법사의 cut-cell refine은 `.cuts.json`을 쓰지만 앱 비행은 아직 그 연속 표면 모델(`SurfaceModel`)을 쓰지 않고 PA 격자 충돌만 쓴다.
 - **비행 결과**: 정밀도 배지(실시간 미리보기 / 정밀), 비행한 장치, 이온 수(비행 / 그림), **계산 시간**(GPU는 디스패치~완료, CPU는 비행 자체)을 크게, 부가 시간(장 업로드·GPU 전송·궤적·전체 왕복)을 작게 보여 준다. 실시간이 CPU로 대신 돌았으면 이유를 경고색으로 적는다. 아래는 끝난 곳(배열 벽/전극/작업대/시간 제한)별 개수와 평균 TOF, TOF 최소/평균/최대/표준편차(µs), 평균 최종 에너지. 요약은 항상 모든 이온으로 계산한다.
 - 상태 표시줄의 `이온 비행 · <장치>`가 비행 장치다(`GPU 준비 중…` → GPU 이름, 없으면 `CPU (GPU 없음)`).
-- 궤적 패킷: `"STR3" | u32 헤더 길이 | 헤더 JSON | u32 그린 이온 번호[drawn] | u32 그린 이온의 시작 오프셋[drawn + 1] | f32 점[x,y,z] | f32 끝점[x,y,z,TOF] | f32 최종 운동 에너지(eV) | u8/u16/u32 끝난 곳 번호`(폭은 헤더 `surfaceBytes`, 끝난 곳이 256개 이하면 1 B. 이온당 21 B). `parseFlight`가 오프셋과 끝난 곳 번호를 이온마다 하나씩(그리지 않는 이온은 빈 구간)으로 넓힌다. 최종 속도는 끝 상태 CSV 내보내기만 쓰므로 패킷에 싣지 않고, Rust 세션이 최근 비행 4개분을 헤더의 `token`으로 두었다가 내보낼 때 `flight_velocities`로 준다(예전 STR2는 모든 이온의 오프셋·u32 번호·속도를 실어 이온당 40 B). 점이 많으면 Rust가 궤적을 솎아 보낸다(`thinned`).
+- 궤적 패킷: `"STR4" | u32 헤더 길이 | 헤더 JSON(8 B 정렬) | u32 그린 이온 번호[drawn] | u32 그린 이온의 시작 오프셋[drawn + 1] | f32 점[x,y,z] | 8 B 정렬 패딩 | f64 끝점[x,y,z,TOF] | f64 최종 운동 에너지(eV) | u8/u16/u32 끝난 곳 번호`(폭은 헤더 `surfaceBytes`, 끝난 곳이 256개 이하면 1 B. 이온당 41 B; STR3의 21 B보다 20 B 증가, 궤적 뒤 패딩은 0 또는 4 B). 끝 상태는 두 모드 모두 f64로 전달·분석하며 GPU 계산 자체의 정확도는 f32다. `parseFlight`가 오프셋과 끝난 곳 번호를 이온마다 하나씩(그리지 않는 이온은 빈 구간)으로 넓힌다. 최종 속도는 끝 상태 CSV 내보내기만 쓰므로 패킷에 싣지 않고, Rust 세션이 최근 비행 4개분을 f64로 헤더의 `token`에 보관했다가 `flight_velocities`로 준다(이온당 24 B, 종전 12 B). 점이 많으면 Rust가 궤적을 솎아 보낸다(`thinned`). `precision`은 요청 모드이며 `executed: { device, precision, surfaces }`가 실제 실행 경로를 기록한다. 정확한 표면을 켠 Live 요청은 `{ device: "cpu", precision: "f64", surfaces: "exact" }`다.
 - 그리기(`viewport/trajectoryLayer.ts`, `trajectoryShader`): 그리는 궤적을 한 line-strip 그리기(primitive restart)로, 모든 이온의 끝점은 인스턴스 사각형(splat, 전극에 맞으면 다른 색)으로 그린다. 선 투명도는 `2.5/√그린 궤적 수`(0.06–0.8)라서 궤적이 많으면 밀도 지도처럼 보이고 초점이 드러난다. 전체 맞추기는 궤적도 포함한다.
 
 ### 실시간 재비행 (GPU)
@@ -459,7 +478,7 @@ app/src-tauri/
 | 비교 | **이 결과 보관**으로 지금 결과를 남기고(최대 5개, 프로젝트에는 저장 안 함) 전압·소스를 바꾼 뒤 히스토그램을 겹쳐 본다. 결과마다 전압·이온 수·정밀도, μ·σ·FWHM·R, 지금 결과와의 Δμ. 정규화(비율) / 로그 / 확대 |
 
 - **연결된 선택**: 3D에서 궤적이나 끝점 클릭, 검출면 지도의 점, 표의 행, 이온 번호 입력이 모두 같은 선택(`useResults.ion`)을 바꾼다. 3D는 그 이온의 경로(다시 계산한 시계열, 없으면 그린 궤적)를 화면 공간 두께 3 px 리본과 끝점 고리로 다른 것들 위에 그리고(`trajectoryShader`의 `vsThick`/`vsRing`, 색은 `--vp-highlight`), 나머지 궤적은 흐리게 한다. 히스토그램은 세로선, 지도는 고리, 표는 행 강조와 스크롤로 따라간다. 3D 피킹은 CPU에서 모든 끝점과 그린 궤적의 선분을 화면에 투영해 가장 가까운 것을 찾는다(클릭할 때만).
-- **내보내기**(패널 머리의 **내보내기**): 모든 이온의 끝 상태 CSV(`ion,surface,x_mm,…,vz_mm_per_us`, f32를 7자리로), 선택한 이온의 시계열 CSV(f64 전체 정밀도), 지금 탭의 그래프 PNG(2배 해상도)·SVG(작은 그래프 여러 개는 화면 배치 그대로 한 장), 3D 뷰 PNG(뷰포트 배경 그라디언트 위에 합성). 데스크톱은 네이티브 저장 대화상자(`dialog:allow-save`, 기본 폴더는 프로젝트 폴더 → 배열 폴더) 뒤 `write_bytes`가 IPC 본문 바이트를 그대로 받아 쓴다(경로는 percent-encode한 `path` 헤더). 브라우저는 다운로드로 대신한다. SVG 색은 `#rrggbb` + `*-opacity`로 바꿔 써서 Inkscape 같은 SVG 1.1 도구에서도 열린다.
+- **내보내기**(패널 머리의 **내보내기**): 모든 이온의 끝 상태 CSV(`ion,surface,x_mm,…,vz_mm_per_us`, f64를 재파싱할 때 같은 수가 되는 최단 문자열로), 선택한 이온의 시계열 CSV(f64 전체 정밀도), 지금 탭의 그래프 PNG(2배 해상도)·SVG(작은 그래프 여러 개는 화면 배치 그대로 한 장), 3D 뷰 PNG(뷰포트 배경 그라디언트 위에 합성). 데스크톱은 네이티브 저장 대화상자(`dialog:allow-save`, 기본 폴더는 프로젝트 폴더 → 배열 폴더) 뒤 `write_bytes`가 IPC 본문 바이트를 그대로 받아 쓴다(경로는 percent-encode한 `path` 헤더). 브라우저는 다운로드로 대신한다. SVG 색은 `#rrggbb` + `*-opacity`로 바꿔 써서 Inkscape 같은 SVG 1.1 도구에서도 열린다.
 - **그래프 엔진**: 의존성을 더하지 않고 `results/plot/`에 직접 만들었다(약 780줄). 필요한 그림이 히스토그램·계단 겹치기·선·래스터(밀도/점)뿐이고, 하나의 모델을 Canvas 2D(화면, PNG)와 SVG(벡터 내보내기)에 같은 코드로 그리며, 색·글꼴은 CSS 토큰(`--plot-*`, viridis는 `--vp-field-*`)에서 읽어 테마를 따른다. uPlot(약 50 kB)은 빠르지만 히스토그램·히트맵·SVG 출력이 없어 결국 같은 양을 더 써야 했고, Plotly/ECharts급은 수백 kB~MB다. 번들: 결과 패널 청크 53.0 kB(gzip 18.7 kB) + CSS 13 kB(gzip 2.8 kB), 첫 비행 결과가 생길 때 `React.lazy`로 불러온다. 같이 React를 따로 청크로 나눠(`vite.config.ts` `codeSplitting`) 앱 청크 290 kB / React 219 kB가 됐다(500 kB 경고 없음)(이전 단일 청크 488 kB).
 - **측정**(2026-10-23, debug 앱 + 프로덕션 React, RTX 3070, 1440×900): 실시간 재비행 결과가 스토어에 들어온 순간부터 그 탭의 그래프가 다시 그려질 때까지(탭마다 12회, 중앙값 / 최대 ms).
 
