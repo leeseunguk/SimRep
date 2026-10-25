@@ -1,0 +1,56 @@
+Final Windows command for the quadrupole study, 2026-10-23:
+
+s="$(wslpath -w tools/win/winproc.ps1)"; (cd /mnt/c && timeout 60 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$s" cleanup < /dev/null)
+
+Exit code: 0
+
+== process counts ==
+
+Name           Count
+----           -----
+cmd.exe            4
+conhost.exe       46
+node.exe           4
+powershell.exe     1
+simrep-app.exe     1
+
+== conhost by parent ==
+
+Name                              Count
+----                              -----
+wsl.exe                              23
+wslhost.exe                           5
+cmd.exe                               4
+node_repl.exe                         2
+lmgrd.exe                             2
+node.exe                              1
+powershell.exe                        1
+simrep-app.exe                        1
+rlm.exe                               1
+GoogleDriveFS.exe                     1
+sunshine.exe                          1
+dispatcher.exe                        1
+codex.exe                             1
+wlanext.exe                           1
+matlab-mcp-server-windows-x64.exe     1
+
+orphan conhost: 0
+stopped orphan conhost: 0
+
+Integrated main-checkout validation, 2026-10-23:
+
+s="$(wslpath -w tools/win/winproc.ps1)"; (cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$s" cleanup < /dev/null)
+
+Exit code: 0
+
+== process counts ==
+
+Name           Count
+----           -----
+cmd.exe            4
+conhost.exe       45
+node.exe           4
+powershell.exe     1
+
+orphan conhost: 0
+stopped orphan conhost: 0

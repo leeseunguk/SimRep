@@ -1,0 +1,19 @@
+; Physical geometry of the app quadrupole template, in millimeters.
+; The round rods and 4 mm circular apertures are not PA electrode voxels.
+pa_define{nx=121, ny=37, nz=37, symmetry='planar', mirror='yz', dx=0.5, surface='none'}
+e(1) {
+  fill { within { cylinder3d(12,10.75,0, 48,10.75,0, 5.75) } }
+}
+e(2) {
+  fill { within { cylinder3d(12,0,10.75, 48,0,10.75, 5.75) } }
+}
+e(3) {
+  fill {
+    within { box3d(6,-100,-100, 7,100,100) }
+    notin { cylinder3d(5,0,0, 55,0,0, 4) }
+  }
+  fill {
+    within { box3d(53,-100,-100, 54,100,100) }
+    notin { cylinder3d(5,0,0, 55,0,0, 4) }
+  }
+}

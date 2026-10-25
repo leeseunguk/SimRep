@@ -1,0 +1,10 @@
+{
+  "parameters": {
+    "rf_hz": 140000,
+    "amplitude": 100
+  },
+  "voltage_expr": {
+    "1": "amplitude*cos(2*pi*rf_hz*1e-6*t)",
+    "2": "-amplitude*cos(2*pi*rf_hz*1e-6*t)"
+  }
+}
