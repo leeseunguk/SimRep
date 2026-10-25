@@ -1,0 +1,10 @@
+pa_define(31, 21, 21, planar, n,,, 1,,,, none)
+locate(0, 10, 10) {
+  e(1) {
+    fill {
+      within_inside_or_on {
+        stl("C:/Program Files/SIMION-2024/examples/geometry/two_cylinder-1.stl")
+      }
+    }
+  }
+}

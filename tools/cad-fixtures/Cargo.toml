@@ -1,0 +1,13 @@
+[package]
+name = "cad-fixtures"
+version = "0.1.0"
+edition = "2024"
+license = "UNLICENSED"
+publish = false
+description = "Dev tool (not shipped): writes the simrep-cad fixture shapes as STEP and IGES and reads them back."
+
+# Standalone: not a member of the root workspace (crates/*), never built by `cargo build` there.
+[workspace]
+
+[dependencies]
+simrep-cad = { path = "../../crates/simrep-cad", features = ["occt"] }
