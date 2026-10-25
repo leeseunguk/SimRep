@@ -36,8 +36,16 @@ struct Layout {
     fixed: usize,
 }
 
-const CLASSIC: Layout = Layout { base: 0, stride: 748, fixed: 20296 };
-const SIMIOB: Layout = Layout { base: PREFIX_LEN, stride: 772, fixed: 20828 };
+const CLASSIC: Layout = Layout {
+    base: 0,
+    stride: 748,
+    fixed: 20296,
+};
+const SIMIOB: Layout = Layout {
+    base: PREFIX_LEN,
+    stride: 772,
+    fixed: 20828,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Instance {
@@ -58,21 +66,34 @@ fn f64_at(bytes: &[u8], at: usize) -> f64 {
 }
 
 pub fn parse(bytes: &[u8]) -> Result<Workbench, Reason> {
-    let layout = if bytes.starts_with(PREFIX) { SIMIOB } else { CLASSIC };
+    let layout = if bytes.starts_with(PREFIX) {
+        SIMIOB
+    } else {
+        CLASSIC
+    };
     if bytes.len() < layout.base + HEADER {
         return Err(Reason::new("iobShort"));
     }
     let bounds: [f64; 6] = std::array::from_fn(|i| f64_at(bytes, layout.base + 8 * i));
-    let count = i32::from_le_bytes(bytes[layout.base + 48..layout.base + 52].try_into().unwrap());
+    let count = i32::from_le_bytes(
+        bytes[layout.base + 48..layout.base + 52]
+            .try_into()
+            .unwrap(),
+    );
     let records = layout.base + HEADER;
     let max = (layout.fixed.min(bytes.len()) - records) / layout.stride;
     if count < 1 || count as usize > max {
-        return Err(Reason::new("iobCount").with("count", count).with("max", max));
+        return Err(Reason::new("iobCount")
+            .with("count", count)
+            .with("max", max));
     }
     if bounds.iter().any(|v| !v.is_finite()) || (0..3).any(|a| bounds[a] >= bounds[a + 3]) {
         return Err(Reason::new("iobBounds"));
     }
-    let long: Vec<&[u8]> = bytes.get(layout.fixed..).map(|t| t.split(|&b| b == 0).collect()).unwrap_or_default();
+    let long: Vec<&[u8]> = bytes
+        .get(layout.fixed..)
+        .map(|t| t.split(|&b| b == 0).collect())
+        .unwrap_or_default();
     let mut instances = Vec::with_capacity(count as usize);
     for i in 0..count as usize {
         let rec = records + layout.stride * i;
@@ -91,7 +112,14 @@ pub fn parse(bytes: &[u8]) -> Result<Workbench, Reason> {
         if file_name.is_empty() {
             return Err(Reason::new("iobName").with("n", i + 1));
         }
-        instances.push(Instance { file_name, matrix: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]]] });
+        instances.push(Instance {
+            file_name,
+            matrix: [
+                [m[0], m[1], m[2], m[3]],
+                [m[4], m[5], m[6], m[7]],
+                [m[8], m[9], m[10], m[11]],
+            ],
+        });
     }
     Ok(Workbench { bounds, instances })
 }
@@ -126,7 +154,15 @@ fn resolve(dir: &Path, name: &str) -> Option<PathBuf> {
         return Some(exact);
     }
     let lower = name.to_lowercase();
-    std::fs::read_dir(dir).ok()?.filter_map(Result::ok).map(|e| e.path()).find(|p| p.is_file() && p.file_name().is_some_and(|n| n.to_string_lossy().to_lowercase() == lower))
+    std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .find(|p| {
+            p.is_file()
+                && p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().to_lowercase() == lower)
+        })
 }
 
 #[tauri::command]
@@ -153,7 +189,12 @@ pub async fn open_iob(path: String) -> Result<IobInfo, PaError> {
                 }
             })
             .collect();
-        Ok(IobInfo { file_name: crate::pa::file_name(&path), path: path.display().to_string(), bounds: bench.bounds, instances })
+        Ok(IobInfo {
+            file_name: crate::pa::file_name(&path),
+            path: path.display().to_string(),
+            bounds: bench.bounds,
+            instances,
+        })
     })
     .await
     .map_err(|e| PaError::new("unexpected", e.to_string()))?

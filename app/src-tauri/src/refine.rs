@@ -77,19 +77,48 @@ enum Message {
     /// `tolerance` / `max_cycles`: the target relative residual and the cycle limit per solution
     /// (the UI's convergence chart draws the target line from them).
     #[serde(rename_all = "camelCase")]
-    Start { device: Device, stages: Vec<Option<usize>>, points: usize, tolerance: f64, max_cycles: usize },
+    Start {
+        device: Device,
+        stages: Vec<Option<usize>>,
+        points: usize,
+        tolerance: f64,
+        max_cycles: usize,
+    },
     /// One V-cycle's residual (cycle 0 = the starting field). A chunk of cycles arrives together.
     #[serde(rename_all = "camelCase")]
-    Progress { stage: usize, cycle: usize, residual: f64, absolute: f64, elapsed_ms: f64 },
+    Progress {
+        stage: usize,
+        cycle: usize,
+        residual: f64,
+        absolute: f64,
+        elapsed_ms: f64,
+    },
     #[serde(rename_all = "camelCase")]
-    StageDone { stage: usize, cycles: usize, residual: f64 },
+    StageDone {
+        stage: usize,
+        cycles: usize,
+        residual: f64,
+    },
     #[serde(rename_all = "camelCase")]
-    Device { device: Device, reason: Reason },
+    Device {
+        device: Device,
+        reason: Reason,
+    },
     #[serde(rename_all = "camelCase")]
-    Done { files: Vec<String>, dir: String, ms: f64, cycles: usize, residual: f64, device: Device },
+    Done {
+        files: Vec<String>,
+        dir: String,
+        ms: f64,
+        cycles: usize,
+        residual: f64,
+        device: Device,
+    },
     Cancelled,
     /// `reason`: a condition the UI states in its language; otherwise `message` is technical text.
-    Error { message: String, reason: Option<Reason> },
+    Error {
+        message: String,
+        reason: Option<Reason>,
+    },
 }
 
 enum Fail {
@@ -121,7 +150,9 @@ struct Layout {
 }
 
 fn transpose<T: Copy>(values: &[T], nx: usize, ny: usize) -> Vec<T> {
-    (0..values.len()).map(|i| values[i / ny + nx * (i % ny)]).collect()
+    (0..values.len())
+        .map(|i| values[i / ny + nx * (i % ny)])
+        .collect()
 }
 
 fn antimirror_plane(a: &PotentialArray, i: usize) -> bool {
@@ -143,11 +174,23 @@ impl Layout {
             fixed = transpose(&fixed, a.nx, a.ny);
         }
         let grid = if cylindrical {
-            Grid { dims: [a.ny, a.nx, 1], spacing: [a.dy_mm, a.dx_mm, a.dz_mm], geometry: Geometry::Cylindrical { radial_origin: 0.0 } }
+            Grid {
+                dims: [a.ny, a.nx, 1],
+                spacing: [a.dy_mm, a.dx_mm, a.dz_mm],
+                geometry: Geometry::Cylindrical { radial_origin: 0.0 },
+            }
         } else {
-            Grid { dims: [a.nx, a.ny, a.nz], spacing: [a.dx_mm, a.dy_mm, a.dz_mm], geometry: Geometry::Planar }
+            Grid {
+                dims: [a.nx, a.ny, a.nz],
+                spacing: [a.dx_mm, a.dy_mm, a.dz_mm],
+                geometry: Geometry::Planar,
+            }
         };
-        Self { grid, fixed, cylindrical }
+        Self {
+            grid,
+            fixed,
+            cylindrical,
+        }
     }
 
     /// Solver-layout values for `a` (anti-mirror planes forced to 0 V).
@@ -161,12 +204,20 @@ impl Layout {
                 *v = 0.0;
             }
         }
-        Ok(if self.cylindrical { transpose(&p, a.nx, a.ny) } else { p })
+        Ok(if self.cylindrical {
+            transpose(&p, a.nx, a.ny)
+        } else {
+            p
+        })
     }
 
     /// Back to PA layout.
     fn to_pa(&self, values: &[f64], a: &PotentialArray) -> Vec<f64> {
-        if self.cylindrical { transpose(values, a.ny, a.nx) } else { values.to_vec() }
+        if self.cylindrical {
+            transpose(values, a.ny, a.nx)
+        } else {
+            values.to_vec()
+        }
     }
 }
 
@@ -180,12 +231,17 @@ fn electrode_table(a: &PotentialArray) -> Vec<i64> {
     for (i, (&value, &fixed)) in a.potentials.iter().zip(&a.electrodes).enumerate() {
         if fixed {
             let slot = electrode_number(value).unwrap_or(0);
-            if indices[slot] == -1 || (slot == 0 && value.abs() > a.potentials[indices[slot] as usize].abs()) {
+            if indices[slot] == -1
+                || (slot == 0 && value.abs() > a.potentials[indices[slot] as usize].abs())
+            {
                 indices[slot] = i as i64;
             }
         }
     }
-    let entries = indices.iter().rposition(|&i| i != -1).map_or(32, |i| (i + 1).max(32));
+    let entries = indices
+        .iter()
+        .rposition(|&i| i != -1)
+        .map_or(32, |i| (i + 1).max(32));
     indices.truncate(entries);
     indices
 }
@@ -200,7 +256,11 @@ fn basis_values(source: &PaFile, slot: usize, scalable_voltage: f64) -> Vec<f64>
             if !fixed {
                 0.0
             } else if slot == 0 && electrode_number(input).is_none() {
-                if scalable_voltage == 0.0 { 0.0 } else { (input / scalable_voltage) * REFERENCE_VOLTAGE }
+                if scalable_voltage == 0.0 {
+                    0.0
+                } else {
+                    (input / scalable_voltage) * REFERENCE_VOLTAGE
+                }
             } else if electrode_number(input) == Some(slot) {
                 REFERENCE_VOLTAGE
             } else {
@@ -211,14 +271,19 @@ fn basis_values(source: &PaFile, slot: usize, scalable_voltage: f64) -> Vec<f64>
 }
 
 fn is_pa_hash(path: &Path) -> bool {
-    path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("pa#"))
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("pa#"))
 }
 
 /// Solutions a refine produces: electrode slots for a .pa#, `[None]` for a .pa.
 fn stages(session: &Session) -> Vec<Option<usize>> {
     if is_pa_hash(&session.path) {
         let table = electrode_table(&session.file.array);
-        (0..table.len()).filter(|&s| table[s] != -1).map(Some).collect()
+        (0..table.len())
+            .filter(|&s| table[s] != -1)
+            .map(Some)
+            .collect()
     } else {
         vec![None]
     }
@@ -236,7 +301,10 @@ fn output_path(session: &Session, dir: &Path, stage: Option<usize>) -> PathBuf {
 }
 
 fn outputs(session: &Session, dir: &Path) -> Vec<PathBuf> {
-    let mut out: Vec<PathBuf> = stages(session).into_iter().map(|s| output_path(session, dir, s)).collect();
+    let mut out: Vec<PathBuf> = stages(session)
+        .into_iter()
+        .map(|s| output_path(session, dir, s))
+        .collect();
     if is_pa_hash(&session.path) {
         out.push(output_path(session, dir, None));
     }
@@ -252,7 +320,10 @@ fn moved_sidecar(session: &Session, dir: &Path) -> Option<(PathBuf, PathBuf)> {
     }
     let from = session.path.with_extension("cuts.json");
     let to = output_path(session, dir, None).with_extension("cuts.json");
-    let same_dir = match (from.parent().map(std::fs::canonicalize), std::fs::canonicalize(dir)) {
+    let same_dir = match (
+        from.parent().map(std::fs::canonicalize),
+        std::fs::canonicalize(dir),
+    ) {
         (Some(Ok(a)), Ok(b)) => a == b,
         _ => true,
     };
@@ -260,11 +331,22 @@ fn moved_sidecar(session: &Session, dir: &Path) -> Option<(PathBuf, PathBuf)> {
 }
 
 fn resolve_dir(session: &Session, requested: Option<String>) -> PathBuf {
-    requested.map(PathBuf::from).unwrap_or_else(|| session.path.parent().map(Path::to_path_buf).unwrap_or_default())
+    requested.map(PathBuf::from).unwrap_or_else(|| {
+        session
+            .path
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_default()
+    })
 }
 
 fn check(session: &Session) -> Result<(), PaError> {
-    let ext = session.path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let ext = session
+        .path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
     if ext != "pa#" && ext != "pa" {
         return Err(PaError::coded("refine", Reason::new("refineFormat")));
     }
@@ -295,22 +377,47 @@ pub struct Targets {
 
 /// Files a refine would write into `output_dir` (default: next to the source), and which exist.
 #[tauri::command]
-pub fn refine_targets(state: State<'_, AppState>, id: String, output_dir: Option<String>) -> Result<Targets, PaError> {
-    let session = state.get(&id).ok_or_else(|| PaError::new("noSession", id))?;
+pub fn refine_targets(
+    state: State<'_, AppState>,
+    id: String,
+    output_dir: Option<String>,
+) -> Result<Targets, PaError> {
+    let session = state
+        .get(&id)
+        .ok_or_else(|| PaError::new("noSession", id))?;
     check(&session)?;
     let dir = resolve_dir(&session, output_dir);
-    let files = outputs(&session, &dir).iter().map(|p| Target { name: pa::file_name(p), exists: p.exists() }).collect();
+    let files = outputs(&session, &dir)
+        .iter()
+        .map(|p| Target {
+            name: pa::file_name(p),
+            exists: p.exists(),
+        })
+        .collect();
     let cutcell = state.geometries.lock().unwrap().contains_key(&session.path);
-    Ok(Targets { dir: dir.display().to_string(), files, cutcell })
+    Ok(Targets {
+        dir: dir.display().to_string(),
+        files,
+        cutcell,
+    })
 }
 
 #[tauri::command]
-pub fn refine_start(state: State<'_, AppState>, request: RefineRequest, channel: Channel<InvokeResponseBody>) -> Result<u32, PaError> {
-    let session = state.get(&request.id).ok_or_else(|| PaError::new("noSession", request.id.clone()))?;
+pub fn refine_start(
+    state: State<'_, AppState>,
+    request: RefineRequest,
+    channel: Channel<InvokeResponseBody>,
+) -> Result<u32, PaError> {
+    let session = state
+        .get(&request.id)
+        .ok_or_else(|| PaError::new("noSession", request.id.clone()))?;
     check(&session)?;
     let dir = resolve_dir(&session, request.output_dir);
     if !dir.is_dir() {
-        return Err(PaError::coded("refine", Reason::new("refineNoFolder").with("dir", dir.display().to_string())));
+        return Err(PaError::coded(
+            "refine",
+            Reason::new("refineNoFolder").with("dir", dir.display().to_string()),
+        ));
     }
     let state = state.inner().clone();
     let job = state.next_job.fetch_add(1, Ordering::Relaxed) + 1;
@@ -319,11 +426,32 @@ pub fn refine_start(state: State<'_, AppState>, request: RefineRequest, channel:
     std::thread::Builder::new()
         .name(format!("refine-{job}"))
         .spawn(move || {
-            match run(&state, &request.id, &session, &dir, request.device, &request.voltages, &cancel, &channel) {
+            match run(
+                &state,
+                &request.id,
+                &session,
+                &dir,
+                request.device,
+                &request.voltages,
+                &cancel,
+                &channel,
+            ) {
                 Ok(()) => {}
                 Err(Fail::Cancelled) => send(&channel, &Message::Cancelled),
-                Err(Fail::Error(message)) => send(&channel, &Message::Error { message, reason: None }),
-                Err(Fail::Reason(reason)) => send(&channel, &Message::Error { message: reason.code.to_owned(), reason: Some(reason) }),
+                Err(Fail::Error(message)) => send(
+                    &channel,
+                    &Message::Error {
+                        message,
+                        reason: None,
+                    },
+                ),
+                Err(Fail::Reason(reason)) => send(
+                    &channel,
+                    &Message::Error {
+                        message: reason.code.to_owned(),
+                        reason: Some(reason),
+                    },
+                ),
             }
             state.jobs.lock().unwrap().remove(&job);
         })
@@ -342,11 +470,19 @@ pub fn refine_cancel(state: State<'_, AppState>, job: u32) {
 
 pub fn cpu_device() -> Device {
     let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
-    Device { kind: "cpu", name: format!("CPU · {threads} threads"), threads: Some(threads) }
+    Device {
+        kind: "cpu",
+        name: format!("CPU · {threads} threads"),
+        threads: Some(threads),
+    }
 }
 
 fn gpu_device(gpu: &Gpu) -> Device {
-    Device { kind: "gpu", name: format!("{} · Vulkan", gpu.info.name), threads: None }
+    Device {
+        kind: "gpu",
+        name: format!("{} · Vulkan", gpu.info.name),
+        threads: None,
+    }
 }
 
 pub fn probe_gpu() -> Result<Arc<Gpu>, Reason> {
@@ -376,13 +512,24 @@ impl Solver<'_> {
     }
 
     /// One solution, progressively. `preview` gets the solver-layout values after each chunk.
-    fn solve(&mut self, stage: usize, values: &mut [f64], layout: &Layout, operator: &Operator, mut preview: impl FnMut(&[f64])) -> Result<(usize, Residual), Fail> {
+    fn solve(
+        &mut self,
+        stage: usize,
+        values: &mut [f64],
+        layout: &Layout,
+        operator: &Operator,
+        mut preview: impl FnMut(&[f64]),
+    ) -> Result<(usize, Residual), Fail> {
         let mut done = 0;
         let mut chunk = 1;
         let mut calls: Vec<(usize, f64)> = Vec::new(); // (cycles, seconds) of each call
         let mut last_preview: Option<Instant> = None;
         loop {
-            let options = Options { relative_tolerance: TOLERANCE, max_cycles: chunk, ..Options::default() };
+            let options = Options {
+                relative_tolerance: TOLERANCE,
+                max_cycles: chunk,
+                ..Options::default()
+            };
             let started = Instant::now();
             let (converged, iterations, history) = match self.gpu.clone() {
                 Some(gpu) => match match operator {
@@ -393,13 +540,21 @@ impl Solver<'_> {
                     Err(e) => {
                         // e.g. the array exceeds a GPU buffer limit: finish on the CPU.
                         self.gpu = None;
-                        send(self.channel, &Message::Device { device: self.device(), reason: Reason::new("gpuSolveFailed").detail(e) });
+                        send(
+                            self.channel,
+                            &Message::Device {
+                                device: self.device(),
+                                reason: Reason::new("gpuSolveFailed").detail(e),
+                            },
+                        );
                         continue;
                     }
                 },
                 None => {
                     let r = match operator {
-                        Operator::Staircase => mg::solve(values, &layout.fixed, layout.grid, options)?,
+                        Operator::Staircase => {
+                            mg::solve(values, &layout.fixed, layout.grid, options)?
+                        }
                         Operator::Cut(cuts) => cuts.solve(values, options)?,
                     };
                     (r.converged, r.iterations, r.residual_history)
@@ -408,7 +563,16 @@ impl Solver<'_> {
             let first = usize::from(done > 0); // later chunks repeat the previous final residual
             for (k, r) in history.iter().enumerate().skip(first) {
                 let elapsed_ms = self.start.elapsed().as_secs_f64() * 1e3;
-                send(self.channel, &Message::Progress { stage, cycle: done + k, residual: r.relative, absolute: r.absolute, elapsed_ms });
+                send(
+                    self.channel,
+                    &Message::Progress {
+                        stage,
+                        cycle: done + k,
+                        residual: r.relative,
+                        absolute: r.absolute,
+                        elapsed_ms,
+                    },
+                );
             }
             done += iterations;
             let last = *history.last().ok_or("solver returned no residual")?;
@@ -423,16 +587,25 @@ impl Solver<'_> {
                 last_preview = Some(Instant::now());
             }
             if done >= MAX_CYCLES {
-                return Err(Fail::Reason(Reason::new("noConverge").with("cycles", done).with("residual", format!("{:.2e}", last.relative))));
+                return Err(Fail::Reason(
+                    Reason::new("noConverge")
+                        .with("cycles", done)
+                        .with("residual", format!("{:.2e}", last.relative)),
+                ));
             }
             calls.push((iterations, started.elapsed().as_secs_f64()));
             chunk = match calls.as_slice() {
                 [_] => 2,
                 [(c1, t1), .., (c2, t2)] => {
                     // Per-cycle cost and per-call overhead from the first and the latest call.
-                    let per_cycle = if c2 > c1 { ((t2 - t1) / (c2 - c1) as f64).max(1e-6) } else { (t2 / (*c2).max(1) as f64).max(1e-6) };
+                    let per_cycle = if c2 > c1 {
+                        ((t2 - t1) / (c2 - c1) as f64).max(1e-6)
+                    } else {
+                        (t2 / (*c2).max(1) as f64).max(1e-6)
+                    };
                     let overhead = (t1 - per_cycle * *c1 as f64).max(0.0);
-                    let wanted = (OVERHEAD_FACTOR * overhead).max(PREVIEW_PERIOD.as_secs_f64()) / per_cycle;
+                    let wanted =
+                        (OVERHEAD_FACTOR * overhead).max(PREVIEW_PERIOD.as_secs_f64()) / per_cycle;
                     wanted.ceil().clamp(1.0, MAX_CYCLES as f64) as usize
                 }
                 [] => 1,
@@ -453,7 +626,16 @@ fn preview_packet(stage: usize, potentials: &[f64]) -> Vec<u8> {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: DeviceChoice, voltages: &[(usize, f64)], cancel: &AtomicBool, channel: &Channel<InvokeResponseBody>) -> Result<(), Fail> {
+fn run(
+    state: &AppState,
+    id: &str,
+    session: &Session,
+    dir: &Path,
+    choice: DeviceChoice,
+    voltages: &[(usize, f64)],
+    cancel: &AtomicBool,
+    channel: &Channel<InvokeResponseBody>,
+) -> Result<(), Fail> {
     let start = Instant::now();
     let small = session.file.array.potentials.len() < AUTO_GPU_POINTS;
     let gpu = match choice {
@@ -462,35 +644,70 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
         DeviceChoice::Auto | DeviceChoice::Gpu => match state.gpu.get_or_init(probe_gpu) {
             Ok(gpu) => Some(gpu.clone()),
             Err(reason) => {
-                send(channel, &Message::Device { device: cpu_device(), reason: reason.clone() });
+                send(
+                    channel,
+                    &Message::Device {
+                        device: cpu_device(),
+                        reason: reason.clone(),
+                    },
+                );
                 None
             }
         },
     };
-    let mut solver = Solver { gpu, channel, cancel, start };
+    let mut solver = Solver {
+        gpu,
+        channel,
+        cancel,
+        start,
+    };
     let source = &session.file;
     let a = &source.array;
     let layout = Layout::new(a);
     let stage_list = stages(session);
-    let prepared = if is_pa_hash(&session.path) { state.geometries.lock().unwrap().get(&session.path).cloned() } else { None };
-    send(channel, &Message::Start { device: solver.device(), stages: stage_list.clone(), points: a.potentials.len(), tolerance: TOLERANCE, max_cycles: MAX_CYCLES });
+    let prepared = if is_pa_hash(&session.path) {
+        state.geometries.lock().unwrap().get(&session.path).cloned()
+    } else {
+        None
+    };
+    send(
+        channel,
+        &Message::Start {
+            device: solver.device(),
+            stages: stage_list.clone(),
+            points: a.potentials.len(),
+            tolerance: TOLERANCE,
+            max_cycles: MAX_CYCLES,
+        },
+    );
 
     let mut total_cycles = 0;
     let mut worst = 0.0_f64;
     let mut solutions: Vec<(Option<usize>, Vec<f64>)> = Vec::new();
     let scalable_voltage = {
         let table = electrode_table(a);
-        if table[0] == -1 { 0.0 } else { a.potentials[table[0] as usize] }
+        if table[0] == -1 {
+            0.0
+        } else {
+            a.potentials[table[0] as usize]
+        }
     };
     for (stage, &slot) in stage_list.iter().enumerate() {
         let initial = match slot {
-            Some(slot) => PotentialArray { potentials: basis_values(source, slot, scalable_voltage), ..a.clone() },
+            Some(slot) => PotentialArray {
+                potentials: basis_values(source, slot, scalable_voltage),
+                ..a.clone()
+            },
             None => a.clone(),
         };
         // Cut-cell bases start from the operator's own boundary values (solver layout).
         let cuts = match (&prepared, slot) {
             (Some(p), Some(n)) if n > 0 => Some(p.cut_cells(Some(n))?),
-            (Some(_), _) => return Err(Fail::Error("cut-cell geometry has an unnumbered electrode".into())),
+            (Some(_), _) => {
+                return Err(Fail::Error(
+                    "cut-cell geometry has an unnumbered electrode".into(),
+                ));
+            }
             (None, _) => None,
         };
         let mut values = match &cuts {
@@ -499,11 +716,21 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
         };
         let operator = cuts.as_ref().map_or(Operator::Staircase, Operator::Cut);
         let (cycles, residual) = solver.solve(stage, &mut values, &layout, &operator, |v| {
-            let _ = channel.send(InvokeResponseBody::Raw(preview_packet(stage, &layout.to_pa(v, a))));
+            let _ = channel.send(InvokeResponseBody::Raw(preview_packet(
+                stage,
+                &layout.to_pa(v, a),
+            )));
         })?;
         let solved = layout.to_pa(&values, a);
         let _ = channel.send(InvokeResponseBody::Raw(preview_packet(stage, &solved)));
-        send(channel, &Message::StageDone { stage, cycles, residual: residual.relative });
+        send(
+            channel,
+            &Message::StageDone {
+                stage,
+                cycles,
+                residual: residual.relative,
+            },
+        );
         total_cycles += cycles;
         worst = worst.max(residual.relative);
         solutions.push((slot, solved));
@@ -528,7 +755,11 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
                 for (i, b) in base.array.potentials.iter_mut().enumerate() {
                     *b = if a.electrodes[i] {
                         let input = a.potentials[i];
-                        if electrode_number(input).is_none() { input } else { 0.0 }
+                        if electrode_number(input).is_none() {
+                            input
+                        } else {
+                            0.0
+                        }
                     } else {
                         potentials[i] * (scalable_voltage / REFERENCE_VOLTAGE)
                     };
@@ -538,10 +769,18 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
         // Requested electrode voltages go into the .pa0 (fast adjust then starts from them).
         for (slot, potentials) in &solutions {
             if let Some(&(_, v)) = voltages.iter().find(|(n, _)| Some(*n) == *slot && *n > 0) {
-                base.array.potentials.iter_mut().zip(potentials).for_each(|(b, p)| *b += p * (v / REFERENCE_VOLTAGE));
+                base.array
+                    .potentials
+                    .iter_mut()
+                    .zip(potentials)
+                    .for_each(|(b, p)| *b += p * (v / REFERENCE_VOLTAGE));
             }
         }
-        base.pa0 = Some(Pa0Metadata { reference_voltage: REFERENCE_VOLTAGE, electrode_indices: electrode_table(a), scalable: None });
+        base.pa0 = Some(Pa0Metadata {
+            reference_voltage: REFERENCE_VOLTAGE,
+            electrode_indices: electrode_table(a),
+            scalable: None,
+        });
         let out = output_path(session, dir, None);
         write_pa(&out, &base).map_err(|e| format!("{}: {e}", out.display()))?;
         written.push(pa::file_name(&out));
@@ -549,7 +788,13 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
             std::fs::copy(&from, &to).map_err(|e| format!("{}: {e}", to.display()))?;
             written.push(pa::file_name(&to));
         }
-        let fast = FastAdjust::new(&base, solutions.into_iter().map(|(s, p)| (s.unwrap_or(0), p)).collect())?;
+        let fast = FastAdjust::new(
+            &base,
+            solutions
+                .into_iter()
+                .map(|(s, p)| (s.unwrap_or(0), p))
+                .collect(),
+        )?;
         (out, base, Some(fast))
     } else {
         let mut refined = source.clone();
@@ -561,7 +806,16 @@ fn run(state: &AppState, id: &str, session: &Session, dir: &Path, choice: Device
     };
     let file_size = std::fs::metadata(&path).map_or(0, |m| m.len());
     let status = fast.as_ref().map(FastAdjust::status);
-    let packet = pa::packet(&file, &file.array, Origin { path: &path, file_size, fast: status }).map_err(|e| format!("{e:?}"))?;
+    let packet = pa::packet(
+        &file,
+        &file.array,
+        Origin {
+            path: &path,
+            file_size,
+            fast: status,
+        },
+    )
+    .map_err(|e| format!("{e:?}"))?;
     state.insert(id.to_owned(), Arc::new(Session::new(path, file, fast)));
     let _ = channel.send(InvokeResponseBody::Raw(packet));
     send(
@@ -585,7 +839,14 @@ mod tests {
 
     #[test]
     fn start_names_the_target_residual() {
-        let json = serde_json::to_value(Message::Start { device: cpu_device(), stages: vec![Some(1)], points: 4, tolerance: TOLERANCE, max_cycles: MAX_CYCLES }).unwrap();
+        let json = serde_json::to_value(Message::Start {
+            device: cpu_device(),
+            stages: vec![Some(1)],
+            points: 4,
+            tolerance: TOLERANCE,
+            max_cycles: MAX_CYCLES,
+        })
+        .unwrap();
         assert_eq!(json["type"], "start");
         assert_eq!(json["tolerance"], TOLERANCE);
         assert_eq!(json["maxCycles"], MAX_CYCLES);
@@ -609,15 +870,39 @@ mod tests {
         let sink = seen.clone();
         let channel = Channel::new(move |body| {
             if let InvokeResponseBody::Json(json) = body {
-                sink.lock().unwrap().push(serde_json::from_str(&json).unwrap());
+                sink.lock()
+                    .unwrap()
+                    .push(serde_json::from_str(&json).unwrap());
             }
             Ok(())
         });
         let cancel = AtomicBool::new(false);
-        let mut solver = Solver { gpu: None, channel: &channel, cancel: &cancel, start: Instant::now() };
-        let (cycles, last) = solver.solve(0, &mut values, &layout, &Operator::Staircase, |_| {}).ok().unwrap();
-        let progress: Vec<(u64, f64)> = seen.lock().unwrap().iter().filter(|m| m["type"] == "progress").map(|m| (m["cycle"].as_u64().unwrap(), m["residual"].as_f64().unwrap())).collect();
-        assert_eq!(progress.iter().map(|p| p.0).collect::<Vec<_>>(), (0..=cycles as u64).collect::<Vec<_>>());
+        let mut solver = Solver {
+            gpu: None,
+            channel: &channel,
+            cancel: &cancel,
+            start: Instant::now(),
+        };
+        let (cycles, last) = solver
+            .solve(0, &mut values, &layout, &Operator::Staircase, |_| {})
+            .ok()
+            .unwrap();
+        let progress: Vec<(u64, f64)> = seen
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|m| m["type"] == "progress")
+            .map(|m| {
+                (
+                    m["cycle"].as_u64().unwrap(),
+                    m["residual"].as_f64().unwrap(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            progress.iter().map(|p| p.0).collect::<Vec<_>>(),
+            (0..=cycles as u64).collect::<Vec<_>>()
+        );
         // serde_json parses floats to within an ulp (the UI's JSON.parse is exact).
         assert!((progress.last().unwrap().1 / last.relative - 1.0).abs() < 1e-15);
         assert!(last.relative <= TOLERANCE);

@@ -44,11 +44,17 @@ pub struct Reason {
 
 impl Reason {
     pub fn new(code: &'static str) -> Self {
-        Self { code, params: serde_json::Map::new() }
+        Self {
+            code,
+            params: serde_json::Map::new(),
+        }
     }
 
     pub fn with(mut self, name: &str, value: impl Serialize) -> Self {
-        self.params.insert(name.to_owned(), serde_json::to_value(value).unwrap_or_default());
+        self.params.insert(
+            name.to_owned(),
+            serde_json::to_value(value).unwrap_or_default(),
+        );
         self
     }
 
@@ -70,17 +76,26 @@ pub struct PaError {
 
 impl PaError {
     pub fn new(code: &'static str, detail: impl Into<String>) -> Self {
-        Self { code, detail: detail.into(), reason: None }
+        Self {
+            code,
+            detail: detail.into(),
+            reason: None,
+        }
     }
 
     /// An error the UI states through `reason` (localized); `detail` keeps the reason code for logs.
     pub fn coded(code: &'static str, reason: Reason) -> Self {
-        Self { code, detail: reason.code.to_owned(), reason: Some(reason) }
+        Self {
+            code,
+            detail: reason.code.to_owned(),
+            reason: Some(reason),
+        }
     }
 
     /// The localized reason, or `fallback` carrying the technical detail.
     pub fn into_reason(self, fallback: &'static str) -> Reason {
-        self.reason.unwrap_or_else(|| Reason::new(fallback).detail(self.detail))
+        self.reason
+            .unwrap_or_else(|| Reason::new(fallback).detail(self.detail))
     }
 }
 
@@ -90,7 +105,9 @@ impl From<io::Error> for PaError {
         let code = match e.kind() {
             io::ErrorKind::NotFound => "notFound",
             io::ErrorKind::UnexpectedEof => "truncated",
-            io::ErrorKind::InvalidData if detail.starts_with("unsupported PA header mode") => "notPa",
+            io::ErrorKind::InvalidData if detail.starts_with("unsupported PA header mode") => {
+                "notPa"
+            }
             io::ErrorKind::InvalidData if detail.contains("PA0") => "badPa0",
             io::ErrorKind::InvalidData => "badHeader",
             _ => "unexpected",
@@ -174,7 +191,8 @@ pub struct Origin<'a> {
 
 /// Binary packet for `array` with `file`'s header fields (mode, PA0 table, ...).
 pub fn packet(file: &PaFile, array: &PotentialArray, origin: Origin) -> Result<Vec<u8>, PaError> {
-    let header = serde_json::to_vec(&describe(file, array, origin)).map_err(|e| PaError::new("unexpected", e.to_string()))?;
+    let header = serde_json::to_vec(&describe(file, array, origin))
+        .map_err(|e| PaError::new("unexpected", e.to_string()))?;
     let n = array.potentials.len();
     let padded = header.len().div_ceil(4) * 4;
     let mut out = Vec::with_capacity(8 + padded + n * 5);
@@ -202,11 +220,20 @@ pub fn packet(file: &PaFile, array: &PotentialArray, origin: Origin) -> Result<V
 /// ```
 ///
 /// Mirrored by `parsePotentialsPacket` in src/scene/pa.ts.
-pub fn potentials_packet(file: &PaFile, array: &PotentialArray, origin: Origin) -> Result<Vec<u8>, PaError> {
+pub fn potentials_packet(
+    file: &PaFile,
+    array: &PotentialArray,
+    origin: Origin,
+) -> Result<Vec<u8>, PaError> {
     let info = describe(file, array, origin);
     let (offset, hi) = (info.potential_min, info.potential_max);
-    let step = if hi > offset { (hi - offset) / f64::from(u16::MAX) } else { 0.0 };
-    let header = serde_json::to_vec(&info).map_err(|e| PaError::new("unexpected", e.to_string()))?;
+    let step = if hi > offset {
+        (hi - offset) / f64::from(u16::MAX)
+    } else {
+        0.0
+    };
+    let header =
+        serde_json::to_vec(&info).map_err(|e| PaError::new("unexpected", e.to_string()))?;
     let padded = header.len().div_ceil(8) * 8;
     let mut out = Vec::with_capacity(8 + padded + 16 + array.potentials.len() * 2);
     out.extend_from_slice(b"SPQ1");
@@ -216,7 +243,11 @@ pub fn potentials_packet(file: &PaFile, array: &PotentialArray, origin: Origin) 
     out.extend_from_slice(&offset.to_le_bytes());
     out.extend_from_slice(&step.to_le_bytes());
     for &p in &array.potentials {
-        let code = if step > 0.0 { ((p - offset) / step).round() as u16 } else { 0 };
+        let code = if step > 0.0 {
+            ((p - offset) / step).round() as u16
+        } else {
+            0
+        };
         out.extend_from_slice(&code.to_le_bytes());
     }
     Ok(out)
@@ -256,8 +287,16 @@ fn describe(file: &PaFile, a: &PotentialArray, origin: Origin) -> PaHeader {
         dx: a.dx_mm,
         dy: a.dy_mm,
         dz: a.dz_mm,
-        mirror: Flags { x: a.mirrors.x, y: a.mirrors.y, z: a.mirrors.z },
-        anti_mirror: Flags { x: a.anti_mirrors.x, y: a.anti_mirrors.y, z: a.anti_mirrors.z },
+        mirror: Flags {
+            x: a.mirrors.x,
+            y: a.mirrors.y,
+            z: a.mirrors.z,
+        },
+        anti_mirror: Flags {
+            x: a.anti_mirrors.x,
+            y: a.anti_mirrors.y,
+            z: a.anti_mirrors.z,
+        },
         field: match a.field_type {
             FieldType::Electrostatic => "electrostatic",
             FieldType::Magnetic => "magnetic",
@@ -275,7 +314,9 @@ fn describe(file: &PaFile, a: &PotentialArray, origin: Origin) -> PaHeader {
         distinct_electrode_values: distinct.len(),
         pa0: file.pa0.as_ref().map(|m| Pa0Info {
             adjustable: m.electrode_indices.iter().filter(|&&i| i != -1).count(),
-            electrode_numbers: (0..m.electrode_indices.len()).filter(|&i| m.electrode_indices[i] != -1).collect(),
+            electrode_numbers: (0..m.electrode_indices.len())
+                .filter(|&i| m.electrode_indices[i] != -1)
+                .collect(),
             reference_voltage: m.reference_voltage,
             fast_scalable: matches!(m.scalable, Some(FastScalable::Voltages(_))),
         }),
@@ -288,7 +329,10 @@ fn describe(file: &PaFile, a: &PotentialArray, origin: Origin) -> PaHeader {
 }
 
 pub fn file_name(path: &Path) -> String {
-    path.file_name().map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned())
+    path.file_name().map_or_else(
+        || path.display().to_string(),
+        |n| n.to_string_lossy().into_owned(),
+    )
 }
 
 /// Refuse huge arrays before simrep-io reserves memory for them (only for a real PA header;
@@ -314,13 +358,19 @@ fn check_size(path: &Path) -> Result<u64, PaError> {
 }
 
 fn is_pa0(path: &Path) -> bool {
-    path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("pa0"))
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| e.eq_ignore_ascii_case("pa0"))
 }
 
 /// Opens a PA by path, registers it as session `id` and returns its packet. A .pa0 also loads its
 /// sibling .pa1..N solutions for live fast adjustment (if they are missing the array still opens).
 #[tauri::command]
-pub async fn open_pa(state: State<'_, AppState>, id: String, path: String) -> Result<Response, PaError> {
+pub async fn open_pa(
+    state: State<'_, AppState>,
+    id: String,
+    path: String,
+) -> Result<Response, PaError> {
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
         let path = PathBuf::from(path);
@@ -329,10 +379,23 @@ pub async fn open_pa(state: State<'_, AppState>, id: String, path: String) -> Re
         let fast = (is_pa0(&path) && file.pa0.is_some()).then(|| FastAdjust::load(&path, &file));
         let status = fast.as_ref().map(|f| match f {
             Ok(f) => f.status(),
-            Err(e) => FastStatus::Missing { detail: e.to_string() },
+            Err(e) => FastStatus::Missing {
+                detail: e.to_string(),
+            },
         });
-        let out = packet(&file, &file.array, Origin { path: &path, file_size: size, fast: status })?;
-        state.insert(id, Arc::new(Session::new(path, file, fast.and_then(Result::ok))));
+        let out = packet(
+            &file,
+            &file.array,
+            Origin {
+                path: &path,
+                file_size: size,
+                fast: status,
+            },
+        )?;
+        state.insert(
+            id,
+            Arc::new(Session::new(path, file, fast.and_then(Result::ok))),
+        );
         Ok(Response::new(out))
     })
     .await
@@ -361,7 +424,11 @@ pub fn path_info(paths: Vec<String>) -> Vec<PathInfo> {
         .into_iter()
         .filter_map(|p| {
             let meta = std::fs::metadata(&p).ok().filter(|m| m.is_file())?;
-            Some(PathInfo { name: file_name(Path::new(&p)), size: meta.len(), path: p })
+            Some(PathInfo {
+                name: file_name(Path::new(&p)),
+                size: meta.len(),
+                path: p,
+            })
         })
         .collect()
 }
@@ -376,13 +443,22 @@ pub fn close_session(state: State<'_, AppState>, id: String) {
 /// the UI then groups electrodes by their stored value.
 #[tauri::command]
 pub async fn electrode_labels(state: State<'_, AppState>, id: String) -> Result<Response, PaError> {
-    let session = state.get(&id).ok_or_else(|| PaError::new("noSession", id))?;
+    let session = state
+        .get(&id)
+        .ok_or_else(|| PaError::new("noSession", id))?;
     tauri::async_runtime::spawn_blocking(move || {
-        let Some(fast) = &session.fast else { return Response::new(Vec::new()) };
+        let Some(fast) = &session.fast else {
+            return Response::new(Vec::new());
+        };
         let electrodes = &session.file.array.electrodes;
         let mut out = Vec::with_capacity(electrodes.len() * 2);
         for (i, &e) in electrodes.iter().enumerate() {
-            let label = if e { fast.electrode_number(i).map_or(0, |n| n.min(u16::MAX as usize) as u16) } else { 0 };
+            let label = if e {
+                fast.electrode_number(i)
+                    .map_or(0, |n| n.min(u16::MAX as usize) as u16)
+            } else {
+                0
+            };
             out.extend_from_slice(&label.to_le_bytes());
         }
         Response::new(out)

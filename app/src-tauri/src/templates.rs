@@ -18,7 +18,13 @@ enum Shape {
     /// Axis-aligned box, [min, max] in mm (x, y, z). Cylindrical arrays use (x, r) only.
     Box([f64; 3], [f64; 3]),
     /// Cylinder along X through (y, z), from x0 to x1 (3D arrays).
-    Rod { y: f64, z: f64, radius: f64, x0: f64, x1: f64 },
+    Rod {
+        y: f64,
+        z: f64,
+        radius: f64,
+        x0: f64,
+        x1: f64,
+    },
 }
 
 struct Part {
@@ -44,7 +50,11 @@ const BIG: f64 = 1e6;
 
 pub(crate) fn template(kind: &str) -> Option<Template> {
     // SIMION's cylindrical arrays are mirrored in y (the radius).
-    let radial = MirrorFlags { x: false, y: true, z: false };
+    let radial = MirrorFlags {
+        x: false,
+        y: true,
+        z: false,
+    };
     let annulus = |x0: f64, x1: f64, r0: f64, r1: f64| Shape::Box([x0, r0, -BIG], [x1, r1, BIG]);
     Some(match kind {
         // Three tubes on the axis: ground, focus, ground (100 x 20 mm, 0.5 mm cells).
@@ -70,13 +80,44 @@ pub(crate) fn template(kind: &str) -> Option<Template> {
                 cylindrical: false,
                 dims: [121, 37, 37],
                 cell: 0.5,
-                mirror: MirrorFlags { x: false, y: true, z: true },
+                mirror: MirrorFlags {
+                    x: false,
+                    y: true,
+                    z: true,
+                },
                 parts: vec![
-                    part(1, Shape::Rod { y: at, z: 0.0, radius: rod, x0: 12.0, x1: 48.0 }),
-                    part(2, Shape::Rod { y: 0.0, z: at, radius: rod, x0: 12.0, x1: 48.0 }),
+                    part(
+                        1,
+                        Shape::Rod {
+                            y: at,
+                            z: 0.0,
+                            radius: rod,
+                            x0: 12.0,
+                            x1: 48.0,
+                        },
+                    ),
+                    part(
+                        2,
+                        Shape::Rod {
+                            y: 0.0,
+                            z: at,
+                            radius: rod,
+                            x0: 12.0,
+                            x1: 48.0,
+                        },
+                    ),
                     part(3, Shape::Box([6.0, -BIG, -BIG], [7.0, BIG, BIG])),
                     part(3, Shape::Box([53.0, -BIG, -BIG], [54.0, BIG, BIG])),
-                    part(0, Shape::Rod { y: 0.0, z: 0.0, radius: 4.0, x0: 5.0, x1: 55.0 }),
+                    part(
+                        0,
+                        Shape::Rod {
+                            y: 0.0,
+                            z: 0.0,
+                            radius: 4.0,
+                            x0: 5.0,
+                            x1: 55.0,
+                        },
+                    ),
                 ],
             }
         }
@@ -89,7 +130,14 @@ pub(crate) fn template(kind: &str) -> Option<Template> {
                 parts.push(part(2 + k, annulus(x, x + 2.0, 18.0, 22.0)));
             }
             parts.push(part(7, annulus(100.0, 102.0, 0.0, 22.0)));
-            Template { file: "reflectron.pa#", cylindrical: true, dims: [241, 61, 1], cell: 0.5, mirror: radial, parts }
+            Template {
+                file: "reflectron.pa#",
+                cylindrical: true,
+                dims: [241, 61, 1],
+                cell: 0.5,
+                mirror: radial,
+                parts,
+            }
         }
         // Cylindrical trap: a ring between two end caps with 2 mm injection holes (40 x 20 mm).
         "trap" => Template {
@@ -111,9 +159,18 @@ pub(crate) fn template(kind: &str) -> Option<Template> {
 impl Shape {
     fn contains(&self, p: [f64; 3], cylindrical: bool) -> bool {
         match *self {
-            Shape::Box(lo, hi) => (0..if cylindrical { 2 } else { 3 }).all(|a| p[a] >= lo[a] - 1e-9 && p[a] <= hi[a] + 1e-9),
-            Shape::Rod { y, z, radius, x0, x1 } => {
-                p[0] >= x0 - 1e-9 && p[0] <= x1 + 1e-9 && (p[1] - y).hypot(p[2] - z) <= radius + 1e-9
+            Shape::Box(lo, hi) => (0..if cylindrical { 2 } else { 3 })
+                .all(|a| p[a] >= lo[a] - 1e-9 && p[a] <= hi[a] + 1e-9),
+            Shape::Rod {
+                y,
+                z,
+                radius,
+                x0,
+                x1,
+            } => {
+                p[0] >= x0 - 1e-9
+                    && p[0] <= x1 + 1e-9
+                    && (p[1] - y).hypot(p[2] - z) <= radius + 1e-9
             }
         }
     }
@@ -122,14 +179,25 @@ impl Shape {
 fn build(t: &Template) -> PaFile {
     let [nx, ny, nz] = t.dims;
     let mut a = PotentialArray::new(nx, ny, nz);
-    a.symmetry = if t.cylindrical { Symmetry::Cylindrical } else { Symmetry::Planar };
+    a.symmetry = if t.cylindrical {
+        Symmetry::Cylindrical
+    } else {
+        Symmetry::Planar
+    };
     a.mirrors = t.mirror;
     (a.dx_mm, a.dy_mm, a.dz_mm) = (t.cell, t.cell, t.cell);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
                 let p = [i as f64 * t.cell, j as f64 * t.cell, k as f64 * t.cell];
-                let Some(owner) = t.parts.iter().rev().find(|part| part.shape.contains(p, t.cylindrical)) else { continue };
+                let Some(owner) = t
+                    .parts
+                    .iter()
+                    .rev()
+                    .find(|part| part.shape.contains(p, t.cylindrical))
+                else {
+                    continue;
+                };
                 let index = (k * ny + j) * nx + i;
                 a.electrodes[index] = owner.electrode != 0;
                 a.potentials[index] = f64::from(owner.electrode);
@@ -142,7 +210,13 @@ fn build(t: &Template) -> PaFile {
 /// First free `<base>`, `<base>-2`, ... folder under `root`.
 fn fresh_dir(root: &Path, base: &str) -> PathBuf {
     (1..)
-        .map(|n| if n == 1 { root.join(base) } else { root.join(format!("{base}-{n}")) })
+        .map(|n| {
+            if n == 1 {
+                root.join(base)
+            } else {
+                root.join(format!("{base}-{n}"))
+            }
+        })
         .find(|p| !p.exists())
         .expect("unbounded range")
 }
@@ -158,15 +232,24 @@ pub struct Created {
 /// Writes template `kind` as a .pa# into a new folder `Documents/SimRep/<kind>[-n]` and returns it.
 #[tauri::command]
 pub async fn create_template(app: AppHandle, kind: String) -> Result<Created, PaError> {
-    let t = template(&kind).ok_or_else(|| PaError::new("unexpected", format!("unknown template {kind}")))?;
-    let documents = app.path().document_dir().map_err(|e| PaError::new("unexpected", e.to_string()))?;
+    let t = template(&kind)
+        .ok_or_else(|| PaError::new("unexpected", format!("unknown template {kind}")))?;
+    let documents = app
+        .path()
+        .document_dir()
+        .map_err(|e| PaError::new("unexpected", e.to_string()))?;
     tauri::async_runtime::spawn_blocking(move || {
         let dir = fresh_dir(&documents.join("SimRep"), &kind);
         std::fs::create_dir_all(&dir)?;
         let path = dir.join(t.file);
         write_pa(&path, &build(&t))?;
         let size = std::fs::metadata(&path)?.len();
-        Ok(Created { name: file_name(&path), path: path.display().to_string(), size, dir: dir.display().to_string() })
+        Ok(Created {
+            name: file_name(&path),
+            path: path.display().to_string(),
+            size,
+            dir: dir.display().to_string(),
+        })
     })
     .await
     .map_err(|e| PaError::new("unexpected", e.to_string()))?
@@ -178,9 +261,21 @@ mod tests {
 
     #[test]
     fn every_template_has_its_numbered_electrodes() {
-        for (kind, numbers) in [("einzel", 3), ("quadrupole", 3), ("reflectron", 7), ("trap", 2)] {
+        for (kind, numbers) in [
+            ("einzel", 3),
+            ("quadrupole", 3),
+            ("reflectron", 7),
+            ("trap", 2),
+        ] {
             let file = build(&template(kind).unwrap());
-            let mut seen: Vec<u32> = file.array.potentials.iter().zip(&file.array.electrodes).filter(|e| *e.1).map(|e| *e.0 as u32).collect();
+            let mut seen: Vec<u32> = file
+                .array
+                .potentials
+                .iter()
+                .zip(&file.array.electrodes)
+                .filter(|e| *e.1)
+                .map(|e| *e.0 as u32)
+                .collect();
             seen.sort_unstable();
             seen.dedup();
             assert_eq!(seen, (1..=numbers).collect::<Vec<_>>(), "{kind}");

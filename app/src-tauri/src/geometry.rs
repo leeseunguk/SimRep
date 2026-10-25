@@ -39,7 +39,10 @@ use simrep_core::{FieldType, PotentialArray, Symmetry};
 use simrep_fly::surface::{SourceGeometry, SourceSurface};
 use simrep_geom::{Electrode, SignedDistance};
 use simrep_io::{PaFile, write_pa};
-use simrep_mesh::{GridSpec, ImportOptions, Mesh, MeshReport, Part, Solid, SurfaceOptions, Unit, electrode_surface_with_options, inspect, read_mesh, repair, voxelize};
+use simrep_mesh::{
+    GridSpec, ImportOptions, Mesh, MeshReport, Part, Solid, SurfaceOptions, Unit,
+    electrode_surface_with_options, inspect, read_mesh, repair, voxelize,
+};
 use simrep_solve::cutcell::{CutCells, surface_fraction};
 use simrep_solve::mg::{Geometry, Grid};
 use tauri::State;
@@ -65,20 +68,33 @@ fn fail_with(reason: Reason) -> PaError {
 }
 
 fn is_gem(path: &Path) -> bool {
-    path.extension().is_some_and(|e| e.eq_ignore_ascii_case("gem"))
+    path.extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("gem"))
 }
 
 fn is_cad(path: &Path) -> bool {
-    path.extension().and_then(|e| e.to_str()).is_some_and(|e| ["step", "stp", "iges", "igs"].iter().any(|x| e.eq_ignore_ascii_case(x)))
+    path.extension().and_then(|e| e.to_str()).is_some_and(|e| {
+        ["step", "stp", "iges", "igs"]
+            .iter()
+            .any(|x| e.eq_ignore_ascii_case(x))
+    })
 }
 
 fn units(text: &Option<String>) -> Result<Option<Unit>, PaError> {
-    text.as_deref().map(Unit::from_str).transpose().map_err(|e| fail(e.to_string()))
+    text.as_deref()
+        .map(Unit::from_str)
+        .transpose()
+        .map_err(|e| fail(e.to_string()))
 }
 
 /// Default length unit of a mesh format (simrep-mesh's rules), for the units picker.
 fn default_units(path: &Path) -> &'static str {
-    match path.extension().and_then(|e| e.to_str()).map(str::to_ascii_lowercase).as_deref() {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
         Some("gltf" | "glb") => "m",
         Some("3mf" | "step" | "stp" | "iges" | "igs") => "model",
         _ => "mm",
@@ -198,33 +214,53 @@ pub struct InspectRequest {
 fn union(a: Option<[[f64; 3]; 2]>, b: [[f64; 3]; 2]) -> [[f64; 3]; 2] {
     match a {
         None => b,
-        Some(a) => [std::array::from_fn(|i| a[0][i].min(b[0][i])), std::array::from_fn(|i| a[1][i].max(b[1][i]))],
+        Some(a) => [
+            std::array::from_fn(|i| a[0][i].min(b[0][i])),
+            std::array::from_fn(|i| a[1][i].max(b[1][i])),
+        ],
     }
 }
 
 fn part_bounds(part: &Part) -> Option<[[f64; 3]; 2]> {
-    part.vertices.iter().fold(None, |b, &v| Some(union(b, [v, v])))
+    part.vertices
+        .iter()
+        .fold(None, |b, &v| Some(union(b, [v, v])))
 }
 
 /// 1, 2 or 5 x 10^k at or below v.
 fn nice_floor(v: f64) -> f64 {
     let p = 10f64.powf(v.log10().floor());
     let m = v / p;
-    (if m >= 5.0 { 5.0 } else if m >= 2.0 { 2.0 } else { 1.0 }) * p
+    (if m >= 5.0 {
+        5.0
+    } else if m >= 2.0 {
+        2.0
+    } else {
+        1.0
+    }) * p
 }
 
 /// Next 1-2-5 step above v.
 fn nice_next(v: f64) -> f64 {
     let p = 10f64.powf(v.log10().floor());
     let m = (v / p * 1e6).round() / 1e6;
-    (if m < 2.0 { 2.0 } else if m < 5.0 { 5.0 } else { 10.0 }) * p
+    (if m < 2.0 {
+        2.0
+    } else if m < 5.0 {
+        5.0
+    } else {
+        10.0
+    }) * p
 }
 
 /// Wall thickness at evenly spread triangle centroids: from just inside the surface, the
 /// distance to where the ray along the inward normal leaves the solid.
 fn thicknesses(part: &Part, solid: &Solid, out: &mut Vec<f64>) {
     let Some(b) = part_bounds(part) else { return };
-    let diagonal = (0..3).map(|a| (b[1][a] - b[0][a]).powi(2)).sum::<f64>().sqrt();
+    let diagonal = (0..3)
+        .map(|a| (b[1][a] - b[0][a]).powi(2))
+        .sum::<f64>()
+        .sqrt();
     let eps = 1e-6 * diagonal.max(1e-9);
     let n = part.triangles.len();
     let samples = n.min(256);
@@ -233,13 +269,21 @@ fn thicknesses(part: &Part, solid: &Solid, out: &mut Vec<f64>) {
         let centroid: [f64; 3] = std::array::from_fn(|i| (a[i] + bb[i] + c[i]) / 3.0);
         let u: [f64; 3] = std::array::from_fn(|i| bb[i] - a[i]);
         let v: [f64; 3] = std::array::from_fn(|i| c[i] - a[i]);
-        let normal = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+        let normal = [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ];
         let length = normal.iter().map(|x| x * x).sum::<f64>().sqrt();
         if length == 0.0 {
             continue;
         }
-        let along = |d: f64, t: f64| -> [f64; 3] { std::array::from_fn(|i| centroid[i] + normal[i] / length * d * t) };
-        let inward = if solid.contains(along(-1.0, 4.0 * eps)) && !solid.contains(along(1.0, 4.0 * eps)) {
+        let along = |d: f64, t: f64| -> [f64; 3] {
+            std::array::from_fn(|i| centroid[i] + normal[i] / length * d * t)
+        };
+        let inward = if solid.contains(along(-1.0, 4.0 * eps))
+            && !solid.contains(along(1.0, 4.0 * eps))
+        {
             -1.0
         } else if solid.contains(along(1.0, 4.0 * eps)) && !solid.contains(along(-1.0, 4.0 * eps)) {
             1.0
@@ -296,7 +340,9 @@ fn suggest_mesh(mesh: &Mesh, solids: &[Option<Solid>], bounds: [[f64; 3]; 2]) ->
     }
     walls.sort_by(f64::total_cmp);
     let feature = walls.get(walls.len() / 10).copied();
-    let gap = smallest_gap(&mesh.parts, |j, p| solids[j].as_ref().map(|s| s.signed_distance(p)));
+    let gap = smallest_gap(&mesh.parts, |j, p| {
+        solids[j].as_ref().map(|s| s.signed_distance(p))
+    });
     suggest(feature, gap, bounds)
 }
 
@@ -318,12 +364,25 @@ fn suggest(feature: Option<f64>, gap: Option<f64>, bounds: [[f64; 3]; 2]) -> Sug
         let origin = std::array::from_fn(|a| ((bounds[0][a] - margin[a]) / h).floor() * h);
         (dims, origin)
     };
-    while dims_for(spacing).0.iter().map(|&n| n as f64).product::<f64>() > SUGGEST_POINTS {
+    while dims_for(spacing)
+        .0
+        .iter()
+        .map(|&n| n as f64)
+        .product::<f64>()
+        > SUGGEST_POINTS
+    {
         spacing = nice_next(spacing);
         limited_by = "budget";
     }
     let (dims, origin) = dims_for(spacing);
-    Suggestion { spacing, dims, origin, feature_mm: feature, gap_mm: gap, limited_by }
+    Suggestion {
+        spacing,
+        dims,
+        origin,
+        feature_mm: feature,
+        gap_mm: gap,
+        limited_by,
+    }
 }
 
 fn push_triangles(out: &mut Vec<f32>, part: &Part, step: usize) -> usize {
@@ -332,7 +391,11 @@ fn push_triangles(out: &mut Vec<f32>, part: &Part, step: usize) -> usize {
         let [a, b, c] = face.map(|i| part.vertices[i]);
         let u: [f64; 3] = std::array::from_fn(|i| b[i] - a[i]);
         let v: [f64; 3] = std::array::from_fn(|i| c[i] - a[i]);
-        let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+        let n = [
+            u[1] * v[2] - u[2] * v[1],
+            u[2] * v[0] - u[0] * v[2],
+            u[0] * v[1] - u[1] * v[0],
+        ];
         let l = n.iter().map(|x| x * x).sum::<f64>().sqrt().max(1e-300);
         for p in [a, b, c] {
             out.extend(p.map(|x| x as f32));
@@ -354,23 +417,48 @@ fn gem_values(gem: &simrep_gem::Gem) -> Vec<f64> {
     values
 }
 
-fn loaded_mesh(path: &Path, units: Option<Unit>, do_repair: bool) -> Result<(Mesh, Vec<Report>), PaError> {
-    let mut mesh = read_mesh(path, ImportOptions { units, ..Default::default() }).map_err(|e| fail(e.to_string()))?;
+fn loaded_mesh(
+    path: &Path,
+    units: Option<Unit>,
+    do_repair: bool,
+) -> Result<(Mesh, Vec<Report>), PaError> {
+    let mut mesh = read_mesh(
+        path,
+        ImportOptions {
+            units,
+            ..Default::default()
+        },
+    )
+    .map_err(|e| fail(e.to_string()))?;
     let mut reports = Vec::new();
     for part in &mut mesh.parts {
         let before = inspect(part).map_err(|e| fail(e.to_string()))?;
         reports.push(if do_repair {
             let r = repair(part).map_err(|e| fail(e.to_string()))?;
-            Report { before: (&before).into(), after: Some((&r.after).into()), removed_triangles: r.removed_triangles, flipped_triangles: r.flipped_triangles }
+            Report {
+                before: (&before).into(),
+                after: Some((&r.after).into()),
+                removed_triangles: r.removed_triangles,
+                flipped_triangles: r.flipped_triangles,
+            }
         } else {
-            Report { before: (&before).into(), after: None, removed_triangles: 0, flipped_triangles: 0 }
+            Report {
+                before: (&before).into(),
+                after: None,
+                removed_triangles: 0,
+                flipped_triangles: 0,
+            }
         });
     }
     Ok((mesh, reports))
 }
 
 fn part_name(part: &Part, index: usize) -> String {
-    if part.name.is_empty() { format!("part {}", index + 1) } else { part.name.clone() }
+    if part.name.is_empty() {
+        format!("part {}", index + 1)
+    } else {
+        part.name.clone()
+    }
 }
 
 #[tauri::command]
@@ -386,18 +474,40 @@ pub async fn inspect_geometry(request: InspectRequest) -> Result<Response, PaErr
             let raster = gem.rasterize().map_err(|e| fail(e.0))?;
             let a = &raster.pa.array;
             let cylindrical = a.symmetry == Symmetry::Cylindrical;
-            let options = SurfaceOptions { angular_segments: 64, sweep_degrees: 360.0, extrusion_depth_mm: (a.ny as f64 * a.dy_mm).max(1.0) };
-            let surface = electrode_surface_with_options(a, [0.0; 3], None, options).map_err(|e| fail(e.to_string()))?;
+            let options = SurfaceOptions {
+                angular_segments: 64,
+                sweep_degrees: 360.0,
+                extrusion_depth_mm: (a.ny as f64 * a.dy_mm).max(1.0),
+            };
+            let surface = electrode_surface_with_options(a, [0.0; 3], None, options)
+                .map_err(|e| fail(e.to_string()))?;
             let total = surface.triangle_count();
             let step = total.div_ceil(PREVIEW_TRIANGLES).max(1);
             for (index, value) in gem_values(&gem).into_iter().enumerate() {
                 let name = format!("electrode-{value}");
-                let triangles = surface.parts.iter().find(|p| p.name == name).map_or(0, |p| push_triangles(&mut vertices, p, step));
-                let b = surface.parts.iter().find(|p| p.name == name).and_then(part_bounds);
+                let triangles = surface
+                    .parts
+                    .iter()
+                    .find(|p| p.name == name)
+                    .map_or(0, |p| push_triangles(&mut vertices, p, step));
+                let b = surface
+                    .parts
+                    .iter()
+                    .find(|p| p.name == name)
+                    .and_then(part_bounds);
                 if let Some(b) = b {
                     bounds = Some(union(bounds, b));
                 }
-                parts.push(PartInfo { index, name: format!("e({value})"), source_value: Some(value), triangles, bounds: b, report: None, closed: true, exact: None });
+                parts.push(PartInfo {
+                    index,
+                    name: format!("e({value})"),
+                    source_value: Some(value),
+                    triangles,
+                    bounds: b,
+                    report: None,
+                    closed: true,
+                    exact: None,
+                });
             }
             let info = GemInfo {
                 dims: gem.dimensions,
@@ -407,10 +517,23 @@ pub async fn inspect_geometry(request: InspectRequest) -> Result<Response, PaErr
                 refinable: gem.refinable,
                 electrostatic: gem.field_type == FieldType::Electrostatic,
             };
-            let suggestion = Suggestion { spacing: gem.spacing_mm[0], dims: gem.dimensions, origin: [0.0; 3], feature_mm: None, gap_mm: None, limited_by: "pa_define" };
+            let suggestion = Suggestion {
+                spacing: gem.spacing_mm[0],
+                dims: gem.dimensions,
+                origin: [0.0; 3],
+                feature_mm: None,
+                gap_mm: None,
+                limited_by: "pa_define",
+            };
             ("gem", Some(info), suggestion, step, "mm".to_owned())
         } else if is_cad(&path) {
-            let (suggestion, step) = inspect_cad(&path, units(&request.units)?, &mut vertices, &mut parts, &mut bounds)?;
+            let (suggestion, step) = inspect_cad(
+                &path,
+                units(&request.units)?,
+                &mut vertices,
+                &mut parts,
+                &mut bounds,
+            )?;
             let label = request.units.clone().unwrap_or_else(|| "model".to_owned());
             ("cad", None, suggestion, step, label)
         } else {
@@ -418,14 +541,26 @@ pub async fn inspect_geometry(request: InspectRequest) -> Result<Response, PaErr
             let (mesh, reports) = loaded_mesh(&path, units, request.repair)?;
             let total = mesh.triangle_count();
             let step = total.div_ceil(PREVIEW_TRIANGLES).max(1);
-            let solids: Vec<Option<Solid>> = mesh.parts.par_iter().map(|p| Solid::new(p).ok()).collect();
-            for (index, ((part, report), solid)) in mesh.parts.iter().zip(reports).zip(&solids).enumerate() {
+            let solids: Vec<Option<Solid>> =
+                mesh.parts.par_iter().map(|p| Solid::new(p).ok()).collect();
+            for (index, ((part, report), solid)) in
+                mesh.parts.iter().zip(reports).zip(&solids).enumerate()
+            {
                 let b = part_bounds(part);
                 if let Some(b) = b {
                     bounds = Some(union(bounds, b));
                 }
                 let triangles = push_triangles(&mut vertices, part, step);
-                parts.push(PartInfo { index, name: part_name(part, index), source_value: None, triangles, bounds: b, report: Some(report), closed: solid.is_some(), exact: None });
+                parts.push(PartInfo {
+                    index,
+                    name: part_name(part, index),
+                    source_value: None,
+                    triangles,
+                    bounds: b,
+                    report: Some(report),
+                    closed: solid.is_some(),
+                    exact: None,
+                });
             }
             let suggestion = suggest_mesh(&mesh, &solids, bounds.unwrap_or([[0.0; 3], [1.0; 3]]));
             let label = match (&request.units, default_units(&path)) {
@@ -439,7 +574,11 @@ pub async fn inspect_geometry(request: InspectRequest) -> Result<Response, PaErr
             file_name: file_name(&path),
             path: request.path,
             units: units_label,
-            default_units: if kind == "gem" { "mm" } else { default_units(&path) },
+            default_units: if kind == "gem" {
+                "mm"
+            } else {
+                default_units(&path)
+            },
             parts,
             bounds,
             gem: gem_info,
@@ -471,9 +610,24 @@ pub async fn inspect_geometry(request: InspectRequest) -> Result<Response, PaErr
 const CAD_PREVIEW_CELLS: f64 = 64.0;
 
 #[cfg(feature = "cad")]
-fn read_cad(path: &Path, units: Option<Unit>, mode: simrep_cad::Mode, band_mm: f64, chordal_tolerance_mm: f64) -> Result<Vec<simrep_cad::CadPart>, PaError> {
+fn read_cad(
+    path: &Path,
+    units: Option<Unit>,
+    mode: simrep_cad::Mode,
+    band_mm: f64,
+    chordal_tolerance_mm: f64,
+) -> Result<Vec<simrep_cad::CadPart>, PaError> {
     crate::cad::ensure()?;
-    simrep_cad::read_cad(path, simrep_cad::ImportOptions { mode, band_mm, chordal_tolerance_mm, units }).map_err(|e| fail(e.to_string()))
+    simrep_cad::read_cad(
+        path,
+        simrep_cad::ImportOptions {
+            mode,
+            band_mm,
+            chordal_tolerance_mm,
+            units,
+        },
+    )
+    .map_err(|e| fail(e.to_string()))
 }
 
 /// CAD inspection: B-rep validity and bounds (exact read), then a preview surface and the grid
@@ -493,23 +647,44 @@ fn inspect_cad(
     }
     let all = exact.iter().fold(None, |b, p| Some(union(b, p.bounds_mm)));
     let all = all.unwrap_or([[0.0; 3], [1.0; 3]]);
-    let diagonal = (0..3).map(|a| (all[1][a] - all[0][a]).powi(2)).sum::<f64>().sqrt().max(1e-9);
-    let tessellated = read_cad(path, units, simrep_cad::Mode::Tessellated, diagonal, diagonal / 2000.0)?;
+    let diagonal = (0..3)
+        .map(|a| (all[1][a] - all[0][a]).powi(2))
+        .sum::<f64>()
+        .sqrt()
+        .max(1e-9);
+    let tessellated = read_cad(
+        path,
+        units,
+        simrep_cad::Mode::Tessellated,
+        diagonal,
+        diagonal / 2000.0,
+    )?;
     let mut surfaces = Vec::with_capacity(tessellated.len());
     let mut feature: Option<f64> = None;
     for cad in &tessellated {
         let b = cad.bounds_mm;
         let extent: [f64; 3] = std::array::from_fn(|a| (b[1][a] - b[0][a]).max(1e-9));
         let mut h = extent.iter().copied().fold(0.0, f64::max) / CAD_PREVIEW_CELLS;
-        let dims_for = |h: f64| -> [usize; 3] { std::array::from_fn(|a| ((extent[a] + 4.0 * h) / h).ceil() as usize + 1) };
+        let dims_for = |h: f64| -> [usize; 3] {
+            std::array::from_fn(|a| ((extent[a] + 4.0 * h) / h).ceil() as usize + 1)
+        };
         while dims_for(h).iter().product::<usize>() > 1_500_000 {
             h *= 1.25;
         }
-        let grid = GridSpec { dims: dims_for(h), origin_mm: std::array::from_fn(|a| b[0][a] - 2.0 * h), spacing_mm: [h; 3] };
+        let grid = GridSpec {
+            dims: dims_for(h),
+            origin_mm: std::array::from_fn(|a| b[0][a] - 2.0 * h),
+            spacing_mm: [h; 3],
+        };
         let points = grid.dims.iter().product::<usize>();
-        let values: Vec<f64> = (0..points).into_par_iter().map(|i| cad.distance(grid.point(i))).collect();
+        let values: Vec<f64> = (0..points)
+            .into_par_iter()
+            .map(|i| cad.distance(grid.point(i)))
+            .collect();
         if values.iter().any(|v| !v.is_finite()) {
-            return Err(fail_with(Reason::new("cadClassify").with("part", &cad.name)));
+            return Err(fail_with(
+                Reason::new("cadClassify").with("part", &cad.name),
+            ));
         }
         // Thickest point of the body: twice its deepest inside distance.
         let depth = values.iter().fold(0.0f64, |m, v| m.max(-v));
@@ -517,11 +692,16 @@ fn inspect_cad(
             feature = Some(feature.map_or(2.0 * depth, |f: f64| f.min(2.0 * depth)));
         }
         let mesh = isosurface(&values, grid, 0.0).map_err(|e| fail(e.to_string()))?;
-        let mut part = Part { name: cad.name.clone(), vertices: Vec::new(), triangles: Vec::new() };
+        let mut part = Part {
+            name: cad.name.clone(),
+            vertices: Vec::new(),
+            triangles: Vec::new(),
+        };
         for p in mesh.parts {
             let offset = part.vertices.len();
             part.vertices.extend(p.vertices);
-            part.triangles.extend(p.triangles.into_iter().map(|t| t.map(|i| i + offset)));
+            part.triangles
+                .extend(p.triangles.into_iter().map(|t| t.map(|i| i + offset)));
         }
         surfaces.push(part);
     }
@@ -530,16 +710,35 @@ fn inspect_cad(
     for (index, ((part, cad), body)) in surfaces.iter().zip(&tessellated).zip(&exact).enumerate() {
         *bounds = Some(union(*bounds, cad.bounds_mm));
         let triangles = push_triangles(vertices, part, step);
-        let name = if cad.name.is_empty() { format!("body {}", index + 1) } else { cad.name.clone() };
+        let name = if cad.name.is_empty() {
+            format!("body {}", index + 1)
+        } else {
+            cad.name.clone()
+        };
         let valid = body.mode == simrep_cad::Mode::Exact;
-        parts.push(PartInfo { index, name, source_value: None, triangles, bounds: Some(cad.bounds_mm), report: None, closed: true, exact: Some(valid) });
+        parts.push(PartInfo {
+            index,
+            name,
+            source_value: None,
+            triangles,
+            bounds: Some(cad.bounds_mm),
+            report: None,
+            closed: true,
+            exact: Some(valid),
+        });
     }
     let gap = smallest_gap(&surfaces, |j, p| Some(tessellated[j].distance(p)));
     Ok((suggest(feature, gap, all), step))
 }
 
 #[cfg(not(feature = "cad"))]
-fn inspect_cad(_: &Path, _: Option<Unit>, _: &mut Vec<f32>, _: &mut Vec<PartInfo>, _: &mut Option<[[f64; 3]; 2]>) -> Result<(Suggestion, usize), PaError> {
+fn inspect_cad(
+    _: &Path,
+    _: Option<Unit>,
+    _: &mut Vec<f32>,
+    _: &mut Vec<PartInfo>,
+    _: &mut Option<[[f64; 3]; 2]>,
+) -> Result<(Suggestion, usize), PaError> {
     crate::cad::ensure()?;
     unreachable!("cad::ensure fails without the cad feature")
 }
@@ -553,7 +752,12 @@ type Source = (String, usize, Arc<dyn SignedDistance>, SourceGeometry);
 /// CAD bodies as signed distances for the build (exact B-rep, or a fine tessellation), with the
 /// fine tessellation as their portable flight geometry (v3 sidecars never store B-reps).
 #[cfg(feature = "cad")]
-fn cad_sources(path: &Path, units: Option<Unit>, surface: CadSurface, spacing: [f64; 3]) -> Result<Vec<CadSource>, PaError> {
+fn cad_sources(
+    path: &Path,
+    units: Option<Unit>,
+    surface: CadSurface,
+    spacing: [f64; 3],
+) -> Result<Vec<CadSource>, PaError> {
     let h_min = spacing.into_iter().fold(f64::INFINITY, f64::min);
     let h_max = spacing.into_iter().fold(0.0, f64::max);
     // Same choices as `simrep refine-geometry` (docs/step-import.md): exact = Auto (tessellation
@@ -568,15 +772,25 @@ fn cad_sources(path: &Path, units: Option<Unit>, surface: CadSurface, spacing: [
         .into_iter()
         .enumerate()
         .map(|(i, part)| {
-            let name = if part.name.is_empty() { format!("body {}", i + 1) } else { part.name.clone() };
-            let source = SourceGeometry::mesh(&part.tessellation, Some(chordal)).map_err(|e| fail(e.to_string()))?;
+            let name = if part.name.is_empty() {
+                format!("body {}", i + 1)
+            } else {
+                part.name.clone()
+            };
+            let source = SourceGeometry::mesh(&part.tessellation, Some(chordal))
+                .map_err(|e| fail(e.to_string()))?;
             Ok((name, Arc::new(part) as Arc<dyn SignedDistance>, source))
         })
         .collect()
 }
 
 #[cfg(not(feature = "cad"))]
-fn cad_sources(_: &Path, _: Option<Unit>, _: CadSurface, _: [f64; 3]) -> Result<Vec<CadSource>, PaError> {
+fn cad_sources(
+    _: &Path,
+    _: Option<Unit>,
+    _: CadSurface,
+    _: [f64; 3],
+) -> Result<Vec<CadSource>, PaError> {
     crate::cad::ensure()?;
     unreachable!("cad::ensure fails without the cad feature")
 }
@@ -614,7 +828,11 @@ impl SolverShape {
     }
 
     fn snap(&self, distance: f64) -> f64 {
-        if distance.abs() <= self.tolerance { 0.0 } else { distance }
+        if distance.abs() <= self.tolerance {
+            0.0
+        } else {
+            distance
+        }
     }
 }
 
@@ -624,11 +842,21 @@ impl SignedDistance for SolverShape {
     }
 
     fn segment_distance_bounds(&self, from: [f64; 3], to: [f64; 3]) -> Option<[f64; 2]> {
-        self.source.segment_distance_bounds(self.point(from), self.point(to)).map(|bounds| bounds.map(|d| self.snap(d)))
+        self.source
+            .segment_distance_bounds(self.point(from), self.point(to))
+            .map(|bounds| bounds.map(|d| self.snap(d)))
     }
 
     fn segment_single_interval(&self, from: [f64; 3], to: [f64; 3], level: f64) -> bool {
-        self.source.segment_single_interval(self.point(from), self.point(to), if level.abs() <= self.tolerance { self.tolerance } else { level })
+        self.source.segment_single_interval(
+            self.point(from),
+            self.point(to),
+            if level.abs() <= self.tolerance {
+                self.tolerance
+            } else {
+                level
+            },
+        )
     }
 }
 
@@ -638,14 +866,31 @@ impl Prepared {
         self.parts
             .iter()
             .map(|(number, shape)| {
-                let voltage = basis.map_or(*number as f64, |n| if *number == n { REFERENCE } else { 0.0 });
-                Electrode::new(voltage, SolverShape { source: Arc::clone(shape), cylindrical: self.cylindrical, tolerance: self.tolerance })
+                let voltage =
+                    basis.map_or(
+                        *number as f64,
+                        |n| if *number == n { REFERENCE } else { 0.0 },
+                    );
+                Electrode::new(
+                    voltage,
+                    SolverShape {
+                        source: Arc::clone(shape),
+                        cylindrical: self.cylindrical,
+                        tolerance: self.tolerance,
+                    },
+                )
             })
             .collect()
     }
 
     pub fn cut_cells(&self, basis: Option<usize>) -> Result<CutCells, String> {
-        CutCells::new_with_root_tolerance(self.grid, self.origin, &self.electrodes(basis), self.tolerance).map_err(|e| e.to_string())
+        CutCells::new_with_root_tolerance(
+            self.grid,
+            self.origin,
+            &self.electrodes(basis),
+            self.tolerance,
+        )
+        .map_err(|e| e.to_string())
     }
 }
 
@@ -745,27 +990,50 @@ fn permute<T: Copy>(v: &[T], nx: usize, ny: usize) -> Vec<T> {
 }
 
 fn validate_grid(dims: [usize; 3], spacing: [f64; 3], origin: [f64; 3]) -> Result<usize, PaError> {
-    let points = dims.iter().try_fold(1usize, |n, &d| n.checked_mul(d)).unwrap_or(usize::MAX);
-    if dims[0] < 2 || dims[1] < 2 || dims[2] == 0 || spacing.iter().any(|h| !h.is_finite() || *h <= 0.0) || origin.iter().any(|v| !v.is_finite()) {
+    let points = dims
+        .iter()
+        .try_fold(1usize, |n, &d| n.checked_mul(d))
+        .unwrap_or(usize::MAX);
+    if dims[0] < 2
+        || dims[1] < 2
+        || dims[2] == 0
+        || spacing.iter().any(|h| !h.is_finite() || *h <= 0.0)
+        || origin.iter().any(|v| !v.is_finite())
+    {
         return Err(fail_with(Reason::new("gridInvalid")));
     }
     if points > MAX_POINTS {
-        return Err(fail_with(Reason::new("gridTooLarge").with("points", points).with("max", MAX_POINTS)));
+        return Err(fail_with(
+            Reason::new("gridTooLarge")
+                .with("points", points)
+                .with("max", MAX_POINTS),
+        ));
     }
     Ok(points)
 }
 
 #[tauri::command]
-pub async fn build_geometry(state: State<'_, AppState>, request: BuildRequest) -> Result<BuildResult, PaError> {
+pub async fn build_geometry(
+    state: State<'_, AppState>,
+    request: BuildRequest,
+) -> Result<BuildResult, PaError> {
     let state = state.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || build(&state, request)).await.map_err(|e| PaError::new("unexpected", e.to_string()))?
+    tauri::async_runtime::spawn_blocking(move || build(&state, request))
+        .await
+        .map_err(|e| PaError::new("unexpected", e.to_string()))?
 }
 
 fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
     let start = Instant::now();
     let path = PathBuf::from(&r.path);
     let dir = PathBuf::from(&r.output_dir);
-    std::fs::create_dir_all(&dir).map_err(|e| fail_with(Reason::new("outputFolder").with("dir", dir.display().to_string()).detail(e)))?;
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        fail_with(
+            Reason::new("outputFolder")
+                .with("dir", dir.display().to_string())
+                .detail(e),
+        )
+    })?;
     let stem = r.stem.trim();
     if stem.is_empty() || stem.contains(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) {
         return Err(fail_with(Reason::new("badFileName")));
@@ -779,7 +1047,10 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
         if !(1..=1000).contains(&a.number) || !a.voltage.is_finite() {
             return Err(fail_with(Reason::new("partNumbers")));
         }
-        if voltages.insert(a.number, a.voltage).is_some_and(|v| v != a.voltage) {
+        if voltages
+            .insert(a.number, a.voltage)
+            .is_some_and(|v| v != a.voltage)
+        {
             return Err(fail_with(Reason::new("sharedVoltage").with("n", a.number)));
         }
     }
@@ -796,10 +1067,20 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
             // The GEM's own grid: its staircase is defined on pa_define's points.
             let raster = gem.rasterize().map_err(|e| fail(e.0))?;
             let mut pa = raster.pa;
-            for (i, (v, e)) in pa.array.potentials.iter_mut().zip(&pa.array.electrodes).enumerate() {
+            for (i, (v, e)) in pa
+                .array
+                .potentials
+                .iter_mut()
+                .zip(&pa.array.electrodes)
+                .enumerate()
+            {
                 if *e {
-                    let k = values.iter().position(|x| x == v).ok_or_else(|| fail(format!("grid point {i} has an unknown electrode value {v}")))?;
-                    *v = number_of(k).ok_or_else(|| fail_with(Reason::new("noNumber").with("part", format!("e({})", values[k]))))? as f64;
+                    let k = values.iter().position(|x| x == v).ok_or_else(|| {
+                        fail(format!("grid point {i} has an unknown electrode value {v}"))
+                    })?;
+                    *v = number_of(k).ok_or_else(|| {
+                        fail_with(Reason::new("noNumber").with("part", format!("e({})", values[k])))
+                    })? as f64;
                 }
             }
             return finish_aligned(state, &out, pa, start);
@@ -812,11 +1093,22 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
         // The exact CSG per electrode value, for the solve and as the sidecar's flight surface
         // (`simrep refine-geometry`'s GEM sources; `gem_values` order).
         let mut sources = Vec::new();
-        for (k, csg) in gem.electrode_sdfs().map_err(|e| fail(e.0))?.into_iter().enumerate() {
+        for (k, csg) in gem
+            .electrode_sdfs()
+            .map_err(|e| fail(e.0))?
+            .into_iter()
+            .enumerate()
+        {
             let name = format!("e({})", csg.voltage);
-            let number = number_of(k).ok_or_else(|| fail_with(Reason::new("noNumber").with("part", &name)))?;
+            let number = number_of(k)
+                .ok_or_else(|| fail_with(Reason::new("noNumber").with("part", &name)))?;
             let source = SourceGeometry::gem(&csg).map_err(|e| fail(e.to_string()))?;
-            sources.push((name, number, Arc::new(csg) as Arc<dyn SignedDistance>, source));
+            sources.push((
+                name,
+                number,
+                Arc::new(csg) as Arc<dyn SignedDistance>,
+                source,
+            ));
         }
         let mut pa = PaFile::new(a);
         pa.ng = gem.ng;
@@ -827,8 +1119,13 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
             return Err(fail_with(Reason::new("need3d")));
         }
         let mut sources = Vec::new();
-        for (i, (name, shape, source)) in cad_sources(&path, units(&r.units)?, r.cad_surface, r.spacing)?.into_iter().enumerate() {
-            let number = number_of(i).ok_or_else(|| fail_with(Reason::new("noNumber").with("part", &name)))?;
+        for (i, (name, shape, source)) in
+            cad_sources(&path, units(&r.units)?, r.cad_surface, r.spacing)?
+                .into_iter()
+                .enumerate()
+        {
+            let number = number_of(i)
+                .ok_or_else(|| fail_with(Reason::new("noNumber").with("part", &name)))?;
             sources.push((name, number, shape, source));
         }
         let mut a = PotentialArray::new(r.dims[0], r.dims[1], r.dims[2]);
@@ -842,18 +1139,38 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
         let (mesh, _) = loaded_mesh(&path, units(&r.units)?, r.repair)?;
         if r.method == Method::Aligned {
             let numbers = (0..mesh.parts.len())
-                .map(|i| number_of(i).map(|n| n as u32).ok_or_else(|| fail_with(Reason::new("noNumber").with("part", part_name(&mesh.parts[i], i)))))
+                .map(|i| {
+                    number_of(i).map(|n| n as u32).ok_or_else(|| {
+                        fail_with(
+                            Reason::new("noNumber").with("part", part_name(&mesh.parts[i], i)),
+                        )
+                    })
+                })
                 .collect::<Result<Vec<_>, _>>()?;
-            let grid = GridSpec { dims: r.dims, origin_mm: r.origin, spacing_mm: r.spacing };
-            let v = voxelize(&mesh, grid, &numbers).map_err(|e| fail_with(Reason::new("voxelize").detail(e)))?;
+            let grid = GridSpec {
+                dims: r.dims,
+                origin_mm: r.origin,
+                spacing_mm: r.spacing,
+            };
+            let v = voxelize(&mesh, grid, &numbers)
+                .map_err(|e| fail_with(Reason::new("voxelize").detail(e)))?;
             return finish_aligned(state, &out, PaFile::new(v.array), start);
         }
         let mut sources = Vec::new();
         for (i, part) in mesh.parts.iter().enumerate() {
-            let number = number_of(i).ok_or_else(|| fail_with(Reason::new("noNumber").with("part", part_name(part, i))))?;
-            let solid = Solid::new(part).map_err(|_| fail_with(Reason::new("notClosed").with("part", part_name(part, i))))?;
+            let number = number_of(i).ok_or_else(|| {
+                fail_with(Reason::new("noNumber").with("part", part_name(part, i)))
+            })?;
+            let solid = Solid::new(part).map_err(|_| {
+                fail_with(Reason::new("notClosed").with("part", part_name(part, i)))
+            })?;
             let source = SourceGeometry::mesh(part, None).map_err(|e| fail(e.to_string()))?;
-            sources.push((part_name(part, i), number, Arc::new(move |p| solid.signed_distance(p)) as Arc<dyn SignedDistance>, source));
+            sources.push((
+                part_name(part, i),
+                number,
+                Arc::new(move |p| solid.signed_distance(p)) as Arc<dyn SignedDistance>,
+                source,
+            ));
         }
         let mut a = PotentialArray::new(r.dims[0], r.dims[1], r.dims[2]);
         [a.dx_mm, a.dy_mm, a.dz_mm] = r.spacing;
@@ -868,7 +1185,10 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
     if cylindrical && (dims[2] != 1 || r.origin[1] != 0.0 || r.origin[2] != 0.0) {
         return Err(fail_with(Reason::new("cylindricalOrigin")));
     }
-    let h_min = (0..3).filter(|&k| dims[k] > 1).map(|k| spacing[k]).fold(f64::INFINITY, f64::min);
+    let h_min = (0..3)
+        .filter(|&k| dims[k] > 1)
+        .map(|k| spacing[k])
+        .fold(f64::INFINITY, f64::min);
     let tolerance = 1e-9 * h_min;
     let owners: Vec<Option<usize>> = (0..a.potentials.len())
         .into_par_iter()
@@ -878,7 +1198,11 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
             for (name, number, shape, _) in &sources {
                 let d = shape.distance(p);
                 if !d.is_finite() {
-                    return Err(Reason::new("distanceFailed").with("part", name).with("x", format!("{:.4}", p[0])).with("y", format!("{:.4}", p[1])).with("z", format!("{:.4}", p[2])));
+                    return Err(Reason::new("distanceFailed")
+                        .with("part", name)
+                        .with("x", format!("{:.4}", p[0]))
+                        .with("y", format!("{:.4}", p[1]))
+                        .with("z", format!("{:.4}", p[2])));
                 }
                 if d <= tolerance {
                     if owner.is_some_and(|n| n != *number) {
@@ -908,12 +1232,31 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
     }
     let prepared = Prepared {
         grid: Grid {
-            dims: if cylindrical { [dims[1], dims[0], 1] } else { dims },
-            spacing: if cylindrical { [spacing[1], spacing[0], spacing[2]] } else { spacing },
-            geometry: if cylindrical { Geometry::Cylindrical { radial_origin: 0.0 } } else { Geometry::Planar },
+            dims: if cylindrical {
+                [dims[1], dims[0], 1]
+            } else {
+                dims
+            },
+            spacing: if cylindrical {
+                [spacing[1], spacing[0], spacing[2]]
+            } else {
+                spacing
+            },
+            geometry: if cylindrical {
+                Geometry::Cylindrical { radial_origin: 0.0 }
+            } else {
+                Geometry::Planar
+            },
         },
-        origin: if cylindrical { [0.0, r.origin[0], 0.0] } else { r.origin },
-        parts: sources.iter().map(|(_, n, s, _)| (*n, Arc::clone(s))).collect(),
+        origin: if cylindrical {
+            [0.0, r.origin[0], 0.0]
+        } else {
+            r.origin
+        },
+        parts: sources
+            .iter()
+            .map(|(_, n, s, _)| (*n, Arc::clone(s)))
+            .collect(),
         tolerance,
         cylindrical,
     };
@@ -936,7 +1279,11 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
                         continue;
                     }
                     let mut q = p;
-                    q[axis] += if s % 2 == 0 { -spacing[axis] } else { spacing[axis] };
+                    q[axis] += if s % 2 == 0 {
+                        -spacing[axis]
+                    } else {
+                        spacing[axis]
+                    };
                     for (_, number, shape, _) in &sources {
                         if let Some(t) = surface_fraction(shape.as_ref(), p, q, tolerance)
                             && fractions[s].is_none_or(|previous| t < previous)
@@ -958,17 +1305,36 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
             symmetry: if cylindrical { "cylindrical" } else { "planar" },
             mirrors: [a.mirrors.x, a.mirrors.y, a.mirrors.z],
             electrode_numbers: voltages.keys().copied().collect(),
-            source_geometry: sources.iter().map(|(_, number, _, geometry)| SourceSurface { number: *number, geometry: geometry.clone() }).collect(),
-            assignments: sources.iter().map(|(name, number, _, _)| SidecarAssignment { part: name, number: *number, voltage: voltages[number] }).collect(),
+            source_geometry: sources
+                .iter()
+                .map(|(_, number, _, geometry)| SourceSurface {
+                    number: *number,
+                    geometry: geometry.clone(),
+                })
+                .collect(),
+            assignments: sources
+                .iter()
+                .map(|(name, number, _, _)| SidecarAssignment {
+                    part: name,
+                    number: *number,
+                    voltage: voltages[number],
+                })
+                .collect(),
             node_electrodes: &owners,
-            solver_fixed: if cylindrical { permute(&cuts.fixed, prepared.grid.dims[0], prepared.grid.dims[1]) } else { cuts.fixed.clone() },
+            solver_fixed: if cylindrical {
+                permute(&cuts.fixed, prepared.grid.dims[0], prepared.grid.dims[1])
+            } else {
+                cuts.fixed.clone()
+            },
             cut_fractions,
             cut_electrodes,
             surface_tolerance_mm: tolerance,
             snap_distance_mm: cuts.snap_distance,
         };
         let side = dir.join(format!("{stem}.cuts.json"));
-        let mut writer = BufWriter::new(File::create(&side).map_err(|e| fail(format!("{}: {e}", side.display())))?);
+        let mut writer = BufWriter::new(
+            File::create(&side).map_err(|e| fail(format!("{}: {e}", side.display())))?,
+        );
         serde_json::to_writer(&mut writer, &sidecar).map_err(|e| fail(e.to_string()))?;
         writer.flush().map_err(|e| fail(e.to_string()))?;
         files.push(file_name(&side));
@@ -983,7 +1349,11 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
     pa.array.potentials = owners.iter().map(|n| n.unwrap_or(0) as f64).collect();
     write_pa(&out, &pa).map_err(|e| fail(format!("{}: {e}", out.display())))?;
     files.insert(0, file_name(&out));
-    state.geometries.lock().unwrap().insert(out.clone(), Arc::new(prepared));
+    state
+        .geometries
+        .lock()
+        .unwrap()
+        .insert(out.clone(), Arc::new(prepared));
     Ok(BuildResult {
         pa_hash: out.display().to_string(),
         files,
@@ -994,7 +1364,12 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
     })
 }
 
-fn finish_aligned(state: &AppState, out: &Path, pa: PaFile, start: Instant) -> Result<BuildResult, PaError> {
+fn finish_aligned(
+    state: &AppState,
+    out: &Path,
+    pa: PaFile,
+    start: Instant,
+) -> Result<BuildResult, PaError> {
     let mut counts: BTreeMap<usize, usize> = BTreeMap::new();
     for (v, e) in pa.array.potentials.iter().zip(&pa.array.electrodes) {
         if *e {

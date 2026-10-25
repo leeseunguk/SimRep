@@ -24,11 +24,14 @@
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use serde::Serialize;
 use self_cell::self_cell;
+use serde::Serialize;
 use simrep_core::PotentialArray;
 use simrep_fly::gpu::{FlightReport, Gpu, Precision, PreparedField, TrajectorySampling};
-use simrep_fly::{Field, FieldSample, FlightOptions, FlightResult, GridField, InstanceField, Particle, SplatReason, Vector, fly, fly_many};
+use simrep_fly::{
+    Field, FieldSample, FlightOptions, FlightResult, GridField, InstanceField, Particle,
+    SplatReason, Vector, fly, fly_many,
+};
 
 use crate::fly::{Collision, Placement};
 use crate::pa::Reason;
@@ -54,9 +57,17 @@ impl FlyDevice {
 pub fn probe(solver: &Result<Arc<simrep_solve::gpu::Gpu>, Reason>) -> Result<FlyDevice, Reason> {
     let solver = solver.as_ref().map_err(Clone::clone)?;
     let start = Instant::now();
-    let gpu = pollster::block_on(Gpu::from_device_with_precision(solver.device().clone(), solver.queue().clone(), solver.info.clone(), Precision::Preview))
-        .map_err(|e| Reason::new("gpuInit").detail(e))?;
-    Ok(FlyDevice { gpu: Box::leak(Box::new(gpu)), init_ms: start.elapsed().as_secs_f64() * 1e3 })
+    let gpu = pollster::block_on(Gpu::from_device_with_precision(
+        solver.device().clone(),
+        solver.queue().clone(),
+        solver.info.clone(),
+        Precision::Preview,
+    ))
+    .map_err(|e| Reason::new("gpuInit").detail(e))?;
+    Ok(FlyDevice {
+        gpu: Box::leak(Box::new(gpu)),
+        init_ms: start.elapsed().as_secs_f64() * 1e3,
+    })
 }
 
 /// The flyer device for the status bar (mirrored by `ComputeDevice` in src/scene/backend.ts).
@@ -76,11 +87,28 @@ pub struct ComputeDevice {
 #[tauri::command]
 pub async fn compute_device(state: tauri::State<'_, AppState>) -> Result<ComputeDevice, ()> {
     let state = state.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || match state.fly_gpu.get_or_init(|| probe(state.gpu.get_or_init(crate::refine::probe_gpu))) {
-        Ok(d) => ComputeDevice { kind: "gpu", name: d.name(), init_ms: d.init_ms, reason: None, threads: None },
-        Err(e) => {
-            let cpu = crate::refine::cpu_device();
-            ComputeDevice { kind: "cpu", name: cpu.name, init_ms: 0.0, reason: Some(e.clone()), threads: cpu.threads }
+    tauri::async_runtime::spawn_blocking(move || {
+        match state
+            .fly_gpu
+            .get_or_init(|| probe(state.gpu.get_or_init(crate::refine::probe_gpu)))
+        {
+            Ok(d) => ComputeDevice {
+                kind: "gpu",
+                name: d.name(),
+                init_ms: d.init_ms,
+                reason: None,
+                threads: None,
+            },
+            Err(e) => {
+                let cpu = crate::refine::cpu_device();
+                ComputeDevice {
+                    kind: "cpu",
+                    name: cpu.name,
+                    init_ms: 0.0,
+                    reason: Some(e.clone()),
+                    threads: cpu.threads,
+                }
+            }
         }
     })
     .await
@@ -140,14 +168,28 @@ pub struct Slot {
 /// Marks `session`'s slot as preparing for `bounds` and builds + uploads the field on a background
 /// thread, so the request that triggered it (and any during the upload) fly on the CPU meanwhile.
 pub fn prepare_in_background(gpu: &'static Gpu, session: Arc<Session>, key: BenchKey) {
-    *session.gpu.lock().unwrap() = Some(Slot { key, resident: None, prepare_ms: 0.0, longest: 0 });
+    *session.gpu.lock().unwrap() = Some(Slot {
+        key,
+        resident: None,
+        prepare_ms: 0.0,
+        longest: 0,
+    });
     std::thread::spawn(move || {
         let started = Instant::now();
         let placed = key.0.map(|b| [[b[0], b[1], b[2]], [b[3], b[4], b[5]]]);
-        let resident = prepare(gpu, &session, placed, key.1.unwrap_or(Placement::IDENTITY), key.2);
+        let resident = prepare(
+            gpu,
+            &session,
+            placed,
+            key.1.unwrap_or(Placement::IDENTITY),
+            key.2,
+        );
         let mut slot = session.gpu.lock().unwrap();
         // A newer request may have asked for another workbench box meanwhile; keep its slot.
-        if let Some(s) = slot.as_mut().filter(|s| s.key == key && s.resident.is_none()) {
+        if let Some(s) = slot
+            .as_mut()
+            .filter(|s| s.key == key && s.resident.is_none())
+        {
             s.resident = Some(resident.map(|(resident, fields)| {
                 *session.live_fields.lock().unwrap() = Some((key, fields));
                 resident
@@ -162,20 +204,43 @@ pub fn prepare_in_background(gpu: &'static Gpu, session: Arc<Session>, key: Benc
 /// Compact fields keep the shared nodal derivatives instead of every CPU cell polynomial, so the
 /// CPU build is lighter. A cache that does not fit the device (`check_size`) leaves the field
 /// compact.
-pub fn prepare(gpu: &'static Gpu, session: &Session, bounds: Option<[Vector; 2]>, place: Placement, collision: Collision) -> Result<(Arc<Resident>, Arc<Fields>), String> {
+pub fn prepare(
+    gpu: &'static Gpu,
+    session: &Session,
+    bounds: Option<[Vector; 2]>,
+    place: Placement,
+    collision: Collision,
+) -> Result<(Arc<Resident>, Arc<Fields>), String> {
     let array = &session.file.array;
     let grid = collision.apply(GridField::new_compact(array.clone()).map_err(|e| e.to_string())?);
     let bases = match &session.fast {
         Some(fast) => fast
             .unit_bases()
-            .map(|potentials| GridField::new_compact(PotentialArray { potentials, ..array.clone() }).map(|g| collision.apply(g)).map_err(|e| e.to_string()))
+            .map(|potentials| {
+                GridField::new_compact(PotentialArray {
+                    potentials,
+                    ..array.clone()
+                })
+                .map(|g| collision.apply(g))
+                .map_err(|e| e.to_string())
+            })
             .collect::<Result<Vec<_>, _>>()?,
         None => Vec::new(),
     };
-    let instance = InstanceField::new(grid, place.origin, place.axes, place.scale, bounds, None).map_err(|e| e.to_string())?;
+    let instance = InstanceField::new(grid, place.origin, place.axes, place.scale, bounds, None)
+        .map_err(|e| e.to_string())?;
     let degrees = 1 + bases.len();
-    let fields = Arc::new(Fields { instance, bases, bounded: bounds.is_some(), place });
-    let mut resident = Resident::try_new(fields.clone(), |f| gpu.prepare(&f.instance, &f.bases).map(|p| Live(Mutex::new(p))).map_err(|e| e.to_string()))?;
+    let fields = Arc::new(Fields {
+        instance,
+        bases,
+        bounded: bounds.is_some(),
+        place,
+    });
+    let mut resident = Resident::try_new(fields.clone(), |f| {
+        gpu.prepare(&f.instance, &f.bases)
+            .map(|p| Live(Mutex::new(p)))
+            .map_err(|e| e.to_string())
+    })?;
     resident.with_dependent_mut(|_, live| {
         let prepared = live.0.get_mut().unwrap();
         if plan(prepared.gpu_memory_bytes(), degrees) {
@@ -196,7 +261,13 @@ impl Resident {
     /// only while the voltages are set and the flight is submitted; collecting it (GPU wait,
     /// readback) runs unlocked, so a concurrent request queues its flight right behind this one.
     /// Returns the report and its wall time (including any wait for the lock and the GPU queue).
-    pub fn fly(&self, factors: &[f64], ions: &[Particle], terminal: &FlightOptions, sampling: Option<&TrajectorySampling>) -> (Result<FlightReport, String>, f64) {
+    pub fn fly(
+        &self,
+        factors: &[f64],
+        ions: &[Particle],
+        terminal: &FlightOptions,
+        sampling: Option<&TrajectorySampling>,
+    ) -> (Result<FlightReport, String>, f64) {
         let start = Instant::now();
         let report = self.with_dependent(|_, live| {
             let pending = {
@@ -209,7 +280,10 @@ impl Resident {
             };
             pending.collect()
         });
-        (report.map_err(|e| e.to_string()), start.elapsed().as_secs_f64() * 1e3)
+        (
+            report.map_err(|e| e.to_string()),
+            start.elapsed().as_secs_f64() * 1e3,
+        )
     }
 
     /// GPU memory of the field, including its pooled flight scratch (`gpu_memory_bytes`), and the
@@ -217,25 +291,48 @@ impl Resident {
     pub fn gpu_usage(&self) -> (u64, usize) {
         self.with_dependent(|_, live| {
             let prepared = live.0.lock().unwrap();
-            (prepared.gpu_memory_bytes(), prepared.max_ions_per_dispatch())
+            (
+                prepared.gpu_memory_bytes(),
+                prepared.max_ions_per_dispatch(),
+            )
         })
     }
 }
 
 /// Trajectories of `subset` through the same bases and factors, on the CPU (f64). Returns the
 /// results and their wall time.
-pub fn fly_paths(fields: &Fields, factors: &[f64], subset: &[Particle], sampled: &FlightOptions) -> (Result<Vec<FlightResult>, String>, f64) {
+pub fn fly_paths(
+    fields: &Fields,
+    factors: &[f64],
+    subset: &[Particle],
+    sampled: &FlightOptions,
+) -> (Result<Vec<FlightResult>, String>, f64) {
     let start = Instant::now();
-    let paths = if subset.is_empty() { Ok(Vec::new()) } else { fly_many(&LiveField { fields, factors }, subset, sampled).map_err(|e| e.to_string()) };
+    let paths = if subset.is_empty() {
+        Ok(Vec::new())
+    } else {
+        fly_many(&LiveField { fields, factors }, subset, sampled).map_err(|e| e.to_string())
+    };
     (paths, start.elapsed().as_secs_f64() * 1e3)
 }
 
 /// One ion through the same bases and factors with its trajectory, plus the potential at every
 /// sample (the per-ion plots in the results panel).
-pub fn trace(fields: &Fields, factors: &[f64], particle: &Particle, sampled: &FlightOptions) -> Result<(FlightResult, Vec<f64>), String> {
+pub fn trace(
+    fields: &Fields,
+    factors: &[f64],
+    particle: &Particle,
+    sampled: &FlightOptions,
+) -> Result<(FlightResult, Vec<f64>), String> {
     let field = LiveField { fields, factors };
     let result = fly(&field, particle, sampled).map_err(|e| e.to_string())?;
-    let potentials = result.trajectory.as_deref().unwrap_or(&[]).iter().map(|s| field.sample(s.position_mm, s.time_us).potential_v).collect();
+    let potentials = result
+        .trajectory
+        .as_deref()
+        .unwrap_or(&[])
+        .iter()
+        .map(|s| field.sample(s.position_mm, s.time_us).potential_v)
+        .collect();
     Ok((result, potentials))
 }
 
@@ -251,7 +348,13 @@ impl Field for LiveField<'_> {
         let place = &self.fields.place;
         let q = place.local(p);
         // Field-free outside the array when a workbench box is set (as the instance itself is).
-        if self.fields.bounded && self.fields.bases.first().is_some_and(|g| g.status(q) == Some(SplatReason::OutsideGrid)) {
+        if self.fields.bounded
+            && self
+                .fields
+                .bases
+                .first()
+                .is_some_and(|g| g.status(q) == Some(SplatReason::OutsideGrid))
+        {
             return s;
         }
         let mut local = [0.0; 3];

@@ -81,7 +81,10 @@ pub fn remove_file(path: String) -> Result<(), PaError> {
 /// Where the autosave of the open project lives (the app's local data folder, created on demand).
 #[tauri::command]
 pub fn recovery_path(app: AppHandle) -> Result<String, PaError> {
-    let dir = app.path().app_local_data_dir().map_err(|e| PaError::new("unexpected", e.to_string()))?;
+    let dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| PaError::new("unexpected", e.to_string()))?;
     std::fs::create_dir_all(&dir)?;
     Ok(dir.join("recovery.simrep").display().to_string())
 }

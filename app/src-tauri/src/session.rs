@@ -86,16 +86,33 @@ fn peak_electrode(potentials: &[f64], electrodes: &[bool]) -> Option<(usize, f64
 }
 
 fn same_geometry(a: &PotentialArray, b: &PotentialArray) -> bool {
-    (a.nx, a.ny, a.nz, a.symmetry, a.mirrors, a.anti_mirrors, a.field_type)
-        == (b.nx, b.ny, b.nz, b.symmetry, b.mirrors, b.anti_mirrors, b.field_type)
-        && [a.dx_mm, a.dy_mm, a.dz_mm] == [b.dx_mm, b.dy_mm, b.dz_mm]
+    (
+        a.nx,
+        a.ny,
+        a.nz,
+        a.symmetry,
+        a.mirrors,
+        a.anti_mirrors,
+        a.field_type,
+    ) == (
+        b.nx,
+        b.ny,
+        b.nz,
+        b.symmetry,
+        b.mirrors,
+        b.anti_mirrors,
+        b.field_type,
+    ) && [a.dx_mm, a.dy_mm, a.dz_mm] == [b.dx_mm, b.dy_mm, b.dz_mm]
         && a.electrodes == b.electrodes
 }
 
 impl FastAdjust {
     /// Reads the sibling solutions of a .pa0 (`.pa1`, `.pa_`, ... with the PA0's extension case).
     pub fn load(path: &Path, base: &PaFile) -> io::Result<Self> {
-        let metadata = base.pa0.as_ref().ok_or_else(|| invalid("no PA0 electrode table"))?;
+        let metadata = base
+            .pa0
+            .as_ref()
+            .ok_or_else(|| invalid("no PA0 electrode table"))?;
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("pa0");
         let prefix = &ext[..ext.len().min(2)];
         let mut solutions = Vec::new();
@@ -103,11 +120,20 @@ impl FastAdjust {
             if index == -1 {
                 continue;
             }
-            let suffix = if number == 0 { "_".to_owned() } else { number.to_string() };
+            let suffix = if number == 0 {
+                "_".to_owned()
+            } else {
+                number.to_string()
+            };
             let sibling = path.with_extension(format!("{prefix}{suffix}"));
-            let solution = read_pa(&sibling).map_err(|e| io::Error::new(e.kind(), format!("{}: {e}", crate::pa::file_name(&sibling))))?;
+            let solution = read_pa(&sibling).map_err(|e| {
+                io::Error::new(e.kind(), format!("{}: {e}", crate::pa::file_name(&sibling)))
+            })?;
             if !same_geometry(&base.array, &solution.array) {
-                return Err(invalid(format!("{}: grid differs from the .pa0", crate::pa::file_name(&sibling))));
+                return Err(invalid(format!(
+                    "{}: grid differs from the .pa0",
+                    crate::pa::file_name(&sibling)
+                )));
             }
             solutions.push((number, solution.array.potentials));
         }
@@ -116,22 +142,34 @@ impl FastAdjust {
 
     /// `solutions` are (electrode number, potentials) with the PA0's geometry.
     pub fn new(base: &PaFile, solutions: Vec<(usize, Vec<f64>)>) -> io::Result<Self> {
-        let metadata = base.pa0.as_ref().ok_or_else(|| invalid("no PA0 electrode table"))?;
+        let metadata = base
+            .pa0
+            .as_ref()
+            .ok_or_else(|| invalid("no PA0 electrode table"))?;
         if metadata.reference_voltage <= 0.0 {
             return Err(invalid("PA0 reference_voltage must be positive"));
         }
         let mut bases = Vec::new();
         for (number, potentials) in solutions {
-            let (peak_index, peak) = peak_electrode(&potentials, &base.array.electrodes).ok_or_else(|| invalid(format!("solution {number} has no nonzero electrode")))?;
-            let (current, reference) = if let Some(FastScalable::Voltages(values)) = &metadata.scalable {
-                (values.get(number).copied().unwrap_or(0.0), peak)
-            } else if number == 0 {
-                (base.array.potentials[peak_index], peak)
-            } else {
-                let index = usize::try_from(metadata.electrode_indices[number]).map_err(|_| invalid("bad PA0 electrode index"))?;
-                (base.array.potentials[index], metadata.reference_voltage)
-            };
-            bases.push(Basis { number, potentials, reference, current, peak: peak.abs() });
+            let (peak_index, peak) = peak_electrode(&potentials, &base.array.electrodes)
+                .ok_or_else(|| invalid(format!("solution {number} has no nonzero electrode")))?;
+            let (current, reference) =
+                if let Some(FastScalable::Voltages(values)) = &metadata.scalable {
+                    (values.get(number).copied().unwrap_or(0.0), peak)
+                } else if number == 0 {
+                    (base.array.potentials[peak_index], peak)
+                } else {
+                    let index = usize::try_from(metadata.electrode_indices[number])
+                        .map_err(|_| invalid("bad PA0 electrode index"))?;
+                    (base.array.potentials[index], metadata.reference_voltage)
+                };
+            bases.push(Basis {
+                number,
+                potentials,
+                reference,
+                current,
+                peak: peak.abs(),
+            });
         }
         if bases.is_empty() {
             return Err(invalid("the .pa0 lists no adjustable electrodes"));
@@ -145,23 +183,46 @@ impl FastAdjust {
 
     /// Electrode voltages with `voltages` (number, V) applied over the PA0's own.
     pub fn status_at(&self, voltages: &[(usize, f64)]) -> FastStatus {
-        let voltage = |b: &Basis| voltages.iter().find(|v| v.0 == b.number).map_or(b.current, |v| v.1);
+        let voltage = |b: &Basis| {
+            voltages
+                .iter()
+                .find(|v| v.0 == b.number)
+                .map_or(b.current, |v| v.1)
+        };
         FastStatus::Ready {
-            electrodes: self.bases.iter().map(|b| FastElectrode { number: b.number, voltage: voltage(b) }).collect(),
+            electrodes: self
+                .bases
+                .iter()
+                .map(|b| FastElectrode {
+                    number: b.number,
+                    voltage: voltage(b),
+                })
+                .collect(),
         }
     }
 
     /// PA0 base with `voltages` (electrode number, V) applied; unlisted electrodes keep theirs.
-    pub fn superpose(&self, base: &PotentialArray, voltages: &[(usize, f64)]) -> io::Result<PotentialArray> {
+    pub fn superpose(
+        &self,
+        base: &PotentialArray,
+        voltages: &[(usize, f64)],
+    ) -> io::Result<PotentialArray> {
         let mut out = base.clone();
         for &(number, voltage) in voltages {
-            let basis = self.bases.iter().find(|b| b.number == number).ok_or_else(|| invalid(format!("electrode {number} is not adjustable")))?;
+            let basis = self
+                .bases
+                .iter()
+                .find(|b| b.number == number)
+                .ok_or_else(|| invalid(format!("electrode {number} is not adjustable")))?;
             let delta = (voltage - basis.current) / basis.reference;
             if !delta.is_finite() {
                 return Err(invalid("non-finite fast-adjust voltage"));
             }
             if delta != 0.0 {
-                out.potentials.iter_mut().zip(&basis.potentials).for_each(|(p, &b)| *p += delta * b);
+                out.potentials
+                    .iter_mut()
+                    .zip(&basis.potentials)
+                    .for_each(|(p, &b)| *p += delta * b);
             }
         }
         Ok(out)
@@ -169,15 +230,29 @@ impl FastAdjust {
 
     /// Unit-voltage solutions (solution / reference), in `bases` order: the GPU flyer's bases.
     pub fn unit_bases(&self) -> impl Iterator<Item = Vec<f64>> + '_ {
-        self.bases.iter().map(|b| b.potentials.iter().map(|v| v / b.reference).collect())
+        self.bases
+            .iter()
+            .map(|b| b.potentials.iter().map(|v| v / b.reference).collect())
     }
 
     /// Volts to add to each unit basis (`bases` order) for `voltages`; unlisted electrodes add 0.
     pub fn deltas(&self, voltages: &[(usize, f64)]) -> io::Result<Vec<f64>> {
-        if let Some(&(number, _)) = voltages.iter().find(|v| !self.bases.iter().any(|b| b.number == v.0)) {
+        if let Some(&(number, _)) = voltages
+            .iter()
+            .find(|v| !self.bases.iter().any(|b| b.number == v.0))
+        {
             return Err(invalid(format!("electrode {number} is not adjustable")));
         }
-        let deltas: Vec<f64> = self.bases.iter().map(|b| voltages.iter().find(|v| v.0 == b.number).map_or(0.0, |v| v.1 - b.current)).collect();
+        let deltas: Vec<f64> = self
+            .bases
+            .iter()
+            .map(|b| {
+                voltages
+                    .iter()
+                    .find(|v| v.0 == b.number)
+                    .map_or(0.0, |v| v.1 - b.current)
+            })
+            .collect();
         if deltas.iter().any(|d| !d.is_finite()) {
             return Err(invalid("non-finite fast-adjust voltage"));
         }
@@ -189,7 +264,11 @@ impl FastAdjust {
         self.bases
             .iter()
             .filter(|b| b.number > 0)
-            .find(|b| b.potentials.get(index).is_some_and(|v| v.abs() >= 0.5 * b.peak))
+            .find(|b| {
+                b.potentials
+                    .get(index)
+                    .is_some_and(|v| v.abs() >= 0.5 * b.peak)
+            })
             .map(|b| b.number)
     }
 }
@@ -266,10 +345,23 @@ impl Session {
     /// None when the array has no sidecar. `tolerance_mm` is the flight's position tolerance
     /// (workbench mm): surface roots are localized to it in source mm, as `simrep fly` does.
     /// A sidecar that does not load or does not match the array is an error, never ignored.
-    pub fn exact(&self, voltages: &[(usize, f64)], bounds: Option<[Vector; 2]>, place: &Placement, tolerance_mm: f64) -> Result<Option<Exact>, PaError> {
-        let Some(path) = sidecar(&self.path) else { return Ok(None) };
+    pub fn exact(
+        &self,
+        voltages: &[(usize, f64)],
+        bounds: Option<[Vector; 2]>,
+        place: &Placement,
+        tolerance_mm: f64,
+    ) -> Result<Option<Exact>, PaError> {
+        let Some(path) = sidecar(&self.path) else {
+            return Ok(None);
+        };
         let name = file_name(&path);
-        let invalid = |e: &dyn std::fmt::Display| PaError::coded("fly", Reason::new("cutsInvalid").with("file", &name).detail(e));
+        let invalid = |e: &dyn std::fmt::Display| {
+            PaError::coded(
+                "fly",
+                Reason::new("cutsInvalid").with("file", &name).detail(e),
+            )
+        };
         let modified = std::fs::metadata(&path).and_then(|m| m.modified()).ok();
         let tolerance = tolerance_mm / place.scale;
         let model = {
@@ -279,9 +371,15 @@ impl Session {
                 Some(s) => s.model.clone(),
                 None => {
                     let reader = BufReader::new(File::open(&path).map_err(|e| invalid(&e))?);
-                    let model = SurfaceModel::from_reader(reader).map_err(|e| invalid(&e))?.with_tolerance(tolerance).map_err(|e| invalid(&e))?;
+                    let model = SurfaceModel::from_reader(reader)
+                        .map_err(|e| invalid(&e))?
+                        .with_tolerance(tolerance)
+                        .map_err(|e| invalid(&e))?;
                     let model = Arc::new(model);
-                    *cache = Some(Surface { key, model: model.clone() });
+                    *cache = Some(Surface {
+                        key,
+                        model: model.clone(),
+                    });
                     model
                 }
             }
@@ -289,22 +387,36 @@ impl Session {
         let fly_err = |e: io::Error| PaError::new("fly", e.to_string());
         let voltages = self.normalize(voltages).map_err(fly_err)?;
         let key = format!("{modified:?} {tolerance:e} {voltages:?} {bounds:?} {place:?}");
-        if let Some((_, exact)) = self.exact.lock().unwrap().as_ref().filter(|(k, _)| *k == key) {
+        if let Some((_, exact)) = self
+            .exact
+            .lock()
+            .unwrap()
+            .as_ref()
+            .filter(|(k, _)| *k == key)
+        {
             return Ok(Some(exact.clone()));
         }
         let array = self.array(&voltages).map_err(fly_err)?;
-        let grid = GridField::new((*array).clone()).map_err(|e| PaError::new("fly", e.to_string()))?;
+        let grid =
+            GridField::new((*array).clone()).map_err(|e| PaError::new("fly", e.to_string()))?;
         let field = InstanceField::new(grid, place.origin, place.axes, place.scale, bounds, None)
             .map_err(|e| PaError::new("fly", e.to_string()))?
             .with_surface(model.clone())
             .map_err(|e| invalid(&e))?;
-        let exact = Exact { field: Arc::new(field), accuracy: model.accuracy(), file: name.clone() };
+        let exact = Exact {
+            field: Arc::new(field),
+            accuracy: model.accuracy(),
+            file: name.clone(),
+        };
         *self.exact.lock().unwrap() = Some((key, exact.clone()));
         Ok(Some(exact))
     }
 
     pub fn is_pa_hash(&self) -> bool {
-        self.path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("pa#"))
+        self.path
+            .extension()
+            .and_then(|e| e.to_str())
+            .is_some_and(|e| e.eq_ignore_ascii_case("pa#"))
     }
 
     fn normalize(&self, voltages: &[(usize, f64)]) -> io::Result<Vec<(usize, f64)>> {
@@ -331,20 +443,41 @@ impl Session {
             Some(fast) if !key.is_empty() => fast.superpose(&self.file.array, &key)?,
             _ => self.file.array.clone(),
         });
-        *live = Some(Live { voltages: key, array: array.clone(), field: None });
+        *live = Some(Live {
+            voltages: key,
+            array: array.clone(),
+            field: None,
+        });
         Ok(array)
     }
 
     /// Interpolation field at `voltages` with the `collision` rule, built once per voltage set.
-    pub fn field(&self, voltages: &[(usize, f64)], collision: Collision) -> Result<Arc<GridField>, String> {
+    pub fn field(
+        &self,
+        voltages: &[(usize, f64)],
+        collision: Collision,
+    ) -> Result<Arc<GridField>, String> {
         let array = self.array(voltages).map_err(|e| e.to_string())?;
         let key = self.normalize(voltages).map_err(|e| e.to_string())?;
-        let cached = self.live.lock().unwrap().as_ref().filter(|l| l.voltages == key).and_then(|l| l.field.clone());
+        let cached = self
+            .live
+            .lock()
+            .unwrap()
+            .as_ref()
+            .filter(|l| l.voltages == key)
+            .and_then(|l| l.field.clone());
         if let Some((_, field)) = cached.filter(|(c, _)| *c == collision) {
             return Ok(field);
         }
-        let field = Arc::new(collision.apply(GridField::new((*array).clone()).map_err(|e| e.to_string())?));
-        if let Some(l) = self.live.lock().unwrap().as_mut().filter(|l| l.voltages == key) {
+        let field =
+            Arc::new(collision.apply(GridField::new((*array).clone()).map_err(|e| e.to_string())?));
+        if let Some(l) = self
+            .live
+            .lock()
+            .unwrap()
+            .as_mut()
+            .filter(|l| l.voltages == key)
+        {
             l.field = Some((collision, field.clone()));
         }
         Ok(field)

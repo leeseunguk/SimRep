@@ -1,7 +1,25 @@
 /// OCCT toolkits linked by crates/simrep-cad/build.rs (keep the two lists in step).
 const OCCT_TOOLKITS: [&str; 20] = [
-    "TKXDESTEP", "TKXDEIGES", "TKSTEP", "TKIGES", "TKXSBase", "TKXCAF", "TKCAF", "TKLCAF", "TKCDF", "TKMesh", "TKShHealing", "TKPrim", "TKTopAlgo",
-    "TKGeomAlgo", "TKBRep", "TKGeomBase", "TKG3d", "TKG2d", "TKMath", "TKernel",
+    "TKXDESTEP",
+    "TKXDEIGES",
+    "TKSTEP",
+    "TKIGES",
+    "TKXSBase",
+    "TKXCAF",
+    "TKCAF",
+    "TKLCAF",
+    "TKCDF",
+    "TKMesh",
+    "TKShHealing",
+    "TKPrim",
+    "TKTopAlgo",
+    "TKGeomAlgo",
+    "TKBRep",
+    "TKGeomBase",
+    "TKG3d",
+    "TKG2d",
+    "TKMath",
+    "TKernel",
 ];
 
 fn main() {

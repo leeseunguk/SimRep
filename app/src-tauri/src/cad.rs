@@ -26,7 +26,10 @@ pub fn ensure() -> Result<(), PaError> {
 #[cfg(feature = "cad")]
 pub fn ensure() -> Result<(), PaError> {
     static READY: std::sync::OnceLock<Result<(), Reason>> = std::sync::OnceLock::new();
-    READY.get_or_init(load).clone().map_err(|reason| PaError::coded(UNAVAILABLE, reason))
+    READY
+        .get_or_init(load)
+        .clone()
+        .map_err(|reason| PaError::coded(UNAVAILABLE, reason))
 }
 
 #[cfg(all(feature = "cad", not(windows)))]
@@ -36,8 +39,26 @@ fn load() -> Result<(), Reason> {
 
 #[cfg(all(feature = "cad", windows))]
 const TOOLKITS: [&str; 20] = [
-    "TKXDESTEP", "TKXDEIGES", "TKSTEP", "TKIGES", "TKXSBase", "TKXCAF", "TKCAF", "TKLCAF", "TKCDF", "TKMesh", "TKShHealing", "TKPrim", "TKTopAlgo",
-    "TKGeomAlgo", "TKBRep", "TKGeomBase", "TKG3d", "TKG2d", "TKMath", "TKernel",
+    "TKXDESTEP",
+    "TKXDEIGES",
+    "TKSTEP",
+    "TKIGES",
+    "TKXSBase",
+    "TKXCAF",
+    "TKCAF",
+    "TKLCAF",
+    "TKCDF",
+    "TKMesh",
+    "TKShHealing",
+    "TKPrim",
+    "TKTopAlgo",
+    "TKGeomAlgo",
+    "TKBRep",
+    "TKGeomBase",
+    "TKG3d",
+    "TKG2d",
+    "TKMath",
+    "TKernel",
 ];
 
 #[cfg(all(feature = "cad", windows))]
@@ -54,7 +75,10 @@ fn load() -> Result<(), Reason> {
     let mut candidates: Vec<PathBuf> = Vec::new();
     candidates.extend(std::env::var_os("SIMREP_OCCT_DIR").map(PathBuf::from));
     candidates.extend(std::env::var_os("CASROOT").map(PathBuf::from));
-    if let Some(dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(Path::to_path_buf)) {
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+    {
         candidates.push(dir.join("occt"));
     }
     if let Some(lib) = option_env!("SIMREP_OCCT_LIB_DIR") {
@@ -70,7 +94,11 @@ fn load() -> Result<(), Reason> {
             Some((sdk, Some(c.clone())))
         } else if c.join("TKernel.dll").is_file() {
             // A bin folder (or bundled flat folder); its CASROOT is three levels up when it is win64\vc14\bin.
-            let root = c.ancestors().nth(3).filter(|r| r.join("win64").is_dir()).map(Path::to_path_buf);
+            let root = c
+                .ancestors()
+                .nth(3)
+                .filter(|r| r.join("win64").is_dir())
+                .map(Path::to_path_buf);
             Some((c.clone(), root))
         } else {
             None
@@ -85,7 +113,10 @@ fn load() -> Result<(), Reason> {
         && let Ok(entries) = std::fs::read_dir(products)
     {
         for entry in entries.flatten() {
-            for sub in [entry.path().join("bin"), entry.path().join("bin").join("win64")] {
+            for sub in [
+                entry.path().join("bin"),
+                entry.path().join("bin").join("win64"),
+            ] {
                 if sub.is_dir() {
                     dirs.push(sub);
                 }
@@ -93,7 +124,8 @@ fn load() -> Result<(), Reason> {
         }
     }
     let path = std::env::var_os("PATH").unwrap_or_default();
-    let joined = std::env::join_paths(dirs.iter().cloned().chain(std::env::split_paths(&path))).map_err(|e| Reason::new("cadLoad").with("file", "PATH").detail(e))?;
+    let joined = std::env::join_paths(dirs.iter().cloned().chain(std::env::split_paths(&path)))
+        .map_err(|e| Reason::new("cadLoad").with("file", "PATH").detail(e))?;
     // SAFETY: called once (OnceLock), before any OCCT DLL is loaded; other threads only read PATH
     // through the loader, which copies it per call.
     unsafe { std::env::set_var("PATH", joined) };
@@ -102,8 +134,15 @@ fn load() -> Result<(), Reason> {
         let wide: Vec<u16> = OsStr::new(&file).encode_wide().chain([0]).collect();
         // SAFETY: a NUL-terminated wide path; the module stays loaded for the process lifetime.
         if unsafe { LoadLibraryW(wide.as_ptr()) }.is_null() {
-            let dirs = dirs.iter().map(|d| d.display().to_string()).collect::<Vec<_>>().join("; ");
-            return Err(Reason::new("cadLoad").with("file", file.display().to_string()).with("dirs", dirs).detail(std::io::Error::last_os_error()));
+            let dirs = dirs
+                .iter()
+                .map(|d| d.display().to_string())
+                .collect::<Vec<_>>()
+                .join("; ");
+            return Err(Reason::new("cadLoad")
+                .with("file", file.display().to_string())
+                .with("dirs", dirs)
+                .detail(std::io::Error::last_os_error()));
         }
     }
     Ok(())
