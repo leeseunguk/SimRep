@@ -51,8 +51,14 @@ pub fn read_fast_adjust(
             .get(number)
             .is_none_or(|&index| index == -1)
         {
+            let accepted: Vec<_> = metadata
+                .electrode_indices
+                .iter()
+                .enumerate()
+                .filter_map(|(number, &index)| (index != -1).then_some(number))
+                .collect();
             return Err(invalid(format!(
-                "adjustable electrode {number} is not represented in PA0"
+                "adjustable electrode {number} is not represented in PA0; accepted electrode numbers: {accepted:?}"
             )));
         }
         if requested.insert(number, voltage).is_some() {

@@ -198,6 +198,16 @@ e(2) { fill { within { box(8,-2,10,8) } } }
     field = simrep.refine_geometry(path, electrodes={1: (1, 3), 2: (2, 11)})
     np.testing.assert_allclose(field.pa.potentials,
                                np.broadcast_to(np.arange(9) + 3, (1, 7, 9)), atol=1e-7)
+    with pytest.raises(ValueError, match="GEM pa_define determines symmetry"):
+        simrep.refine_geometry(path, symmetry="cylindrical",
+                               electrodes={1: (1, 3), 2: (2, 11)})
+
+
+@pytest.mark.parametrize("options", [{"units": "cm"}, {"repair": True}])
+def test_analytic_geometry_rejects_mesh_only_settings(options):
+    with pytest.raises(ValueError, match="units and repair apply only to mesh input"):
+        simrep.refine_geometry(geometry_planes(), dims=(9, 7, 1),
+                               electrodes={"left": (1, 3), "right": (2, 11)}, **options)
 
 
 def test_analytic_numeric_names_do_not_alias_part_indices():
@@ -236,6 +246,25 @@ f 4 1 5 8
 def beam():
     return simrep.particles_from_energy([[1, 2, 0], [1, 3, 0]],
                                         [1, 0, 0], [2, 3], mass_amu=39)
+
+
+def test_automatic_device_reasons_are_visible(capfd):
+    refined = simrep.refine(plates(), device="auto")
+    assert refined.report["device"] == "cpu"
+    assert "auto: CPU (no dielectric material;" in capfd.readouterr().err
+    result = simrep.fly(None, beam(), duration_us=0.001, allow_time_limit=True)
+    assert result.report["device"] == "cpu"
+    assert "auto: CPU (2 ions < measured crossover 4096)" in capfd.readouterr().err
+    result = simrep.fly(None, beam(), bfield=[0, 0, 10], duration_us=0.001,
+                        allow_time_limit=True)
+    assert result.report["device"] == "cpu"
+    assert "GPU magnetic flight not selected automatically" in capfd.readouterr().err
+
+
+def test_unknown_backend_is_rejected_even_for_cpu_refine():
+    for device in ("cpu", "auto"):
+        with pytest.raises(ValueError, match="backend must be auto, vulkan, dx12, metal or all"):
+            simrep.refine(plates(), device=device, backend="typo")
 
 
 def test_fly_arrays_trajectories_and_velocity_input():

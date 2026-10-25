@@ -80,7 +80,12 @@ fn invalid(message: impl Into<String>) -> io::Error {
 pub fn read(path: impl AsRef<Path>, options: &ReadOptions) -> io::Result<MagneticGrid> {
     let text = std::fs::read_to_string(path.as_ref())?;
     let mut options = options.clone();
-    if options.format == Format::Auto && path.as_ref().extension().is_some_and(|s| s == "table") {
+    if options.format == Format::Auto
+        && path
+            .as_ref()
+            .extension()
+            .is_some_and(|s| s.eq_ignore_ascii_case("table"))
+    {
         options.format = Format::Opera;
     }
     parse(&text, &options)

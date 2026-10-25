@@ -4,6 +4,7 @@ import argparse
 import collections
 import json
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -12,6 +13,18 @@ from pathlib import Path
 
 from check_gem import invoke
 from run_oracle import win_path
+
+# Shared SIMION oracle working directory; required via SIMREP_ORACLE_CACHE or --root.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --root was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory that holds (or should hold) "
+        "the oracle working data (default layout: $SIMREP_ORACLE_CACHE/_fly2 "
+        "for results and $SIMREP_ORACLE_CACHE/_iob for cached IOB placements), "
+        "or pass --root pointing at the _fly2 directory.")
 
 
 def rows(text):
@@ -99,7 +112,8 @@ def lua_string(value):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--examples", type=Path, default=Path("/mnt/c/Program Files/SIMION-2024/examples"))
-    ap.add_argument("--root", type=Path, default=Path("/mnt/c/Users/lsu10/simrep-oracle/_fly2"))
+    ap.add_argument("--root", type=Path, default=None,
+                    help="Oracle working directory (default: $SIMREP_ORACLE_CACHE/_fly2)")
     ap.add_argument("--native", type=Path, default=Path("target/release/examples/particles"))
     ap.add_argument("--simion", default="/mnt/c/Program Files/SIMION-2024/simion.exe")
     ap.add_argument("--filter", default="")
@@ -107,6 +121,8 @@ def main():
     ap.add_argument("--reuse-oracle", action="store_true")
     ap.add_argument("--report", type=Path, default=Path("docs/fly2-validation.md"))
     args = ap.parse_args()
+    if args.root is None:
+        args.root = oracle_cache() / "_fly2"
     args.native = args.native.resolve()
     args.root.mkdir(parents=True, exist_ok=True)
     results_path = args.root / "results.json"
@@ -134,7 +150,7 @@ def main():
         # PA coordinate modes need the actual IOB placement, not an assumed identity.
         iob = source.with_suffix(".iob")
         needs_context = bool(re.search(r"coordinates\s*=\s*[1-9]|simion\.wb", text))
-        cached_iob = Path("/mnt/c/Users/lsu10/simrep-oracle/_iob/all") / name[:-5].replace("/", "__") / iob.name
+        cached_iob = args.root.parent / "_iob" / "all" / name[:-5].replace("/", "__") / iob.name
         if needs_context and cached_iob.exists():
             iob = cached_iob
         if "simion.wb" in text and iob.exists():

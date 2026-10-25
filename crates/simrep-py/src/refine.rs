@@ -45,14 +45,25 @@ pub fn backends(name: &str) -> Result<Backends> {
 }
 
 pub fn gpu(s: &Settings) -> Result<Option<Gpu>> {
+    let backend = backends(&s.backend)?;
     match s.device.as_str() {
         "cpu" => Ok(None),
         "auto" | "gpu" => {
-            let gpu = pollster::block_on(Gpu::new(backends(&s.backend)?))?;
+            let gpu = pollster::block_on(Gpu::new(backend))?;
             if gpu.is_none() && s.device == "gpu" {
                 return Err(
                     "no GPU adapter found; select device='cpu' or a supported backend".into(),
                 );
+            }
+            if let Some(gpu) = &gpu {
+                if s.device == "gpu" {
+                    crate::require_hardware_gpu(&gpu.info)?;
+                }
+                eprintln!(
+                    "Adapter: {} ({:?}, {:?})",
+                    gpu.info.name, gpu.info.backend, gpu.info.device_type
+                );
+                crate::report_gpu_residual(gpu.has_f64());
             }
             Ok(gpu)
         }
@@ -99,6 +110,7 @@ pub fn refine<'py>(
     let mut file = pa::owned(potentials, electrodes, metadata)?;
     let s: Settings = serde_json::from_str(settings).map_err(error)?;
     let report = py.detach(|| -> Result<String> {
+        backends(&s.backend)?;
         let a = &mut file.array;
         if !a.refinable {
             return Err("PA is marked non-refinable (field map)".into());
@@ -135,6 +147,16 @@ pub fn refine<'py>(
         let gpu = gpu.filter(|gpu| s.device != "auto" || material.is_none()
             || gpu.info.device_type != simrep_solve::gpu::DeviceType::Cpu);
         let mut field_change = None;
+        if s.device == "auto" {
+            let reason = match &material {
+                None => "no dielectric material; use --device gpu for GPU refine",
+                Some(material) if !simrep_solve::dielectric::prefer_gpu(grid(a), material.is_nonlinear()) =>
+                    "dielectric grid below measured GPU crossover",
+                Some(_) if gpu.is_none() => "no hardware GPU adapter available for the requested backend",
+                Some(_) => "dielectric grid meets measured GPU crossover",
+            };
+            eprintln!("auto: {} ({reason})", if gpu.is_some() { "GPU" } else { "CPU" });
+        }
         let (converged, cycles, residual, compute_ms) = if let Some(material) = &material {
             let r = material.solve(&mut values, options(&s), gpu.as_ref())?;
             field_change = r.field_change;

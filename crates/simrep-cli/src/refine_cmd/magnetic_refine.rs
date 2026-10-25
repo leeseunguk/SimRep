@@ -114,13 +114,33 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
     let primary_layout = Layout::new(&primary.array);
     // Preserve the linear policy, extending its measured crossover only for
     // magnetic Poisson. The smaller bracket needs native f64 on the adapter.
-    let gpu = if options
+    let request_gpu = options
         .device
         .requests_gpu(primary_layout.grid, Some(false))
         || options.device == RefineDevice::Auto
-            && magnetostatics::prefer_gpu(primary_layout.grid, true)
-    {
+            && magnetostatics::prefer_gpu(primary_layout.grid, true);
+    let mut reason = if request_gpu {
+        "magnetic grid meets measured GPU crossover"
+    } else {
+        "magnetic grid below measured GPU crossover"
+    };
+    let gpu = if request_gpu {
         let candidate = pollster::block_on(Gpu::new(options.backend.backends()))?;
+        if let Some(gpu) = &candidate
+            && options.device == RefineDevice::Gpu
+        {
+            crate::require_hardware_gpu(&gpu.info)?;
+        }
+        reason = match &candidate {
+            None => "no adapter available for the requested backend",
+            Some(gpu) if gpu.info.device_type == DeviceType::Cpu => {
+                "adapter is a CPU/software adapter"
+            }
+            Some(gpu) if !magnetostatics::prefer_gpu(primary_layout.grid, gpu.has_f64()) => {
+                "adapter lacks native f64 and grid is below its measured GPU crossover"
+            }
+            _ => reason,
+        };
         let selected = candidate.filter(|g| {
             options.device == RefineDevice::Gpu
                 || g.info.device_type != DeviceType::Cpu
@@ -134,10 +154,25 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
         None
     };
     println!(
-        "Device: {} (requested {:?}); magnetic material refinement",
+        "Device: {} (requested {:?}); magnetic material refinement; {}",
         if gpu.is_some() { "GPU" } else { "CPU" },
-        options.device
+        options.device,
+        if options.device == RefineDevice::Auto {
+            format!(
+                "auto: {} ({reason})",
+                if gpu.is_some() { "GPU" } else { "CPU" }
+            )
+        } else {
+            "explicit --device".to_owned()
+        }
     );
+    if let Some(gpu) = &gpu {
+        println!(
+            "Adapter: {} ({:?}, {:?})",
+            gpu.info.name, gpu.info.backend, gpu.info.device_type
+        );
+        crate::report_gpu_residual(gpu.has_f64());
+    }
     let solve_options = Options {
         relative_tolerance: options.tolerance,
         max_cycles: options.max_cycles,

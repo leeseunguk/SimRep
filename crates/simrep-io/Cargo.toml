@@ -1,6 +1,6 @@
 [package]
 name = "simrep-io"
-description = "SIMION file formats (.pa, .fly2, .gem, .rec) and STL"
+description = "SIMION file formats (PA/PA#/PA0, fast adjust, ION, FLY2) and imported magnetic field maps"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

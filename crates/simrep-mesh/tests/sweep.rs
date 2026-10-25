@@ -110,6 +110,22 @@ fn planar_extrusion_expands_mirrors_and_retains_electrode_interfaces() {
     assert!((volume - 1.5 * 6.0 * 4.0).abs() < 1e-10);
     let selected = electrode_surface_with_options(&pa, [0.0; 3], Some(7.0), options).unwrap();
     assert_eq!(selected.parts.len(), 1);
+    for nz in [1, 3] {
+        let mut pa = PotentialArray::new(3, 3, nz);
+        pa.electrodes[0] = true;
+        pa.potentials[0] = 7.0;
+        let error = electrode_surface(&pa, [0.0; 3], Some(9.0))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("electrode 9 has no exposed faces"),
+            "{error}"
+        );
+        assert!(
+            error.contains("accepted electrode values: [7.0]"),
+            "{error}"
+        );
+    }
 }
 
 #[test]

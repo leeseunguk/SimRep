@@ -151,10 +151,9 @@ fn errors(actual: &[FlightResult], reference: &[FlightResult]) -> (f64, f64) {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_PHYSICS (captured SIMION fixtures and native f64 Vulkan)"]
 fn gpu_physics_reference_agreement() {
-    let Ok(root) = std::env::var("SIMREP_GPU_PHYSICS") else {
-        return;
-    };
+    let root = std::env::var("SIMREP_GPU_PHYSICS").expect("requires SIMREP_GPU_PHYSICS");
     let gpu = pollster::block_on(Gpu::new(Backends::VULKAN))
         .unwrap()
         .expect("native Vulkan adapter");
@@ -265,10 +264,9 @@ fn write_csv(path: &Path, particles: &[Particle], results: &[FlightResult]) {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_PHYSICS and SIMREP_GPU_MBM (collision output directory, mbmr.dat and Vulkan)"]
 fn gpu_physics_collision_distributions() {
-    let Ok(root) = std::env::var("SIMREP_GPU_PHYSICS") else {
-        return;
-    };
+    let root = std::env::var("SIMREP_GPU_PHYSICS").expect("requires SIMREP_GPU_PHYSICS");
     let output = Path::new(&root).join("gpu-physics");
     std::fs::create_dir_all(&output).unwrap();
     let preview = std::env::var("SIMREP_GPU_PREVIEW").as_deref() == Ok("1");
@@ -360,13 +358,14 @@ fn gpu_physics_collision_distributions() {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_PHYSICS and SIMREP_GPU_TIMING=1 (oracle fixtures and hardware f64 Vulkan timestamps)"]
 fn gpu_physics_compute_benchmark() {
-    let Ok(root) = std::env::var("SIMREP_GPU_PHYSICS") else {
-        return;
-    };
-    if std::env::var("SIMREP_GPU_TIMING").as_deref() != Ok("1") {
-        return;
-    }
+    let root = std::env::var("SIMREP_GPU_PHYSICS").expect("requires SIMREP_GPU_PHYSICS");
+    assert_eq!(
+        std::env::var("SIMREP_GPU_TIMING").as_deref(),
+        Ok("1"),
+        "requires SIMREP_GPU_TIMING=1"
+    );
     let cpu_only = std::env::var("SIMREP_GPU_CPU_ONLY").as_deref() == Ok("1");
     let gpu = pollster::block_on(Gpu::new(Backends::VULKAN))
         .unwrap()

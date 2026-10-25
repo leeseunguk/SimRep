@@ -4,10 +4,9 @@ use super::*;
 
 /// The app's cached, adjustable templates, with no IPC or renderer work.
 #[test]
+#[ignore = "requires SIMREP_GPU_LIVE_BENCH (solved app templates and hardware Vulkan timestamps)"]
 fn live_refly_benchmark() {
-    let Ok(directory) = std::env::var("SIMREP_GPU_LIVE_BENCH") else {
-        return;
-    };
+    let directory = std::env::var("SIMREP_GPU_LIVE_BENCH").expect("requires SIMREP_GPU_LIVE_BENCH");
     let precision = if std::env::var_os("SIMREP_GPU_PREVIEW").is_some() {
         Precision::Preview
     } else {
@@ -129,10 +128,9 @@ fn live_refly_benchmark() {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_BENCH (solved templates and hardware Vulkan)"]
 fn template_compute_benchmark() {
-    let Ok(directory) = std::env::var("SIMREP_GPU_BENCH") else {
-        return;
-    };
+    let directory = std::env::var("SIMREP_GPU_BENCH").expect("requires SIMREP_GPU_BENCH");
     let precision = if std::env::var_os("SIMREP_GPU_PREVIEW").is_some() {
         Precision::Preview
     } else {

@@ -952,17 +952,12 @@ fn gpu_pending_physics_snapshots_instances_and_continues_seeded_streams() {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_MBM (installed mbmr.dat and Vulkan)"]
 fn gpu_sds_exact_damped_rotation_and_diffusion() {
-    let Some(path) = std::env::var_os("SIMREP_GPU_MBM") else {
-        eprintln!("SKIP GPU SDS: set SIMREP_GPU_MBM to the installed mbmr.dat");
-        return;
-    };
-    let Some(gpu) =
-        pollster::block_on(Gpu::new(Backends::VULKAN)).unwrap_or_else(|e| panic!("{e}"))
-    else {
-        eprintln!("SKIP GPU SDS: no Vulkan adapter");
-        return;
-    };
+    let path = std::env::var_os("SIMREP_GPU_MBM").expect("requires SIMREP_GPU_MBM");
+    let gpu = pollster::block_on(Gpu::new(Backends::VULKAN))
+        .unwrap_or_else(|e| panic!("{e}"))
+        .expect("GPU SDS requires a Vulkan adapter");
     let e = empty_electric();
     let magnetic = MagneticField {
         uniform_gauss: [0.0, 0.0, 100.0],

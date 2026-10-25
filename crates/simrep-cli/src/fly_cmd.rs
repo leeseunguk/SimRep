@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
 use std::path::PathBuf;
@@ -239,19 +239,19 @@ fn map_units(
     use simrep_io::bfield::{FluxUnit as B, LengthUnit as L};
     let (length, flux) = text
         .split_once('/')
-        .ok_or("expected coordinate/flux units, for example mm/G")?;
+        .ok_or("expected coordinate/flux units: length mm, m, cm, inch or in / flux G, gauss, T, tesla or mT (for example mm/G)")?;
     let length = match length.to_ascii_lowercase().as_str() {
         "mm" => L::Mm,
         "m" => L::M,
         "cm" => L::Cm,
         "inch" | "in" => L::Inch,
-        _ => return Err("length unit must be mm, m, cm or inch".into()),
+        _ => return Err("length unit must be mm, m, cm, inch or in".into()),
     };
     let flux = match flux.to_ascii_lowercase().as_str() {
         "g" | "gauss" => B::Gauss,
         "t" | "tesla" => B::Tesla,
         "mt" => B::Millitesla,
-        _ => return Err("flux unit must be G, T or mT".into()),
+        _ => return Err("flux unit must be G, gauss, T, tesla or mT".into()),
     };
     Ok((length, flux))
 }
@@ -364,8 +364,12 @@ fn load_magnetic_maps(options: &FlyOptions) -> GpuResult<Vec<ImportedMagneticMap
 
 fn voltage(text: &str) -> Result<(usize, f64), String> {
     let (number, volts) = text.split_once('=').ok_or("expected electrode=volts")?;
-    let number = number.parse().map_err(|_| "invalid electrode number")?;
-    let volts: f64 = volts.parse().map_err(|_| "invalid electrode voltage")?;
+    let number = number
+        .parse()
+        .map_err(|_| "expected electrode=volts with a nonnegative integer electrode number")?;
+    let volts: f64 = volts
+        .parse()
+        .map_err(|_| "expected electrode=volts with a finite voltage")?;
     if !volts.is_finite() {
         return Err("electrode voltage must be finite".into());
     }
@@ -406,9 +410,44 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         Some(path) => serde_json::from_reader(BufReader::new(File::open(path)?))?,
         None => VoltageRun::default(),
     };
-    run.parameters.extend(options.param.iter().cloned());
-    run.voltage_expr
-        .extend(options.voltage_expr.iter().cloned());
+    let mut parameters = BTreeSet::new();
+    for (name, value) in &options.param {
+        if !parameters.insert(name) {
+            return Err(
+                format!("duplicate --param key {name:?}; supply each parameter once").into(),
+            );
+        }
+        if let Some(previous) = run.parameters.insert(name.clone(), *value)
+            && previous != *value
+        {
+            eprintln!("parameter {name}: {previous} -> {value} (--param overrides run-file value)");
+        }
+    }
+    let mut expression_numbers = BTreeSet::new();
+    for (number, expression) in &options.voltage_expr {
+        if !expression_numbers.insert(number) {
+            return Err(format!(
+                "duplicate --voltage-expr electrode {number}; supply each electrode once"
+            )
+            .into());
+        }
+        if let Some(previous) = run.voltage_expr.insert(*number, expression.clone())
+            && previous != *expression
+        {
+            eprintln!(
+                "electrode {number} expression: {previous:?} -> {expression:?} (--voltage-expr overrides run-file value)"
+            );
+        }
+    }
+    let mut voltage_numbers = BTreeSet::new();
+    for &(number, _) in &options.voltage {
+        if !voltage_numbers.insert(number) {
+            return Err(format!(
+                "duplicate --voltage electrode {number}; supply each electrode once"
+            )
+            .into());
+        }
+    }
     let expressions = run
         .voltage_expr
         .into_iter()
@@ -434,6 +473,11 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
     if beam_mode && options.device == FlyDevice::Gpu {
         return Err("leader-plane beam integration requires --device cpu or auto".into());
     }
+    if options.device == FlyDevice::Gpu
+        && matches!(options.space_charge, Some(SpaceChargeMethod::Direct))
+    {
+        return Err("direct Coulomb physics requires --device cpu or auto".into());
+    }
     let cuts_path = options.cuts.clone().or_else(|| {
         options
             .pa
@@ -457,13 +501,27 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
             return Err("surface collisions require CPU; use --device cpu or auto, or --no-cuts for staircase GPU flying".into());
         }
         eprintln!(
-            "surface: {} ({})",
+            "surface: {} ({}; {})",
             cuts_path.as_ref().unwrap().display(),
+            if options.cuts.is_some() {
+                "explicit --cuts"
+            } else {
+                "automatic sibling pickup"
+            },
             match surface.accuracy() {
                 SurfaceAccuracy::ApproximateV1 =>
                     "APPROXIMATE v1 reconstruction from link intersections",
                 SurfaceAccuracy::SampledSdf => "APPROXIMATE sampled SDF (v2); CPU",
                 SurfaceAccuracy::SourceGeometry => "source geometry (v3); CPU",
+            }
+        );
+    } else if options.pa.is_some() {
+        eprintln!(
+            "surface: staircase ({})",
+            if options.no_cuts {
+                "--no-cuts disables sibling pickup"
+            } else {
+                "no sibling .cuts.json found"
             }
         );
     }
@@ -608,6 +666,25 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
     };
     let init = Instant::now();
     let request_gpu = !beam_mode && options.device.requests_gpu(particle_data.len(), crossover);
+    let mut reason = if beam_mode {
+        "leader-plane beam integration requires CPU".to_owned()
+    } else if surface.is_some() && !matches!(options.space_charge, Some(SpaceChargeMethod::Pic)) {
+        "surface collisions require CPU".to_owned()
+    } else if cpu_only_magnetic {
+        "vector potentials and magnetic material cells require CPU".to_owned()
+    } else if has_magnetic || magnetic.support.is_some() {
+        "magnetic field: GPU magnetic flight not selected automatically".to_owned()
+    } else if matches!(options.space_charge, Some(SpaceChargeMethod::Direct)) {
+        "direct Coulomb physics requires CPU".to_owned()
+    } else if let Some(threshold) = crossover {
+        format!(
+            "{} ions {} measured crossover {threshold}",
+            particle_data.len(),
+            if request_gpu { ">=" } else { "<" }
+        )
+    } else {
+        "no measured GPU crossover for this collision profile".to_owned()
+    };
     let gpu = if (surface.is_none() || matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
         && request_gpu
     {
@@ -615,15 +692,33 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
             None if options.device == FlyDevice::Gpu => {
                 return Err("no adapter available for GPU flying".into());
             }
-            Some(gpu)
-                if options.device == FlyDevice::Auto
-                    && (gpu.info.device_type == DeviceType::Cpu
-                        || !gpu.has_f64()
-                        || collision.is_some() && gpu.info.name != "NVIDIA GeForce RTX 3070") =>
-            {
+            None => {
+                reason = "no adapter available for the requested backend".into();
                 None
             }
-            gpu => gpu,
+            Some(gpu) => {
+                if options.device == FlyDevice::Gpu {
+                    crate::require_hardware_gpu(&gpu.info)?;
+                }
+                if options.device == FlyDevice::Auto && gpu.info.device_type == DeviceType::Cpu {
+                    reason = format!("adapter {} is a CPU/software adapter", gpu.info.name);
+                    None
+                } else if options.device == FlyDevice::Auto && !gpu.has_f64() {
+                    reason = format!("adapter {} lacks native f64", gpu.info.name);
+                    None
+                } else if options.device == FlyDevice::Auto
+                    && collision.is_some()
+                    && gpu.info.name != "NVIDIA GeForce RTX 3070"
+                {
+                    reason = format!(
+                        "collision crossover was measured on NVIDIA GeForce RTX 3070, not {}",
+                        gpu.info.name
+                    );
+                    None
+                } else {
+                    Some(gpu)
+                }
+            }
         }
     } else {
         None
@@ -631,11 +726,29 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
     let initialization = init.elapsed();
     let use_gpu = gpu.is_some();
     eprintln!(
-        "device: {}, requested: {:?}, auto_gpu_threshold: {:?} (measured compute-only class calibration)",
+        "device: {}, requested: {:?}, auto_gpu_threshold: {:?} (measured compute-only class calibration); {}",
         if use_gpu { "gpu" } else { "cpu" },
         options.device,
         crossover,
+        if options.device == FlyDevice::Auto {
+            format!("auto: {} ({reason})", if use_gpu { "GPU" } else { "CPU" })
+        } else {
+            "explicit --device".to_owned()
+        },
     );
+    if let Some(gpu) = &gpu {
+        eprintln!(
+            "Adapter: {} ({:?}, {:?})",
+            gpu.info.name, gpu.info.backend, gpu.info.device_type
+        );
+        if matches!(options.space_charge, Some(SpaceChargeMethod::Pic)) {
+            crate::report_gpu_residual(gpu.has_f64());
+        } else if !gpu.has_f64() {
+            eprintln!(
+                "GPU precision: f32 (adapter lacks native f64; tolerance floor 2e-7, two-float TOF)"
+            );
+        }
+    }
     let reconstruction = if options.global_cubic {
         Reconstruction::GlobalCubic
     } else {
@@ -691,13 +804,15 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
     if let Some(surface) = surface {
         field = field.with_surface(std::sync::Arc::new(surface))?;
     }
-    if use_gpu && matches!(options.space_charge, Some(SpaceChargeMethod::Direct)) {
-        return Err("direct Coulomb physics requires --device cpu".into());
-    }
     if (beam_mode || options.space_charge.is_some()) && collision.is_some() {
         return Err("space charge does not support collision models".into());
     }
     let nonrelativistic = options.nonrelativistic || collision.is_some();
+    if collision.is_some() && !options.nonrelativistic {
+        eprintln!(
+            "dynamics: nonrelativistic (collision models require nonrelativistic integration)"
+        );
+    }
     let weights = particle_data
         .iter()
         .map(|p| p.charge_weight)
@@ -875,10 +990,6 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         );
         (report.results, setup, report.compute_time)
     } else if let Some(gpu) = &gpu {
-        eprintln!(
-            "Adapter: {} ({:?}, {:?})",
-            gpu.info.name, gpu.info.backend, gpu.info.device_type
-        );
         let mut resident = if has_magnetic || collision.is_some() {
             gpu.prepare_physics(&field, &bases, &magnetic, collision.as_ref(), seed)?
         } else {

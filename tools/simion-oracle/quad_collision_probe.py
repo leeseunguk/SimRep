@@ -1,14 +1,34 @@
 #!/usr/bin/env python3
 """Measure SIMION's 3D PA collision surface with all voltages set to zero."""
+import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 
 from run_oracle import DEFAULT_SIMION, run_simion, win_path
 
+# Collected SIMION oracle inputs; required via SIMREP_ORACLE_CACHE or --source.
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set and --source was not given. "
+        "Set SIMREP_ORACLE_CACHE to the directory holding the collected SIMION "
+        "oracle inputs (default layout: $SIMREP_ORACLE_CACHE/_quad_gpu with "
+        "quad.pa* and compute.iob), or pass --source with that directory.")
+
 
 def main():
-    source = Path("/mnt/c/Users/lsu10/simrep-oracle/_quad_gpu")
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--source", type=Path, default=None,
+                        help="Directory holding the quad PAs and compute.iob "
+                             "(default: $SIMREP_ORACLE_CACHE/_quad_gpu)")
+    args = parser.parse_args()
+    if args.source is None:
+        args.source = oracle_cache() / "_quad_gpu"
+    source = args.source
     work = source.parent / "_quad_collision_probe"
     work.mkdir(exist_ok=True)
     for path in source.glob("quad.pa*"):

@@ -511,6 +511,7 @@ pub fn fly<'py>(
             let surface = SurfaceModel::from_reader(BufReader::new(File::open(path)?))?
                 .with_tolerance(s.tolerance.unwrap_or(1e-12) / s.scale)?;
             field = field.with_surface(Arc::new(surface))?;
+            eprintln!("surface: {path} (explicit cuts)");
         }
         if let Some(value) = &s.cuts_json {
             let surface = SurfaceModel::from_reader(value.to_string().as_bytes())?
@@ -524,6 +525,7 @@ pub fn fly<'py>(
         if beam_mode && (s.beam_current_a.is_none() || s.space_charge.is_some()) { return Err("beam needs beam_current_a and cannot be combined with space_charge".into()); }
         if !beam_mode && s.beam_current_a.is_some() { return Err("beam_current_a requires charge_mode='beam'".into()); }
         if beam_mode && s.device == "gpu" { return Err("leader-plane beam integration requires device='cpu' or 'auto'".into()); }
+        if s.device == "gpu" && s.space_charge.as_deref() == Some("direct") { return Err("direct Coulomb physics requires device='cpu' or 'auto'".into()); }
         if (beam_mode || s.space_charge.is_some()) && collision.is_some() { return Err("space charge does not support collision models".into()); }
         let cpu_only = beam_mode || s.transparent_faces.contains(&true)
             || ((s.cuts.is_some() || s.cuts_json.is_some()) && s.space_charge.as_deref() != Some("pic"));
@@ -552,18 +554,55 @@ pub fn fly<'py>(
                 _ => None,
             },
         };
+        let mut auto_reason = if cpu_only {
+            "beam integration, surface collisions or transparent faces require CPU".to_owned()
+        } else if s.space_charge.as_deref() == Some("direct") {
+            "direct Coulomb physics requires CPU".to_owned()
+        } else if has_magnetic && crossover.is_none() {
+            "magnetic field: GPU magnetic flight not selected automatically".to_owned()
+        } else if let Some(threshold) = crossover {
+            format!("{} ions {} measured crossover {threshold}", particles.len(),
+                if particles.len() >= threshold { ">=" } else { "<" })
+        } else {
+            "no measured GPU crossover for this collision profile".to_owned()
+        };
         let gpu = match s.device.as_str() {
             "cpu" => None,
             "auto" if cpu_only || crossover.is_none_or(|n| particles.len() < n) => None,
             "gpu" | "auto" => {
                 let gpu = pollster::block_on(Gpu::new(backends(&s.backend)?))?;
                 if s.device == "gpu" && gpu.is_none() { return Err("no GPU adapter found; select device='cpu'".into()); }
+                if let Some(gpu) = &gpu {
+                    if s.device == "gpu" { crate::require_hardware_gpu(&gpu.info)?; }
+                    if gpu.info.device_type == DeviceType::Cpu {
+                        auto_reason = format!("adapter {} is a CPU/software adapter", gpu.info.name);
+                    } else if !gpu.has_f64() {
+                        auto_reason = format!("adapter {} lacks native f64", gpu.info.name);
+                    } else if collision.is_some() && gpu.info.name != "NVIDIA GeForce RTX 3070" {
+                        auto_reason = format!("collision crossover was measured on NVIDIA GeForce RTX 3070, not {}", gpu.info.name);
+                    }
+                } else {
+                    auto_reason = "no adapter available for the requested backend".into();
+                }
                 gpu.filter(|g| s.device == "gpu" || (g.info.device_type != DeviceType::Cpu && g.has_f64()
                     && (collision.is_none() || g.info.name == "NVIDIA GeForce RTX 3070")))
             }
             _ => return Err("device must be auto, cpu or gpu".into()),
         };
-        if gpu.is_some() && s.space_charge.as_deref() == Some("direct") { return Err("direct Coulomb physics requires device='cpu'".into()); }
+        if s.device == "auto" {
+            eprintln!("auto: {} ({auto_reason})", if gpu.is_some() { "GPU" } else { "CPU" });
+        }
+        if let Some(gpu) = &gpu {
+            eprintln!("Adapter: {} ({:?}, {:?})", gpu.info.name, gpu.info.backend, gpu.info.device_type);
+            if s.space_charge.as_deref() == Some("pic") {
+                crate::report_gpu_residual(gpu.has_f64());
+            } else if !gpu.has_f64() {
+                eprintln!("GPU precision: f32 (adapter lacks native f64; tolerance floor 2e-7, two-float TOF)");
+            }
+        }
+        if collision.is_some() && s.relativistic {
+            eprintln!("dynamics: nonrelativistic (collision models require nonrelativistic integration)");
+        }
         let o = FlightOptions {
             integrator: match s.integrator.as_str() { "rk45" => Integrator::Rk45, "boris" => Integrator::Boris, _ => return Err("integrator must be rk45 or boris".into()) },
             duration_us: s.duration_us, initial_step_us: s.initial_step_us.min(s.max_step_us.unwrap_or(f64::MAX)),

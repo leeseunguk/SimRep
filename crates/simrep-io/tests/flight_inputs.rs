@@ -150,6 +150,13 @@ fn fast_adjust_uses_extended_scalable_voltage_table_for_overlapping_solutions() 
 fn fast_adjust_rejects_unknown_duplicate_nonfinite_and_missing_inputs() {
     let fixture = Fixture::new();
     let path = write_fast_adjust_fixture(&fixture);
+    let error = read_fast_adjust(&path, &[(3, 1.0)])
+        .unwrap_err()
+        .to_string();
+    assert!(
+        error.contains("accepted electrode numbers: [0, 1, 2]"),
+        "{error}"
+    );
     for overrides in [
         vec![(3, 1.0)],
         vec![(1001, 1.0)],

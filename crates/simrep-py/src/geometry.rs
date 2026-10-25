@@ -129,7 +129,16 @@ pub fn refine_geometry<'py>(
     let shapes: Vec<ShapeInput> = serde_json::from_str(shapes).map_err(error)?;
     let (file, bases, report) = py.detach(|| -> Result<_> {
         let start = Instant::now();
+        if !matches!(s.symmetry.as_str(), "planar" | "cylindrical") {
+            return Err("symmetry must be planar or cylindrical with nz=1".into());
+        }
+        if path.is_empty() && (s.units.is_some() || s.repair) {
+            return Err("units and repair apply only to mesh input, not analytic shapes".into());
+        }
         let gem_input = Path::new(&path).extension().is_some_and(|v| v.eq_ignore_ascii_case("gem"));
+        if gem_input && s.symmetry != "planar" {
+            return Err("GEM pa_define determines symmetry; omit the Python symmetry override (accepted only for mesh/analytic input: planar or cylindrical with nz=1)".into());
+        }
         let mesh_input = !path.is_empty() && !gem_input;
         let (mut file, sources, tracing_scale): (PaFile, Vec<Source>, f64) = if gem_input {
             if s.units.is_some() || s.repair { return Err("units and repair apply only to mesh input".into()); }
@@ -224,6 +233,10 @@ pub fn refine_geometry<'py>(
         let grid = refine::grid(&file.array);
         let origin = if cylindrical { [0.0, s.origin_mm[0], 0.0] } else { s.origin_mm };
         let gpu = refine::gpu(&s.solve)?;
+        if s.solve.device == "auto" {
+            eprintln!("auto: {} ({})", if gpu.is_some() { "GPU" } else { "CPU" },
+                if gpu.is_some() { "GPU adapter available for geometry refinement" } else { "no adapter available for the requested backend" });
+        }
         let mut bases = Vec::new();
         let mut compute_ms = 0.0;
         let mut combined = vec![0.0; file.array.potentials.len()];

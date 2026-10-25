@@ -9,6 +9,7 @@ import argparse
 import csv
 import json
 import math
+import os
 import re
 import shutil
 import struct
@@ -18,7 +19,21 @@ from pathlib import Path
 from scipy.stats import ks_2samp
 
 REPO = Path(__file__).resolve().parents[2]
-ORACLE = Path("/mnt/c/Users/lsu10/simrep-oracle")
+# Collected SIMION oracle inputs; required via SIMREP_ORACLE_CACHE.
+# Resolved in main() so --help works without it.
+ORACLE = None
+
+
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set. Set it to the directory holding the "
+        "collected SIMION oracle inputs: contour/contourlib81.lua, magnet/, "
+        "magnetic_sector/, helmholtz_coil/, solenoid/, collision_hs1/, and "
+        "collision_sds/mbmr.dat. Results are written to --root (default "
+        "$SIMREP_ORACLE_CACHE/physics-validation-20261023).")
 SIMION = "/mnt/c/Program Files/SIMION-2024/simion.exe"
 
 
@@ -360,7 +375,8 @@ function segment.terminate() end
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--root", type=Path, default=ORACLE / "physics-validation-20261023")
+    ap.add_argument("--root", type=Path, default=None,
+                    help="Output directory (default: $SIMREP_ORACLE_CACHE/physics-validation-20261023)")
     ap.add_argument("--ions", type=int, default=4096)
     ap.add_argument("--only", choices=("magnetic", "collision", "all"), default="all")
     ap.add_argument("--case", help="Run one magnetic IOB stem, e.g. sector_2dp")
@@ -369,6 +385,10 @@ def main():
     ap.add_argument("--stage", choices=("prepare", "native", "flight", "all"), default="all",
                     help="Separate foreground Windows runs from potentially long native PA setup")
     args = ap.parse_args()
+    global ORACLE
+    ORACLE = oracle_cache()
+    if args.root is None:
+        args.root = ORACLE / "physics-validation-20261023"
     args.root.mkdir(parents=True, exist_ok=True)
     if args.check_replay:
         for model in ("hs1", "sds"):

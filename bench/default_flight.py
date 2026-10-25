@@ -16,8 +16,24 @@ import struct
 import subprocess
 
 
-ORACLE = Path("/mnt/c/Users/lsu10/simrep-oracle")
-SOURCE = Path("/home/lsu10/orca/workspaces/SIMION/SIMION_Rep")
+# Collected SIMION oracle inputs; required via SIMREP_ORACLE_CACHE.
+# Resolved in main() so --help works without it.
+ORACLE = None
+
+
+def oracle_cache():
+    root = os.environ.get("SIMREP_ORACLE_CACHE")
+    if root:
+        return Path(root)
+    raise SystemExit(
+        "SIMREP_ORACLE_CACHE is not set. Set it to the directory holding the "
+        "collected SIMION oracle inputs: _benchfly/ (einzel.pa0 and the einzel "
+        "ion files), physics-validation-20261023/ (magnetic and collision "
+        "cases), _rf_tof/ (RF TOF cases and cpu-measurements.json), "
+        "collision_sds/mbmr.dat, and space-charge/.")
+
+
+SOURCE = Path(__file__).resolve().parents[1]
 
 
 def rows(path):
@@ -54,6 +70,8 @@ def main():
     parser.add_argument("--einzel-10k", action="store_true",
                         help="Time the preserved 10k beam instead of the reference subset")
     args = parser.parse_args()
+    global ORACLE
+    ORACLE = oracle_cache()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
     if args.api_baseline and not args.legacy:

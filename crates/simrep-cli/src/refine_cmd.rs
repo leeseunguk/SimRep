@@ -290,11 +290,31 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
     {
         return Err("nonlinear permittivity cannot use PA# fast-adjust bases; refine an ordinary PA at its actual voltages".into());
     }
-    let gpu = if options.device.requests_gpu(
+    let request_gpu = options.device.requests_gpu(
         layout.grid,
         permittivity.as_ref().map(LoadedMaterial::is_nonlinear),
-    ) {
+    );
+    let mut reason = if permittivity.is_none() {
+        "no dielectric material; use --device gpu for GPU refine"
+    } else if request_gpu {
+        "dielectric grid meets measured GPU crossover"
+    } else {
+        "dielectric grid below measured GPU crossover"
+    };
+    let gpu = if request_gpu {
         let candidate = pollster::block_on(Gpu::new(options.backend.backends()))?;
+        if let Some(gpu) = &candidate
+            && options.device == RefineDevice::Gpu
+        {
+            crate::require_hardware_gpu(&gpu.info)?;
+        }
+        reason = match &candidate {
+            None => "no adapter available for the requested backend",
+            Some(gpu) if gpu.info.device_type == DeviceType::Cpu => {
+                "adapter is a CPU/software adapter"
+            }
+            _ => reason,
+        };
         let gpu = candidate.filter(|gpu| {
             options.device == RefineDevice::Gpu || gpu.info.device_type != DeviceType::Cpu
         });
@@ -310,11 +330,20 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
             "Adapter: {} ({:?}, {:?})",
             gpu.info.name, gpu.info.backend, gpu.info.device_type
         );
+        crate::report_gpu_residual(gpu.has_f64());
     }
     println!(
-        "Device: {} (requested {:?})",
+        "Device: {} (requested {:?}); {}",
         if gpu.is_some() { "GPU" } else { "CPU" },
-        options.device
+        options.device,
+        if options.device == RefineDevice::Auto {
+            format!(
+                "auto: {} ({reason})",
+                if gpu.is_some() { "GPU" } else { "CPU" }
+            )
+        } else {
+            "explicit --device".to_owned()
+        }
     );
     println!(
         "Grid: {} x {} x {}, {:?}, spacing mm: {} x {} x {}",

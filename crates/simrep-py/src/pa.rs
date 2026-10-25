@@ -13,7 +13,11 @@ pub type Arrays<'py> = (
 );
 
 pub fn error(error: impl std::fmt::Display) -> PyErr {
-    PyValueError::new_err(error.to_string())
+    PyValueError::new_err(
+        error
+            .to_string()
+            .replace("use --device cpu", "use device='cpu'"),
+    )
 }
 
 #[derive(Serialize, Deserialize)]

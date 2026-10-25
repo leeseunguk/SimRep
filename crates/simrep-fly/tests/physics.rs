@@ -380,10 +380,9 @@ fn neighboring_ion_streams_are_not_shifted_copies() {
 /// External SIMION dataset is intentionally not a repository dependency.
 /// Run explicitly with SIMREP_MBMR=/path/to/collision_sds/mbmr.dat.
 #[test]
+#[ignore = "requires SIMREP_MBMR (external SIMION collision_sds/mbmr.dat)"]
 fn sds_runtime_icdf_transport_and_exact_drift() {
-    let Ok(path) = std::env::var("SIMREP_MBMR") else {
-        return;
-    };
+    let path = std::env::var("SIMREP_MBMR").expect("requires SIMREP_MBMR");
     let statistics = DiffusionStatistics::from_path(path).unwrap();
     assert_eq!(statistics.quantile(2.0, 0.0), 0.0);
     let q1 = statistics.quantile(1.0, 0.5);

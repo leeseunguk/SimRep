@@ -311,6 +311,8 @@ fn fly_picks_up_v3_sidecar_and_reports_electrode_number() {
     );
     let stderr = String::from_utf8(output.stderr).unwrap();
     assert!(stderr.contains("source geometry (v3)"));
+    assert!(stderr.contains("surface: plates.cuts.json (automatic sibling pickup;"));
+    assert!(stderr.contains("auto: CPU (surface collisions require CPU)"));
     assert!(stderr.contains("device: cpu"));
     let text = String::from_utf8(output.stdout).unwrap();
     let row: Vec<_> = text.lines().nth(1).unwrap().split(',').collect();
@@ -319,9 +321,9 @@ fn fly_picks_up_v3_sidecar_and_reports_electrode_number() {
         "{text}"
     );
     assert_eq!(row[7], "7");
-    let staircase = run(
-        dir.path(),
-        &[
+    let staircase_output = Command::new(env!("CARGO_BIN_EXE_simrep"))
+        .current_dir(dir.path())
+        .args([
             "fly",
             "--pa",
             "plates.pa0",
@@ -329,8 +331,15 @@ fn fly_picks_up_v3_sidecar_and_reports_electrode_number() {
             "one.ion",
             "--nonrelativistic",
             "--no-cuts",
-        ],
+        ])
+        .output()
+        .unwrap();
+    assert!(staircase_output.status.success());
+    assert!(
+        String::from_utf8_lossy(&staircase_output.stderr)
+            .contains("surface: staircase (--no-cuts disables sibling pickup)")
     );
+    let staircase = String::from_utf8(staircase_output.stdout).unwrap();
     let row: Vec<_> = staircase.lines().nth(1).unwrap().split(',').collect();
     use simrep_fly::Field;
     let grid = simrep_fly::GridField::new(

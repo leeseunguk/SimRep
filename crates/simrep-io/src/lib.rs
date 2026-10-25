@@ -1,4 +1,4 @@
-//! SIMION file formats (.pa, .fly2, .gem, .rec) and STL.
+//! SIMION file formats (PA/PA#/PA0, fast adjust, ION, FLY2) and imported magnetic field maps.
 
 pub mod bfield;
 pub mod fast_adjust;

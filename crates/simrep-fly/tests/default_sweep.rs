@@ -8,14 +8,13 @@ use simrep_fly::{
 use simrep_io::{read_fast_adjust, read_particles};
 
 #[test]
+#[ignore = "requires SIMREP_DEFAULT_SWEEP (external default-flight sweep fixtures)"]
 fn einzel_step_control_sweep() {
     run_sweep();
 }
 
 pub fn run_sweep() {
-    let Ok(root) = std::env::var("SIMREP_DEFAULT_SWEEP") else {
-        return;
-    };
+    let root = std::env::var("SIMREP_DEFAULT_SWEEP").expect("requires SIMREP_DEFAULT_SWEEP");
     rayon::ThreadPoolBuilder::new()
         .num_threads(16)
         .build_global()

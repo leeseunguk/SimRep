@@ -262,10 +262,10 @@ fn fly(@builtin(global_invocation_id) id: vec3<u32>) {{\n\
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_KERNEL_BENCH (solved templates and hardware Vulkan timestamps)"]
 fn kernel_experiments() {
-    let Ok(directory) = std::env::var("SIMREP_GPU_KERNEL_BENCH") else {
-        return;
-    };
+    let directory =
+        std::env::var("SIMREP_GPU_KERNEL_BENCH").expect("requires SIMREP_GPU_KERNEL_BENCH");
     let precision = if std::env::var_os("SIMREP_GPU_PREVIEW").is_some() {
         Precision::Preview
     } else {

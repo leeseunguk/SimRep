@@ -598,3 +598,123 @@ fn damped_step(
     }
     next
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Exact SI constants (2019 SI definitions).
+    const SI_E: f64 = 1.602176634e-19; // C
+    const SI_K_B: f64 = 1.380649e-23; // J/K
+    const SI_AMU: f64 = 1.66053906892e-27; // kg
+
+    /// Formula evaluation of the Mason-Schamp low-field mobility with
+    /// supplied constants, not a check of HS1 transport.
+    /// K = 3|q| / (16 n sigma) sqrt(2 pi / (mu k T)) in m^2/(V s), with
+    /// n = P/(kT) and mu the reduced ion/gas mass in kg.
+    fn mason_schamp_mobility(
+        e: f64,
+        k_b: f64,
+        amu: f64,
+        gas: &Gas,
+        sigma_m2: f64,
+        ion_mass_amu: f64,
+        charge_e: f64,
+    ) -> f64 {
+        let mu_kg = ion_mass_amu * gas.mass_amu / (ion_mass_amu + gas.mass_amu) * amu;
+        let n = gas.pressure_pa / (k_b * gas.temperature_k);
+        3.0 * charge_e.abs() * e / (16.0 * n * sigma_m2)
+            * (2.0 * PI / (mu_kg * k_b * gas.temperature_k)).sqrt()
+    }
+
+    fn relative_error(got: f64, expected: f64) -> f64 {
+        ((got - expected) / expected).abs()
+    }
+
+    /// Helium buffer gas at 0.53 Pa / 273 K, sigma = 2.27e-18 m^2, with a
+    /// 100 amu singly charged ion.
+    fn helium_hs1() -> Hs1 {
+        Hs1 {
+            gas: Gas {
+                pressure_pa: 0.53,
+                temperature_k: 273.0,
+                mass_amu: 4.0,
+                velocity_mm_per_us: [0.0; 3],
+            },
+            cross_section_m2: 2.27e-18,
+            ..Default::default()
+        }
+    }
+
+    /// Nitrogen buffer gas at 1.0 Pa / 300 K, sigma = 3.0e-18 m^2, with a
+    /// 50 amu doubly charged ion.
+    fn nitrogen_hs1() -> Hs1 {
+        Hs1 {
+            gas: Gas {
+                pressure_pa: 1.0,
+                temperature_k: 300.0,
+                mass_amu: 28.0,
+                velocity_mm_per_us: [0.0; 3],
+            },
+            cross_section_m2: 3.0e-18,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn low_field_mobility_matches_formula_with_legacy_and_si_constants() {
+        // Recomputed with this module's documented constants (the shipped
+        // HS1 example's e/k_B/amu values), the formula must agree to
+        // floating-point rounding.
+        for (hs1, ion_mass_amu, charge_e) in
+            [(helium_hs1(), 100.0, 1.0), (nitrogen_hs1(), 50.0, -2.0)]
+        {
+            let expected = mason_schamp_mobility(
+                1.602176634e-19,
+                HS_K,
+                HS_AMU,
+                &hs1.gas,
+                hs1.cross_section_m2,
+                ion_mass_amu,
+                charge_e,
+            );
+            let got = hs1.low_field_mobility(ion_mass_amu, charge_e);
+            assert!(
+                relative_error(got, expected) < 1e-12,
+                "K = {got}, formula evaluation = {expected}"
+            );
+        }
+
+        // With exact SI constants the same recomputation differs by the
+        // intentional legacy-constant offset in HS_K/HS_AMU (~2.03e-7);
+        // the physics must still agree within that bound.
+        for (hs1, ion_mass_amu, charge_e) in
+            [(helium_hs1(), 100.0, 1.0), (nitrogen_hs1(), 50.0, -2.0)]
+        {
+            let expected = mason_schamp_mobility(
+                SI_E,
+                SI_K_B,
+                SI_AMU,
+                &hs1.gas,
+                hs1.cross_section_m2,
+                ion_mass_amu,
+                charge_e,
+            );
+            let got = hs1.low_field_mobility(ion_mass_amu, charge_e);
+            assert!(
+                relative_error(got, expected) < 3e-7,
+                "K = {got}, SI evaluation = {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn low_field_mobility_scales_with_absolute_charge() {
+        let hs1 = helium_hs1();
+        let k = hs1.low_field_mobility(100.0, 1.0);
+
+        // Doubling |q| doubles mobility, and the sign is absorbed by abs().
+        let k2 = hs1.low_field_mobility(100.0, -2.0);
+        assert!(relative_error(k2 / k, 2.0) < 1e-12);
+    }
+}

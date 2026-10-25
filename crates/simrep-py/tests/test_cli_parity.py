@@ -34,6 +34,13 @@ def gpu(cli):
     return probe.stdout
 
 
+@pytest.fixture(scope="session")
+def hardware_gpu(gpu):
+    if "Device type: Cpu" in gpu:
+        pytest.skip(f"GPU numeric parity requires a hardware GPU; {gpu.splitlines()[0]}")
+    return gpu
+
+
 @pytest.fixture
 def particles(tmp_path):
     path = tmp_path / "ions.ion"
@@ -57,6 +64,25 @@ def compare_flight(cli, tmp_path, source, particles, python_options, *arguments)
         expected = [float(row[name]) if row[name] else 0 for row in rows]
         np.testing.assert_allclose(result.arrays[name], expected, rtol=3e-14, atol=3e-14)
     return result
+
+
+def test_explicit_gpu_refuses_software_adapter_in_cli_and_python(cli, gpu, tmp_path, particles):
+    if "Device type: Cpu" not in gpu:
+        pytest.skip("Explicit GPU software-adapter refusal requires a software adapter")
+    output = tmp_path / "refused.csv"
+    completed = cli("fly", "--particles", particles, "--output", output,
+                    "--device=gpu", "--backend=vulkan", "--duration-us=0.005",
+                    "--allow-time-limit", check=False)
+    assert completed.returncode != 0
+    assert not output.exists()
+    with pytest.raises(ValueError) as error:
+        simrep.fly(None, particles, device="gpu", backend="vulkan",
+                   duration_us=0.005, allow_time_limit=True)
+    for message in (completed.stderr, str(error.value)):
+        assert "requires a hardware GPU" in message
+        assert "is a CPU/software adapter" in message
+    assert "use --device cpu" in completed.stderr
+    assert "use device='cpu'" in str(error.value)
 
 
 @pytest.mark.parametrize("fraction", [None, 0.25])
@@ -113,7 +139,7 @@ def test_default_step_ceiling_matches_cli(cli, tmp_path):
                               one.arrays["accepted_steps"])
 
 
-def test_gpu_pic_matches_cli(cli, gpu, tmp_path, particles):
+def test_gpu_pic_matches_cli(cli, hardware_gpu, tmp_path, particles):
     result = compare_flight(
         cli, tmp_path, None, particles,
         dict(device="gpu", space_charge="pic", charge_amount=1000, duration_us=0.002,
@@ -129,7 +155,7 @@ def test_gpu_pic_matches_cli(cli, gpu, tmp_path, particles):
 @pytest.mark.parametrize("exact", [False, True])
 def test_magnetic_pa_coils_and_exact_routing(cli, request, tmp_path, particles, device, exact):
     if device == "gpu":
-        request.getfixturevalue("gpu")
+        request.getfixturevalue("hardware_gpu")
     magnetic = tmp_path / "magnetic.pa"
     values = np.broadcast_to(-np.arange(9), (9, 9, 9)).copy().astype(float)
     simrep.PA(values, np.zeros_like(values, bool),
@@ -152,7 +178,7 @@ def test_magnetic_pa_coils_and_exact_routing(cli, request, tmp_path, particles, 
 
 
 @pytest.mark.parametrize("kind", ["hs1", "sds"])
-def test_gpu_collision_models_match_cli(cli, gpu, tmp_path, particles, kind):
+def test_gpu_collision_models_match_cli(cli, hardware_gpu, tmp_path, particles, kind):
     options = dict(device="gpu", collision=kind, seed=7, duration_us=0.005,
                    max_step_us=0.001, tolerance=1e-10, pressure_pa=530)
     arguments = ["--device=gpu", "--collision", kind, "--seed=7", "--duration-us=0.005",
@@ -249,7 +275,7 @@ def test_no_cuts_bypasses_malformed_sibling(cli, tmp_path, particles):
 @pytest.mark.parametrize("device", ["cpu", "gpu"])
 def test_sampled_trajectories_preserve_cli_terminal_results(cli, request, tmp_path, particles, device):
     if device == "gpu":
-        request.getfixturevalue("gpu")
+        request.getfixturevalue("hardware_gpu")
     result = compare_flight(
         cli, tmp_path, None, particles,
         dict(device=device, duration_us=0.005, max_step_us=0.001, tolerance=1e-10,

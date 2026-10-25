@@ -121,8 +121,12 @@ fn assignment(text: &str) -> Result<Assignment, String> {
     let (number, voltage) = value
         .split_once(':')
         .ok_or("expected part=number:voltage")?;
-    let number: usize = number.parse().map_err(|_| "invalid electrode number")?;
-    let voltage: f64 = voltage.parse().map_err(|_| "invalid voltage")?;
+    let number: usize = number
+        .parse()
+        .map_err(|_| "expected part=number:voltage with integer number 1..1000")?;
+    let voltage: f64 = voltage
+        .parse()
+        .map_err(|_| "expected part=number:voltage with finite voltage")?;
     if part.is_empty() || !(1..=1000).contains(&number) || !voltage.is_finite() {
         return Err("part is required, number must be 1..1000, voltage finite".into());
     }
@@ -385,6 +389,18 @@ pub fn run(args: GeometryOptions) -> GpuResult<()> {
             .iter()
             .any(|extension| s.eq_ignore_ascii_case(extension))
     });
+    if !cad && (args.cad_mode != CadMode::Auto || args.cad_tolerance.is_some()) {
+        return Err("--cad-mode and --cad-tolerance apply only to CAD input: .step, .stp, .iges or .igs; --cad-mode accepts auto, exact or tessellated".into());
+    }
+    if !args.input.extension().is_some_and(|s| {
+        [
+            "gem", "step", "stp", "iges", "igs", "stl", "obj", "ply", "3mf", "gltf", "glb",
+        ]
+        .iter()
+        .any(|extension| s.eq_ignore_ascii_case(extension))
+    }) {
+        return Err("refine-geometry input must be .gem, .step, .stp, .iges, .igs, .stl, .obj, .ply, .3mf, .gltf or .glb".into());
+    }
     if cad && args.cad_mode == CadMode::Auto {
         match run_once(args.clone()) {
             Err(error)
@@ -760,6 +776,8 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let gpu = if args.device == Device::Gpu {
         let gpu =
             pollster::block_on(Gpu::new(args.backend.backends()))?.ok_or("no GPU adapter found")?;
+        crate::require_hardware_gpu(&gpu.info)?;
+        crate::report_gpu_residual(gpu.has_f64());
         println!(
             "Adapter: {} ({:?}, {:?})",
             gpu.info.name, gpu.info.backend, gpu.info.device_type

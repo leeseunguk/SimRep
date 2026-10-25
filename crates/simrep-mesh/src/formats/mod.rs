@@ -26,7 +26,11 @@ pub fn read_mesh(path: impl AsRef<Path>, options: ImportOptions) -> io::Result<M
         "ply" => (ply::read(path)?, Unit::Millimeter),
         "3mf" => threemf::read(path)?,
         "gltf" | "glb" => (gltf_io::read(path)?, Unit::Meter),
-        _ => return Err(invalid(format!("unsupported mesh extension {extension:?}"))),
+        _ => {
+            return Err(invalid(format!(
+                "unsupported mesh extension {extension:?}; expected stl, obj, ply, 3mf, gltf or glb"
+            )));
+        }
     };
     let transform = options.transform.compose(Transform::scale(
         options.units.unwrap_or(source_unit).millimeters(),
@@ -86,7 +90,9 @@ pub fn write_mesh(path: impl AsRef<Path>, mesh: &Mesh) -> io::Result<()> {
             writer.flush()
         }
         "gltf" | "glb" => gltf_io::write(path, mesh),
-        other => Err(invalid(format!("unsupported mesh export {other:?}"))),
+        other => Err(invalid(format!(
+            "unsupported mesh export {other:?}; expected stl, obj, gltf or glb"
+        ))),
     }
 }
 
@@ -94,7 +100,7 @@ fn extension(path: &Path) -> io::Result<String> {
     path.extension()
         .and_then(|s| s.to_str())
         .map(str::to_ascii_lowercase)
-        .ok_or_else(|| invalid("file has no extension"))
+        .ok_or_else(|| invalid("file has no extension; import accepts stl, obj, ply, 3mf, gltf or glb; export accepts stl, obj, gltf or glb"))
 }
 
 fn read_obj(path: &Path) -> io::Result<Mesh> {

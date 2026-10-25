@@ -113,6 +113,8 @@ pub fn run(args: SdfOptions) -> GpuResult<()> {
         let start = Instant::now();
         let gpu =
             pollster::block_on(Gpu::new(args.backend.backends()))?.ok_or("no GPU adapter found")?;
+        crate::require_hardware_gpu(&gpu.info)?;
+        crate::report_gpu_residual(gpu.has_f64());
         println!(
             "Adapter: {} ({:?}, {:?}), native f64: {}, initialization: {:.3} ms",
             gpu.info.name,

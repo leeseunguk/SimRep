@@ -139,6 +139,25 @@ pub fn electrode_surface_with_options(
         return Err(invalid("electrode filter must be finite"));
     }
     let (pa, grid) = expanded_pa(pa, origin_mm)?;
+    if let Some(electrode) = electrode
+        && !pa
+            .potentials
+            .iter()
+            .zip(&pa.electrodes)
+            .any(|(&value, &fixed)| fixed && value == electrode)
+    {
+        let mut accepted: Vec<_> = pa
+            .potentials
+            .iter()
+            .zip(&pa.electrodes)
+            .filter_map(|(&value, &fixed)| fixed.then_some(value))
+            .collect();
+        accepted.sort_unstable_by(f64::total_cmp);
+        accepted.dedup();
+        return Err(invalid(format!(
+            "electrode {electrode} has no exposed faces; accepted electrode values: {accepted:?}"
+        )));
+    }
     if pa.nz == 1 {
         return crate::sweep::electrodes(&pa, grid, electrode, options);
     }

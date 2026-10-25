@@ -31,6 +31,14 @@ pub fn load(
 ) -> GpuResult<MagneticProblem> {
     let path = path.as_ref();
     let spec: Spec = serde_json::from_slice(&std::fs::read(path)?)?;
+    if spec.permeability.is_none()
+        && spec.magnetization.is_none()
+        && spec.negative_divergence.is_none()
+        && spec.current_density.is_none()
+        && spec.solid.is_none()
+    {
+        return Err("empty magnetic-material specification; supply at least one of permeability, magnetization, negative_divergence, current_density or solid".into());
+    }
     let parent = path.parent().unwrap_or(Path::new("."));
     let cells = grid
         .dims

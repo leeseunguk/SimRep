@@ -99,10 +99,10 @@ fn placed(array: PotentialArray, compact: bool) -> InstanceField {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_QUAD_REFERENCE (quadrupole reference fixtures and hardware Vulkan)"]
 fn quadrupole_grid_time_reference() {
-    let Ok(directory) = std::env::var("SIMREP_GPU_QUAD_REFERENCE") else {
-        return;
-    };
+    let directory =
+        std::env::var("SIMREP_GPU_QUAD_REFERENCE").expect("requires SIMREP_GPU_QUAD_REFERENCE");
     let directory = std::path::Path::new(&directory);
     let array = simrep_io::read_fast_adjust(
         directory.join("quadrupole.pa0"),
@@ -180,10 +180,9 @@ fn quadrupole_grid_time_reference() {
 }
 
 #[test]
+#[ignore = "requires SIMREP_GPU_QUAD_RULES (quadrupole collision fixtures and f64 Vulkan)"]
 fn quadrupole_collision_rule_agreement() {
-    let Ok(directory) = std::env::var("SIMREP_GPU_QUAD_RULES") else {
-        return;
-    };
+    let directory = std::env::var("SIMREP_GPU_QUAD_RULES").expect("requires SIMREP_GPU_QUAD_RULES");
     let directory = std::path::Path::new(&directory);
     let array = simrep_io::read_fast_adjust(
         directory.join("quadrupole.pa0"),

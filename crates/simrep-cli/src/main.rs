@@ -116,6 +116,23 @@ impl Backend {
     }
 }
 
+fn require_hardware_gpu(info: &simrep_solve::gpu::AdapterInfo) -> GpuResult<()> {
+    if info.device_type == simrep_solve::gpu::DeviceType::Cpu {
+        return Err(format!(
+            "--device gpu requires a hardware GPU; adapter {} ({:?}) is a CPU/software adapter; use --device cpu",
+            info.name, info.backend
+        )
+        .into());
+    }
+    Ok(())
+}
+
+fn report_gpu_residual(native_f64: bool) {
+    if !native_f64 {
+        eprintln!("GPU residual: CPU f64 (adapter lacks native f64; GPU f32 corrections retained)");
+    }
+}
+
 fn main() -> ExitCode {
     match run(Cli::parse()) {
         Ok(()) => ExitCode::SUCCESS,
@@ -322,6 +339,7 @@ fn run_refine_bench(options: RefineBenchOptions) -> GpuResult<()> {
             let start = std::time::Instant::now();
             let gpu = pollster::block_on(Gpu::new(options.backend.backends()))?
                 .ok_or("no GPU adapter found")?;
+            require_hardware_gpu(&gpu.info)?;
             println!(
                 "Adapter: {} ({:?}, {:?})",
                 gpu.info.name, gpu.info.backend, gpu.info.device_type
@@ -336,7 +354,7 @@ fn run_refine_bench(options: RefineBenchOptions) -> GpuResult<()> {
                 if report.gpu_f64 {
                     "GPU f64"
                 } else {
-                    "CPU f64 (full correction download + residual upload each cycle)"
+                    "CPU f64 (adapter lacks native f64; full correction download + residual upload each cycle)"
                 }
             );
             println!(

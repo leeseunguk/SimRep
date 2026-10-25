@@ -16,10 +16,10 @@ fn records<'a>(text: &'a str, tag: &'a str) -> impl Iterator<Item = Vec<&'a str>
 }
 
 #[test]
+#[ignore = "requires SIMREP_CPU_MAGNETIC_ORACLE (captured SIMION magnetic fixtures)"]
 fn magnetic_cpu_map_and_profile() {
-    let Ok(root) = std::env::var("SIMREP_CPU_MAGNETIC_ORACLE") else {
-        return;
-    };
+    let root =
+        std::env::var("SIMREP_CPU_MAGNETIC_ORACLE").expect("requires SIMREP_CPU_MAGNETIC_ORACLE");
     let gates = [
         ("magnet1", 5.47282e-7, 4.01298e-7),
         ("mag90", 2.54520e-7, 2.31283e-9),
@@ -180,10 +180,10 @@ fn magnetic_cpu_map_and_profile() {
 }
 
 #[test]
+#[ignore = "requires SIMREP_CPU_MAGNETIC_ORACLE (captured SIMION mag90 fixture)"]
 fn magnetic_cpu_mag90_matched_precision() {
-    let Ok(root) = std::env::var("SIMREP_CPU_MAGNETIC_ORACLE") else {
-        return;
-    };
+    let root =
+        std::env::var("SIMREP_CPU_MAGNETIC_ORACLE").expect("requires SIMREP_CPU_MAGNETIC_ORACLE");
     let (field, particles, oracle, _) = load(Path::new(&root), "mag90");
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(16)
@@ -399,10 +399,9 @@ fn errors(actual: &[FlightResult], reference: &[FlightResult]) -> (f64, f64) {
 }
 
 #[test]
+#[ignore = "requires SIMREP_PHYSICS_ORACLE (captured SIMION magnetic convergence fixtures)"]
 fn magnetic_compute_and_convergence() {
-    let Ok(root) = std::env::var("SIMREP_PHYSICS_ORACLE") else {
-        return;
-    };
+    let root = std::env::var("SIMREP_PHYSICS_ORACLE").expect("requires SIMREP_PHYSICS_ORACLE");
     let root = Path::new(&root);
     let cases = [
         "magnet1",

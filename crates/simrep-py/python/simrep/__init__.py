@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import copy
 import json
 import os
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -147,6 +148,10 @@ def load_field(path, *, no_cuts=False):
     cuts_path = path.with_suffix(".cuts.json")
     cuts = (json.loads(cuts_path.read_text(encoding="utf-8"))
             if not no_cuts and cuts_path.is_file() else None)
+    if cuts is not None:
+        print(f"surface: {cuts_path} (automatic sibling pickup)", file=sys.stderr)
+    elif no_cuts:
+        print("surface: staircase (no_cuts disables sibling pickup)", file=sys.stderr)
     path = os.fspath(path)
     pa = read_pa(path)
     trailer = pa.metadata.get("pa0")
@@ -266,6 +271,13 @@ def refine_geometry(source=None, *, electrodes, dims=None, spacing_mm=None,
     CAD input requires a wheel built with the ``cad`` Cargo feature.
     """
     analytic = isinstance(source, (list, tuple))
+    if symmetry not in ("planar", "cylindrical"):
+        raise ValueError("symmetry must be planar or cylindrical with nz=1")
+    if not analytic and symmetry != "planar":
+        if Path(source).suffix.lower() == ".gem":
+            raise ValueError("GEM pa_define determines symmetry; omit the Python symmetry override")
+        raise ValueError("geometry file input does not accept a symmetry override; "
+                         "mesh input requires planar symmetry")
     if not analytic:
         def solve(stem):
             start = perf_counter()
@@ -364,11 +376,13 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
                json.loads(Path(run_file).read_text(encoding="utf-8")))
         unknown = run.keys() - {"parameters", "voltage_expr", "physics"}
         if unknown:
-            raise ValueError(f"unknown field {next(iter(unknown))!r} in run_file")
+            raise ValueError(f"unknown field {next(iter(unknown))!r} in run_file; "
+                             "accepted fields: parameters, voltage_expr, physics")
     physics = run.get("physics", {})
     unknown = physics.keys() - {"uniform_gauss", "coils", "magnetic_pas", "magnetic_support"}
     if unknown:
-        raise ValueError(f"unknown field {next(iter(unknown))!r} in physics")
+        raise ValueError(f"unknown field {next(iter(unknown))!r} in physics; "
+                         "accepted fields: uniform_gauss, coils, magnetic_pas, magnetic_support")
     if "uniform_gauss" in physics:
         options.setdefault("bfield", physics["uniform_gauss"])
     for key in ("magnetic_pas", "magnetic_support"):
@@ -405,6 +419,8 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
         if surface is not None:
             settings["cuts_json" if isinstance(surface, dict) else "cuts"] = (
                 surface if isinstance(surface, dict) else os.fspath(surface))
+            if isinstance(cuts, dict):
+                print("surface: in-memory cuts geometry", file=sys.stderr)
     for key in ("magnetic_pa",):
         if key in settings:
             settings[key] = [os.fspath(path) for path in settings[key]]

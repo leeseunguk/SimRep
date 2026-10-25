@@ -173,7 +173,9 @@ impl FromStr for Unit {
             "m" | "meter" => Ok(Self::Meter),
             "in" | "inch" => Ok(Self::Inch),
             "ft" | "foot" => Ok(Self::Foot),
-            _ => Err(invalid(format!("unknown length unit {s:?}"))),
+            _ => Err(invalid(format!(
+                "unknown length unit {s:?}; expected um/micron, mm/millimeter, cm/centimeter, m/meter, in/inch or ft/foot"
+            ))),
         }
     }
 }

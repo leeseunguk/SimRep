@@ -7,6 +7,42 @@ use std::io::Write;
 use tempfile::tempdir;
 
 #[test]
+fn unknown_units_and_file_formats_list_supported_values() {
+    let error = "typo".parse::<Unit>().unwrap_err().to_string();
+    for unit in [
+        "um",
+        "micron",
+        "mm",
+        "millimeter",
+        "cm",
+        "centimeter",
+        "m/meter",
+        "in",
+        "inch",
+        "ft",
+        "foot",
+    ] {
+        assert!(error.contains(unit), "{error}");
+    }
+    let dir = tempdir().unwrap();
+    let path = dir.path().join("mesh.typo");
+    let error = read_mesh(&path, ImportOptions::default())
+        .unwrap_err()
+        .to_string();
+    for format in ["stl", "obj", "ply", "3mf", "gltf", "glb"] {
+        assert!(error.contains(format), "{error}");
+    }
+    let mesh = Mesh {
+        parts: vec![cube(-1.0, 1.0)],
+    };
+    let error = write_mesh(&path, &mesh).unwrap_err().to_string();
+    for format in ["stl", "obj", "gltf", "glb"] {
+        assert!(error.contains(format), "{error}");
+    }
+    assert!(!path.exists());
+}
+
+#[test]
 fn stl_obj_gltf_glb_roundtrip_preserves_two_solids_and_units() {
     let dir = tempdir().unwrap();
     let mut second = cube(-1.0, 1.0);
