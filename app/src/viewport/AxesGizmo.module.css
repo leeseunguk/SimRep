@@ -1,0 +1,67 @@
+.gizmo {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-3);
+  z-index: var(--z-viewport-overlay);
+  width: var(--gizmo-size);
+  height: var(--gizmo-size);
+  overflow: visible;
+  animation: fade-in var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--stagger) * 5);
+}
+
+.backdrop {
+  fill: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  stroke: var(--color-border);
+}
+
+.axis {
+  cursor: pointer;
+}
+
+.axis line {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.axis circle {
+  fill: currentColor;
+  transition: r var(--dur-fast) var(--ease-out);
+}
+
+.axis:hover circle {
+  r: 9.5px;
+}
+
+.axis text {
+  fill: var(--color-bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.negative {
+  fill: color-mix(in srgb, currentColor 25%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.25;
+  cursor: pointer;
+}
+
+.negative:hover {
+  fill: currentColor;
+}
+
+.x {
+  color: var(--vp-axis-x);
+}
+
+.y {
+  color: var(--vp-axis-y);
+}
+
+.z {
+  color: var(--vp-axis-z);
+}

@@ -1,0 +1,543 @@
+.lead {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.hint {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+
+.subtle {
+  color: var(--color-text-subtle);
+}
+
+.warnText {
+  color: var(--color-warning);
+}
+
+.blocker {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.primary {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+.inlineIcon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  vertical-align: -2px;
+}
+
+.path {
+  overflow: hidden;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+  user-select: text;
+}
+
+/* ---------------------------------------------------------------------------------- notices */
+.notice {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-w) solid var(--tone-soft);
+  border-radius: var(--radius-md);
+  background: var(--tone-soft);
+  --tone: var(--color-info);
+  --tone-soft: var(--color-info-soft);
+}
+
+.notice[data-tone="success"] {
+  --tone: var(--color-success);
+  --tone-soft: var(--color-success-soft);
+}
+
+.notice[data-tone="warning"] {
+  --tone: var(--color-warning);
+  --tone-soft: var(--color-warning-soft);
+}
+
+.notice[data-tone="danger"] {
+  --tone: var(--color-danger);
+  --tone-soft: var(--color-danger-soft);
+}
+
+.noticeIcon {
+  flex: none;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  margin-top: var(--space-0-5);
+  color: var(--tone);
+}
+
+.noticeText {
+  min-width: 0;
+}
+
+.noticeTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.noticeBody {
+  margin-top: var(--space-0-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-w) solid var(--color-warning-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------------- progress */
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: fade-in var(--dur-normal) var(--ease-out);
+}
+
+.progressHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.progressTitle {
+  overflow: hidden;
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meter {
+  position: relative;
+  height: var(--meter-h);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+}
+
+.meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width var(--dur-normal) var(--ease-out);
+}
+
+.sparkline {
+  width: 100%;
+  height: var(--sparkline-h);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunken);
+}
+
+.sparkLine {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.sparkTarget {
+  stroke: var(--color-success);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* --------------------------------------------------------------------------------- voltages */
+.voltage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  padding-bottom: var(--space-1);
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: calc(var(--space-1) * -1);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+}
+
+/* ------------------------------------------------------------------------------ advanced */
+.advanced {
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.advanced summary {
+  padding: var(--space-1-5) var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.advanced summary:hover {
+  color: var(--color-text);
+}
+
+.advancedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+/* ---------------------------------------------------------------------------------- results */
+.hits {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+}
+
+.hitsHead,
+.hit {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto var(--space-16);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+}
+
+.hitsHead {
+  background: var(--color-surface-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.hitsHead :last-child,
+.hit :last-child {
+  text-align: right;
+}
+
+.hit + .hit {
+  border-top: var(--border-w) solid var(--color-border);
+}
+
+.hitBar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--color-accent-soft);
+  pointer-events: none;
+}
+
+.hit[data-kind="electrode"] .hitBar {
+  background: var(--color-danger-soft);
+}
+
+.hitName {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  overflow: hidden;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hit > :not(.hitBar) {
+  position: relative;
+}
+
+.hitDot {
+  flex: none;
+  width: var(--swatch-sm);
+  height: var(--swatch-sm);
+  border: var(--border-w) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--vp-splat);
+}
+
+.hit[data-kind="electrode"] .hitDot {
+  background: var(--vp-splat-hit);
+}
+
+.tof {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.tofTitle {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.tofGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.tofGrid div {
+  padding: var(--space-1) var(--space-1-5);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunken);
+}
+
+.tofGrid dt {
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+}
+
+.tofGrid dd {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+}
+
+/* Run facts: precision mode, device, ion counts, timings (label column + value column). */
+.meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.meta div {
+  display: contents;
+}
+
+.meta dt {
+  color: var(--color-text-subtle);
+}
+
+.meta dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta dd.metaWrap {
+  white-space: normal;
+}
+
+.meta dd.metaStrong {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.warnHint {
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+
+.presets {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  margin-top: calc(var(--space-1) * -1);
+}
+
+/* Precision mode: two labelled cards (what runs where), not a terse toggle. */
+.modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-1-5);
+}
+
+.modesLabel {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.modesHint {
+  grid-column: 1 / -1;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-2);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+  color: var(--color-text-muted);
+  text-align: left;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.mode:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.mode[aria-checked="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.modeIcon {
+  grid-row: span 2;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.mode[aria-checked="true"] .modeIcon {
+  color: var(--color-accent-text);
+}
+
+.modeName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.modeSub {
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+/* Workbench: placement of the array on the bench (.iob instance / imported model origin). */
+.placement {
+  padding: var(--space-2) var(--space-3);
+  border-left: calc(var(--border-w) * 2) solid var(--color-info);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+}
+
+.placementTitle {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+/* Units keep their case inside uppercase headers (µ would become Greek capital mu). */
+.unit {
+  text-transform: none;
+}
+
+/* Exact electrode surfaces (.cuts.json): what ions stop on, with its switch. */
+.surfaceCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  padding: var(--space-1-5) var(--space-2);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.surfaceCard[data-on="true"] {
+  border-color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.surfaceIcon {
+  width: var(--space-4);
+  height: var(--space-4);
+  color: var(--color-text-subtle);
+}
+
+.surfaceCard[data-on="true"] .surfaceIcon {
+  color: var(--color-success);
+}
+
+.surfaceText {
+  display: grid;
+  min-width: 0;
+}
+
+.surfaceName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.surfaceFile {
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.surfaceHint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}

@@ -1,0 +1,40 @@
+.app {
+  display: grid;
+  height: 100%;
+  grid-template-columns: var(--panel-left-w) minmax(0, 1fr) var(--panel-right-w);
+  grid-template-rows: var(--topbar-h) minmax(0, 1fr) auto var(--statusbar-h);
+}
+
+.left,
+.center,
+.right {
+  position: relative;
+  display: flex;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+}
+
+.left {
+  grid-column: 1;
+}
+
+.center {
+  grid-column: 2;
+  /* 3D view above, results panel below. */
+  flex-direction: column;
+}
+
+.center > :first-child {
+  min-height: var(--viewport-min-h);
+}
+
+.right {
+  grid-column: 3;
+}
+
+.left > :first-child,
+.center > :first-child,
+.right > :first-child {
+  flex: 1;
+}

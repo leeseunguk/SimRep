@@ -1,0 +1,68 @@
+[package]
+name = "simrep-app"
+version = "0.1.0"
+description = "SimRep desktop shell (Tauri 2). UI lives in ../ (Vite + React)."
+edition = "2024"
+license = "UNLICENSED"
+publish = false
+
+# Standalone workspace: keeps the Tauri/WebView dependency tree out of the root
+# cargo workspace (crates/*), so `cargo build` / `cargo test` at the repo root on
+# Linux never needs webkit2gtk.
+[workspace]
+
+[features]
+default = []
+# STEP/IGES import through OpenCascade (crates/simrep-cad). Needs the OCCT SDK at build time
+# (OCCT_INCLUDE_DIR / OCCT_LIB_DIR, docs/dev/windows-occt.md); on Windows the OCCT DLLs are
+# delay-loaded and located at run time (src/cad.rs), so the app starts without them.
+cad = ["dep:simrep-cad", "simrep-cad/occt"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+simrep-core = { path = "../../crates/simrep-core" }
+simrep-io = { path = "../../crates/simrep-io" }
+simrep-solve = { path = "../../crates/simrep-solve" }
+simrep-fly = { path = "../../crates/simrep-fly" }
+simrep-gem = { path = "../../crates/simrep-gem" }
+simrep-geom = { path = "../../crates/simrep-geom" }
+simrep-mesh = { path = "../../crates/simrep-mesh" }
+simrep-cad = { path = "../../crates/simrep-cad", optional = true }
+rayon = "1"
+tauri-plugin-dialog = "2"
+pollster = "1"
+self_cell = "1"
+
+# Decoding, solving and flying are ~10x slower unoptimized; keep the core crates and the
+# commands (src/*.rs) optimized in dev builds too. Tauri and other dependencies stay debug.
+[profile.dev.package.simrep-core]
+opt-level = 3
+
+[profile.dev.package.simrep-io]
+opt-level = 3
+
+[profile.dev.package.simrep-solve]
+opt-level = 3
+
+[profile.dev.package.simrep-fly]
+opt-level = 3
+
+[profile.dev.package.simrep-gem]
+opt-level = 3
+
+[profile.dev.package.simrep-geom]
+opt-level = 3
+
+[profile.dev.package.simrep-mesh]
+opt-level = 3
+
+[profile.dev.package.simrep-cad]
+opt-level = 3
+
+[profile.dev.package.simrep-app]
+opt-level = 3

@@ -1,0 +1,36 @@
+.resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: var(--z-resizer);
+  width: var(--resizer-w);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizer[data-edge="left"] {
+  left: calc(var(--resizer-w) / -2);
+}
+
+.resizer[data-edge="right"] {
+  right: calc(var(--resizer-w) / -2);
+}
+
+.resizer::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--border-w);
+  background: var(--color-border);
+  content: "";
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    width var(--dur-fast) var(--ease-out);
+}
+
+.resizer:hover::after,
+.resizer:active::after {
+  width: calc(var(--border-w) * 2);
+  background: var(--color-accent);
+}

@@ -1,0 +1,412 @@
+/* Import wizard: docked in the right column (App.tsx widens it to --panel-wizard-w). */
+.wizard {
+  height: 100%;
+}
+
+.headerIcon {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--color-accent-text);
+}
+
+.pad {
+  padding: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- file card */
+.file {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-bottom: var(--border-w) solid var(--color-border);
+  background: linear-gradient(180deg, var(--color-accent-soft), transparent);
+}
+
+.fileIcon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-lg);
+  height: var(--control-h-lg);
+  border: var(--border-w) solid var(--color-accent-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-accent-text);
+}
+
+.fileIcon svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+
+.fileText {
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  overflow: hidden;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileMeta {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+/* ---------------------------------------------------------------- stepper */
+.steps {
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-w) solid var(--color-border);
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  width: 100%;
+  min-width: 0;
+  height: var(--control-h-md);
+  padding: 0 var(--space-1-5);
+  border: var(--border-w) solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.step:hover:not(:disabled) {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+.step:disabled {
+  cursor: default;
+}
+
+.step[data-active="true"] {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.stepNumber {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-h-xs);
+  height: var(--control-h-xs);
+  border: var(--border-w) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.step[data-active="true"] .stepNumber {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.step[data-done="true"] .stepNumber {
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.stepNumber svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.stepLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- mesh report */
+.report {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+}
+
+.report[data-tone="danger"] {
+  background: var(--color-danger-soft);
+}
+
+.reportIcon {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  margin-top: var(--space-0-5);
+  color: var(--color-success);
+}
+
+.report[data-tone="danger"] .reportIcon {
+  color: var(--color-danger);
+}
+
+.reportTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.reportBody {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+/* ---------------------------------------------------------------- parts table */
+.partsHead,
+.part {
+  display: grid;
+  grid-template-columns: var(--swatch-md) minmax(0, 1fr) var(--space-12) calc(var(--space-16) + var(--space-4));
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.partsHead {
+  padding: 0 var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.part {
+  padding: var(--space-1-5) var(--space-2);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+  animation: rise-in var(--dur-normal) var(--ease-out) both;
+}
+
+.part:nth-child(2) {
+  animation-delay: var(--stagger);
+}
+
+.part:nth-child(3) {
+  animation-delay: calc(var(--stagger) * 2);
+}
+
+.part:nth-child(n + 4) {
+  animation-delay: calc(var(--stagger) * 3);
+}
+
+.part[data-selected="true"] {
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
+}
+
+.part[data-open="true"] {
+  border-color: var(--color-danger);
+}
+
+.swatch {
+  width: var(--swatch-md);
+  height: var(--swatch-md);
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 0 var(--border-w) var(--color-border-strong);
+}
+
+.nameInput,
+.numInput,
+.voltInput {
+  width: 100%;
+  min-width: 0;
+}
+
+.voltWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.part .numInput {
+  padding-right: var(--space-2);
+}
+
+.part .voltInput {
+  padding-right: var(--space-5);
+}
+
+.voltUnit {
+  position: absolute;
+  right: var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+.partIssues {
+  display: flex;
+  grid-column: 2 / -1;
+  align-items: flex-start;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.partIssues[data-tone="open"] {
+  color: var(--color-danger);
+}
+
+/* Technical cause under a translated notice (native error text, not localized). */
+.detail {
+  margin-top: var(--space-1);
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  overflow-wrap: anywhere;
+}
+
+.partIssues[data-tone="warn"] {
+  color: var(--color-warning);
+}
+
+.partIssues[data-tone="ok"] svg {
+  color: var(--color-success);
+}
+
+.partIssues svg {
+  flex: none;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  margin-top: var(--space-px);
+}
+
+/* ---------------------------------------------------------------- grid */
+.suggest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: calc(var(--border-w) * 2) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.cost {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-px);
+  margin: 0;
+  overflow: hidden;
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-border);
+}
+
+.cost div {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+}
+
+.cost dt {
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.cost dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.cost[data-tone="warning"] {
+  border-color: var(--color-warning);
+}
+
+.cost[data-tone="danger"] {
+  border-color: var(--color-danger);
+}
+
+.cost[data-tone="danger"] dd {
+  color: var(--color-danger);
+}
+
+/* ---------------------------------------------------------------- progress + footer */
+.working {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.spin {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  animation: wizard-spin 900ms linear infinite;
+}
+
+@keyframes wizard-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: var(--border-w) solid var(--color-border);
+  background: var(--color-surface-2);
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.blocker {
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}

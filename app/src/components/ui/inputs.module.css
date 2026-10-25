@@ -1,0 +1,158 @@
+.input {
+  width: 100%;
+  min-width: 0;
+  height: var(--control-h-md);
+  padding: 0 var(--space-2);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunken);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+
+.input:hover {
+  border-color: var(--color-border-strong);
+}
+
+.input:focus {
+  border-color: var(--color-accent);
+  outline: none;
+  box-shadow: 0 0 0 var(--focus-ring-w) var(--color-accent-soft);
+}
+
+.numberWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.number {
+  padding-right: var(--space-8);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.unit {
+  position: absolute;
+  right: var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+.scrub {
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.scrub:hover {
+  color: var(--color-text);
+}
+
+.select {
+  appearance: none;
+  padding-right: var(--space-6);
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-text-subtle) 50%),
+    linear-gradient(135deg, var(--color-text-subtle) 50%, transparent 50%);
+  background-position:
+    calc(100% - var(--space-3)) 50%,
+    calc(100% - var(--space-2)) 50%;
+  background-size: var(--space-1) var(--space-1);
+  background-repeat: no-repeat;
+}
+
+.slider {
+  width: 100%;
+  height: var(--space-5);
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  cursor: pointer;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    to right,
+    var(--vp-electrode-negative),
+    var(--vp-electrode-neutral) 50%,
+    var(--vp-electrode-positive)
+  );
+}
+
+.slider::-webkit-slider-thumb {
+  width: var(--space-4);
+  height: var(--space-4);
+  margin-top: calc((var(--space-1) - var(--space-4)) / 2);
+  border: var(--focus-ring-w) solid var(--color-surface);
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  box-shadow: var(--shadow-sm);
+  appearance: none;
+}
+
+.slider::-moz-range-track {
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    to right,
+    var(--vp-electrode-negative),
+    var(--vp-electrode-neutral) 50%,
+    var(--vp-electrode-positive)
+  );
+}
+
+.slider::-moz-range-thumb {
+  width: var(--space-4);
+  height: var(--space-4);
+  border: var(--focus-ring-w) solid var(--color-surface);
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+}
+
+/* Position sliders: a neutral track instead of the potential gradient. */
+.sliderPlain::-webkit-slider-runnable-track {
+  background: var(--color-border-strong);
+}
+
+.sliderPlain::-moz-range-track {
+  background: var(--color-border-strong);
+}
+
+/* Vec3Field: three compact inputs sharing the value column. */
+.vec {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.vecItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.vecAxis {
+  position: absolute;
+  left: var(--space-1-5);
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  pointer-events: none;
+}
+
+.vecInput {
+  height: var(--control-h-sm);
+  padding: 0 var(--space-1-5) 0 var(--space-4);
+  font-size: var(--text-xs);
+}
+
+.vecUnit {
+  color: var(--color-text-subtle);
+}

@@ -1,0 +1,129 @@
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-6) var(--space-8);
+  text-align: center;
+}
+
+.emptyIcon {
+  width: var(--icon-xl);
+  height: var(--icon-xl);
+  margin-bottom: var(--space-1);
+  color: var(--color-text-subtle);
+  stroke-width: 1.5;
+}
+
+.emptyTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.emptyBody {
+  max-width: 28ch;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
+  animation: rise-in var(--dur-slow) var(--ease-out) both;
+}
+
+.identityIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--space-10);
+  height: var(--space-10);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  color: var(--color-accent-text);
+}
+
+.identityIcon svg {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.identityText {
+  min-width: 0;
+}
+
+.identityName {
+  overflow: hidden;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.identityType {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: calc(var(--space-1) * -1);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+}
+
+.hint {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.notice {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+  padding: var(--space-3);
+  border: var(--border-w) solid var(--color-info-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-info-soft);
+}
+
+.noticeIcon {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  margin-top: var(--space-0-5);
+  color: var(--color-info);
+}
+
+.noticeTitle {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.noticeBody {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* Lets a wrapped ReadOnlyValue ellipsize instead of widening the panel. */
+.clip {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}

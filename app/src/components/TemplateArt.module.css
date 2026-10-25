@@ -1,0 +1,60 @@
+.art {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.axis {
+  stroke: var(--color-border-strong);
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+}
+
+.field {
+  fill: none;
+  stroke: var(--vp-field-2);
+  stroke-opacity: 0.35;
+  stroke-width: 1;
+}
+
+.neutral {
+  fill: var(--vp-electrode-neutral);
+}
+
+.positive {
+  fill: var(--vp-electrode-positive);
+}
+
+.negative {
+  fill: var(--vp-electrode-negative);
+}
+
+/* Reflectron ramp: --amt of the positive colour over neutral, per ring. */
+.ramp {
+  fill: color-mix(in srgb, var(--vp-electrode-positive) var(--amt), var(--vp-electrode-neutral));
+}
+
+.beam {
+  fill: none;
+  stroke: var(--vp-trajectory);
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.beamFaint {
+  fill: none;
+  stroke: var(--vp-trajectory);
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}
+
+.beamFill {
+  fill: var(--vp-trajectory);
+  fill-opacity: 0.35;
+  stroke: var(--vp-trajectory);
+  stroke-width: 1;
+}
+
+.dot {
+  fill: var(--vp-trajectory);
+}

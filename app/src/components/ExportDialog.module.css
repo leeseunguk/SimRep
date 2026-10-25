@@ -1,0 +1,133 @@
+/* Export dialog: what to export (left) and its options (right). Base styles: Dialog.module.css. */
+.dialog {
+  width: min(100%, var(--dialog-wide-w));
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 15fr) minmax(0, 24fr);
+  gap: var(--space-5);
+  min-height: calc(var(--space-16) * 5);
+}
+
+.kinds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.kind {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+  color: var(--color-text-muted);
+  text-align: left;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.kind:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.kind[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.kind[data-off="true"] {
+  opacity: 0.6;
+}
+
+.kindIcon {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  margin-top: var(--space-0-5);
+}
+
+.kind[aria-pressed="true"] .kindIcon {
+  color: var(--color-accent-text);
+}
+
+.kindText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kindName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.kindSub {
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-left: var(--space-5);
+  border-left: var(--border-w) solid var(--color-border);
+  animation: fade-in var(--dur-normal) var(--ease-out);
+}
+
+.paMode {
+  grid-column: 1 / -1;
+}
+
+.paMode:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.select {
+  width: 100%;
+  height: var(--control-h-md);
+  padding: 0 var(--space-2);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunken);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: var(--border-w) solid var(--color-border);
+}
+
+.footerHint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .options {
+    padding-left: 0;
+    border-left: none;
+  }
+}

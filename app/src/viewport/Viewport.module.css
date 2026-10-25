@@ -1,0 +1,382 @@
+.viewport {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse 120% 90% at 50% 40%, var(--vp-bg-center), var(--vp-bg-edge));
+}
+
+/* Film-grain layer under the (transparent) canvas: keeps large gradients from banding. */
+.viewport::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  opacity: var(--vp-noise-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.canvas:active {
+  cursor: grabbing;
+}
+
+.hint {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  z-index: var(--z-viewport-overlay);
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fade-in var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--stagger) * 6);
+}
+
+.hint b {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.spin {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ------------------------------------------------------------------ section legend + readout */
+.legend {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  z-index: var(--z-viewport-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  max-width: var(--legend-max-w);
+  padding: var(--space-2) var(--space-3);
+  transform: translateY(-50%);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface) 86%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-xs);
+  pointer-events: none;
+  animation: fade-in var(--dur-slow) var(--ease-out) both;
+}
+
+.legendTitle {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.legendUnit {
+  color: var(--color-text-subtle);
+  font-weight: var(--weight-regular);
+}
+
+.legendName {
+  margin-top: calc(var(--space-1) * -1);
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legendScale {
+  display: flex;
+  gap: var(--space-2);
+  height: var(--legend-bar-len);
+  margin: var(--space-1) 0;
+}
+
+.legendBar {
+  flex: none;
+  width: var(--legend-bar-w);
+  border-radius: var(--radius-xs);
+  background: linear-gradient(
+    to top,
+    var(--vp-field-0),
+    var(--vp-field-1),
+    var(--vp-field-2),
+    var(--vp-field-3),
+    var(--vp-field-4)
+  );
+  box-shadow: inset 0 0 0 var(--border-w) color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.legendTicks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: calc(var(--space-1-5) * -1) 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  white-space: nowrap;
+}
+
+.legendLine {
+  flex: none;
+  width: var(--legend-bar-w);
+  height: var(--space-px);
+  background: var(--color-text);
+  box-shadow: 0 0 0 var(--space-px) color-mix(in srgb, var(--color-text) 20%, transparent);
+}
+
+.legendElectrode {
+  flex: none;
+  width: var(--legend-bar-w);
+  height: var(--legend-bar-w);
+  border-radius: var(--radius-xs);
+  background: linear-gradient(
+    to right,
+    var(--vp-electrode-negative),
+    var(--vp-electrode-neutral) 50%,
+    var(--vp-electrode-positive)
+  );
+}
+
+.readout {
+  position: absolute;
+  z-index: var(--z-viewport-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  padding: var(--space-1-5) var(--space-2);
+  --tx: var(--readout-offset);
+  --ty: var(--readout-offset);
+  transform: translate(var(--tx), var(--ty));
+  border: var(--border-w) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Near the right / bottom edge the readout flips to the other side of the cursor. */
+.readout[data-flip-x="true"] {
+  --tx: calc(-100% - var(--readout-offset));
+}
+
+.readout[data-flip-y="true"] {
+  --ty: calc(-100% - var(--readout-offset));
+}
+
+.readoutCoords {
+  display: flex;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.readoutCoords b {
+  color: var(--color-text-subtle);
+  font-weight: var(--weight-medium);
+}
+
+.readoutUnit {
+  color: var(--color-text-subtle);
+}
+
+.readoutValue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.readoutLabel {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.readoutValue[data-electrode="true"] .readoutLabel {
+  color: var(--color-accent-text);
+}
+
+/* ------------------------------------------------------------------ refine progress chip */
+.chip {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  z-index: var(--z-viewport-overlay);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: calc(100% - var(--space-6) - var(--gizmo-size) * 2);
+  height: var(--control-h-lg);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  transform: translateX(-50%);
+  border: var(--border-w) solid var(--color-accent-border);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  animation: rise-in var(--dur-normal) var(--ease-out) both;
+}
+
+.chip .spin {
+  flex: none;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--color-accent-text);
+}
+
+.chipTitle {
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+}
+
+.chipMeta {
+  flex: none;
+}
+
+.chipBar {
+  position: relative;
+  flex: none;
+  width: var(--space-16);
+  height: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+}
+
+.chipBar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width var(--dur-normal) var(--ease-out);
+}
+
+.chipCancel {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.chipCancel:hover {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.chipCancel svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+/* ------------------------------------------------------------------ workbench box handles */
+.benchHandle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: var(--z-viewport-overlay);
+  width: var(--handle-size);
+  height: var(--handle-size);
+  margin: calc(var(--handle-size) / -2) 0 0 calc(var(--handle-size) / -2);
+  padding: 0;
+  border: var(--focus-ring-w) solid var(--color-surface);
+  border-radius: var(--radius-full);
+  background: var(--vp-bench);
+  box-shadow: var(--shadow-sm);
+  cursor: grab;
+  touch-action: none;
+  transition: scale var(--dur-fast) var(--ease-out);
+}
+
+.benchHandle:hover,
+.benchHandle:focus-visible,
+.benchHandle[data-active="true"] {
+  scale: var(--handle-hover-scale);
+}
+
+.benchHandle[data-active="true"] {
+  cursor: grabbing;
+}
+
+.benchValue {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  padding: var(--space-1) var(--space-2);
+  translate: -50% 0;
+  scale: calc(1 / var(--handle-hover-scale));
+  border: var(--border-w) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@media (max-width: 1180px) {
+  .hint {
+    display: none;
+  }
+}

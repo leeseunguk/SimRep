@@ -1,0 +1,108 @@
+.statusbar {
+  display: flex;
+  grid-row: 4;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border-top: var(--border-w) solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item svg {
+  flex: none;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.item[data-compute="gpu"] svg {
+  color: var(--color-accent);
+}
+
+.item[data-compute="pending"] {
+  color: var(--color-text-subtle);
+}
+
+.dot {
+  flex: none;
+  width: var(--swatch-sm);
+  height: var(--swatch-sm);
+  border-radius: var(--radius-full);
+  background: var(--color-text-subtle);
+}
+
+.dot[data-state="ready"] {
+  background: var(--color-success);
+  box-shadow: 0 0 0 var(--space-0-5) var(--color-success-soft);
+}
+
+.dot[data-state="pending"] {
+  background: var(--color-warning);
+}
+
+.dot[data-state="unavailable"],
+.dot[data-state="lost"] {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 var(--space-0-5) var(--color-danger-soft);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.logButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  height: calc(var(--statusbar-h) - var(--space-1) * 2);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.logButton svg {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.logButton:hover,
+.logButton[aria-pressed="true"] {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+
+.logCount {
+  min-width: var(--space-4);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  text-align: center;
+}
+
+.logCount[data-error="true"] {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+@media (max-width: 1100px) {
+  .statusbar {
+    gap: var(--space-3);
+  }
+}

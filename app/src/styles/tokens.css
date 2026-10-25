@@ -1,0 +1,327 @@
+/*
+ * SimRep design tokens. Every visual value in the app comes from here.
+ *
+ * - Spacing: 4px grid (--space-*). Half steps (0-5, 1-5) exist only for dense controls.
+ * - Type: desktop-dense scale, 13px body. Sans = IBM Plex Sans (+ KR for Hangul), mono for numbers.
+ * - Colour: semantic tokens per theme ([data-theme]). Viewport tokens (--vp-*) are hex because the
+ *   WebGPU renderer reads them with getComputedStyle and parses them (see viewport/color.ts).
+ */
+:root {
+  /* Typography */
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 24px;
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --tracking-caps: 0.07em;
+  --tracking-tight: -0.01em;
+
+  /* Spacing (4px grid) */
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 999px;
+
+  /* Sizes */
+  --border-w: 1px;
+  --focus-ring-w: 2px;
+  --control-h-xs: 20px;
+  --control-h-sm: 24px;
+  --control-h-md: 28px;
+  --control-h-lg: 32px;
+  --icon-xs: 12px;
+  --icon-sm: 14px;
+  --icon-md: 16px;
+  --icon-lg: 20px;
+  --icon-xl: 32px;
+  --icon-2xl: 48px;
+  --swatch-sm: 8px;
+  --topbar-h: 48px;
+  --statusbar-h: 28px;
+  --logdrawer-h: 184px;
+  --panel-left-w: 264px;
+  --panel-right-w: 312px;
+  --panel-min-w: 200px;
+  --panel-max-w: 480px;
+  --resizer-w: 6px;
+  --card-max-w: 440px;
+  --gizmo-size: 88px;
+  --sparkline-h: 44px;
+  --meter-h: 6px;
+  --start-max-w: 1120px;
+  --start-side-w: 320px;
+  --template-art-h: 112px;
+  --dialog-max-w: 640px;
+  --dialog-wide-w: 760px;
+  --panel-wizard-w: 392px;
+  --swatch-md: 12px;
+  /* Drag handle on a face of the workbench box in the 3D view. */
+  --handle-size: 12px;
+  --handle-hover-scale: 1.35;
+  /* Guided tour coach card (components/Tour.tsx). */
+  --tour-card-w: 320px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-normal: 200ms;
+  --dur-slow: 360ms;
+  --stagger: 60ms;
+
+  /* Layers */
+  --z-viewport-overlay: 10;
+  --z-resizer: 20;
+  --z-start: 50;
+  --z-tour: 140;
+  --z-dialog: 150;
+  --z-drop: 100;
+  --z-toast: 200;
+
+  /* Potential colour map (viridis: perceptually even, colour-blind safe, readable in both themes).
+     Shared by the WebGPU section shader and the CSS legend, so it stays hex. */
+  --vp-field-0: #440154;
+  --vp-field-1: #3b528b;
+  --vp-field-2: #21918c;
+  --vp-field-3: #5ec962;
+  --vp-field-4: #fde725;
+  --vp-contour-dark: #0b0d10;
+  --vp-contour-light: #ffffff;
+  --legend-bar-len: 168px;
+  --legend-bar-w: 10px;
+  --legend-max-w: 168px;
+  --readout-w: 224px;
+  --readout-h: 64px;
+  --readout-offset: 14px;
+
+  /* Results panel (bottom of the workspace) and its plots */
+  --results-h: 360px;
+  --results-min-h: 200px;
+  --viewport-min-h: 180px;
+  --results-side-w: 232px;
+  --table-row-h: 24px;
+  --table-cols: minmax(var(--space-12), 0.6fr) minmax(var(--space-16), 1.5fr) repeat(6, minmax(var(--space-12), 1fr));
+  --menu-min-w: 200px;
+  --plot-font: 10px;
+  --plot-line-w: 1.5px;
+  --plot-select-w: 2px;
+  --plot-marker-r: 5px;
+  --plot-point: 2px;
+  --plot-chip-h: 22px;
+  /* 3D highlight of the selected ion (screen px) */
+  --vp-highlight-w: 3px;
+  --vp-highlight-ring: 7px;
+}
+
+/* Small windows (the desktop minimum is 960 px): give the viewport more room. */
+@media (max-width: 1180px) {
+  :root {
+    --panel-left-w: 232px;
+    --panel-right-w: 272px;
+  }
+}
+
+/* ---------------------------------------------------------------- dark: graphite + ion amber */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #0b0d10;
+  --color-surface: #12151a;
+  --color-surface-2: #181c22;
+  --color-surface-3: #20252d;
+  --color-sunken: #0d1014;
+  --color-border: #232831;
+  --color-border-strong: #333a46;
+
+  --color-text: #e6e8ec;
+  --color-text-muted: #a0a7b4;
+  --color-text-subtle: #6c7482;
+  --color-text-disabled: #4b525d;
+
+  --color-accent: #ffa630;
+  --color-accent-hover: #ffb75a;
+  --color-accent-active: #f0921a;
+  --color-accent-fg: #1b1205;
+  --color-accent-text: #ffb75a;
+  --color-accent-soft: rgb(255 166 48 / 0.13);
+  --color-accent-border: rgb(255 166 48 / 0.45);
+
+  --color-success: #3ccf91;
+  --color-success-soft: rgb(60 207 145 / 0.14);
+  --color-warning: #f5c542;
+  --color-warning-soft: rgb(245 197 66 / 0.14);
+  --color-danger: #ff5d68;
+  --color-danger-soft: rgb(255 93 104 / 0.14);
+  --color-info: #5cb4ff;
+  --color-info-soft: rgb(92 180 255 / 0.14);
+
+  --color-scrim: rgb(6 8 10 / 0.7);
+  --color-hairline-light: rgb(255 255 255 / 0.04);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.65), 0 0 0 1px var(--color-hairline-light);
+  --shadow-lg: 0 28px 64px -24px rgb(0 0 0 / 0.8), 0 0 0 1px var(--color-hairline-light);
+
+  --vp-bg-center: #1a2029;
+  --vp-bg-edge: #08090c;
+  --vp-noise-opacity: 0.05;
+  --vp-grid: #8d98ab;
+  --vp-axis-x: #ff5d68;
+  --vp-axis-y: #3ccf91;
+  --vp-axis-z: #5cb4ff;
+  --vp-electrode-neutral: #a7afbc;
+  --vp-electrode-positive: #ff6a5c;
+  --vp-electrode-negative: #4f9dff;
+  --vp-mesh-imported: #d39a6a;
+  --vp-trajectory: #ff5fa8;
+  --vp-splat: #f4f6fa;
+  --vp-splat-hit: #ff3d4f;
+  --vp-selection: #ffa630;
+  --vp-sky: #c9d3e3;
+  --vp-ground: #2a2622;
+  --vp-highlight: #fff3c4;
+  /* Workbench box (field-free flight volume) and import-wizard part colours (by electrode number). */
+  --vp-bench: #7fd1ff;
+  --vp-part-1: #ffa630;
+  --vp-part-2: #5cb4ff;
+  --vp-part-3: #3ccf91;
+  --vp-part-4: #ff5fa8;
+  --vp-part-5: #b892ff;
+  --vp-part-6: #f5c542;
+
+  /* Plots: canvas reads these with getComputedStyle (any CSS colour works). */
+  --plot-bg: var(--color-sunken);
+  --plot-grid: rgb(255 255 255 / 0.06);
+  --plot-axis: var(--color-border-strong);
+  --plot-text: var(--color-text-subtle);
+  --plot-text-strong: var(--color-text-muted);
+  --plot-primary: #ffa630;
+  --plot-primary-fill: rgb(255 166 48 / 0.55);
+  --plot-band: rgb(255 166 48 / 0.12);
+  --plot-select: #f4f6fa;
+  --plot-series-1: #5cb4ff;
+  --plot-series-2: #3ccf91;
+  --plot-series-3: #ff5fa8;
+  --plot-series-4: #b892ff;
+  --plot-series-5: #f5c542;
+  --plot-x: #ff5d68;
+  --plot-y: #3ccf91;
+  --plot-z: #5cb4ff;
+}
+
+/* ---------------------------------------------------------------- light: warm paper + amber */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg: #e8e6e1;
+  --color-surface: #f7f6f3;
+  --color-surface-2: #efede8;
+  --color-surface-3: #e5e2db;
+  --color-sunken: #ffffff;
+  --color-border: #dcd9d1;
+  --color-border-strong: #c4c0b6;
+
+  --color-text: #17191d;
+  --color-text-muted: #525862;
+  --color-text-subtle: #80858e;
+  --color-text-disabled: #b0b3b8;
+
+  --color-accent: #f59a14;
+  --color-accent-hover: #ffab3d;
+  --color-accent-active: #e08600;
+  --color-accent-fg: #1b1205;
+  --color-accent-text: #9c5400;
+  --color-accent-soft: rgb(245 154 20 / 0.14);
+  --color-accent-border: rgb(214 122 0 / 0.5);
+
+  --color-success: #12845a;
+  --color-success-soft: rgb(18 132 90 / 0.12);
+  --color-warning: #9a6a00;
+  --color-warning-soft: rgb(196 140 0 / 0.14);
+  --color-danger: #c92f3f;
+  --color-danger-soft: rgb(201 47 63 / 0.1);
+  --color-info: #1d68c4;
+  --color-info-soft: rgb(29 104 196 / 0.1);
+
+  --color-scrim: rgb(232 230 225 / 0.78);
+  --color-hairline-light: rgb(255 255 255 / 0.7);
+
+  --shadow-sm: 0 1px 2px rgb(30 25 15 / 0.08);
+  --shadow-md: 0 8px 24px -10px rgb(30 25 15 / 0.22), 0 0 0 1px rgb(30 25 15 / 0.06);
+  --shadow-lg: 0 28px 64px -24px rgb(30 25 15 / 0.3), 0 0 0 1px rgb(30 25 15 / 0.06);
+
+  --vp-bg-center: #fcfbf9;
+  --vp-bg-edge: #e2dfd8;
+  --vp-noise-opacity: 0.035;
+  --vp-grid: #4d5462;
+  --vp-axis-x: #e0404c;
+  --vp-axis-y: #17a06c;
+  --vp-axis-z: #2f7de1;
+  --vp-electrode-neutral: #8f97a3;
+  --vp-electrode-positive: #e2493f;
+  --vp-electrode-negative: #2f7de1;
+  --vp-mesh-imported: #c07f4a;
+  --vp-trajectory: #e0187a;
+  --vp-splat: #ffffff;
+  --vp-splat-hit: #d1172b;
+  --vp-selection: #f08c00;
+  --vp-sky: #ffffff;
+  --vp-ground: #b9b2a6;
+  --vp-highlight: #1b1205;
+  --vp-bench: #1d68c4;
+  --vp-part-1: #d67a00;
+  --vp-part-2: #1d68c4;
+  --vp-part-3: #12845a;
+  --vp-part-4: #d1176f;
+  --vp-part-5: #7a4fd6;
+  --vp-part-6: #9a6a00;
+
+  --plot-bg: var(--color-sunken);
+  --plot-grid: rgb(30 25 15 / 0.07);
+  --plot-axis: var(--color-border-strong);
+  --plot-text: var(--color-text-subtle);
+  --plot-text-strong: var(--color-text-muted);
+  --plot-primary: #d67a00;
+  --plot-primary-fill: rgb(245 154 20 / 0.5);
+  --plot-band: rgb(245 154 20 / 0.14);
+  --plot-select: #17191d;
+  --plot-series-1: #1d68c4;
+  --plot-series-2: #12845a;
+  --plot-series-3: #d1176f;
+  --plot-series-4: #7a4fd6;
+  --plot-series-5: #9a6a00;
+  --plot-x: #e0404c;
+  --plot-y: #17a06c;
+  --plot-z: #2f7de1;
+}

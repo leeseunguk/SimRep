@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "resources": {
+      "bundle-occt/*.dll": "occt/",
+      "bundle-occt/*.txt": "occt/",
+      "bundle-occt/licenses/*": "occt/licenses/",
+      "bundle-occt/crt/*.dll": "./"
+    }
+  }
+}
