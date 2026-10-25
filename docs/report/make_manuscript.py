@@ -66,7 +66,7 @@ for index, b in enumerate(blocks):
             reverted.append(n)
 if reverted:
     print(f"reverted polish to keep sources: {sorted(reverted)}")
-FINAL_FIXES = {"(/mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html)": "(SIMION 2024와 함께 설치되는 도움말 문서)"}
+FINAL_FIXES = {"최대 6.4e-5 V 이내로 같았다": "최대 6.42e-5 V 차이로 같았다", "6.4e-5 V 안에서 같다": "최대 6.42e-5 V 차이로 같다", "(/mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html)": "(SIMION 2024와 함께 설치되는 도움말 문서)"}
 for b in blocks:
     for key in ("text", "caption"):
         if isinstance(b.get(key), str):

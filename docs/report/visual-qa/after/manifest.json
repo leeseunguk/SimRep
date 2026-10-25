@@ -798,102 +798,6 @@
    }
   },
   {
-   "surface": "exact-on",
-   "theme": "light",
-   "css": "1280x800",
-   "dsf": 2,
-   "file": "exact-on-1280x800-light-after.png",
-   "px": "2560x1600",
-   "bytes": 1159395,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-on",
-   "theme": "light",
-   "css": "1920x1080",
-   "dsf": 1,
-   "file": "exact-on-1920x1080-light-after.png",
-   "px": "1920x1080",
-   "bytes": 1111271,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-on",
-   "theme": "dark",
-   "css": "1280x800",
-   "dsf": 2,
-   "file": "exact-on-1280x800-dark-after.png",
-   "px": "2560x1600",
-   "bytes": 1211136,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-on",
-   "theme": "dark",
-   "css": "1920x1080",
-   "dsf": 1,
-   "file": "exact-on-1920x1080-dark-after.png",
-   "px": "1920x1080",
-   "bytes": 1232493,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-off",
-   "theme": "light",
-   "css": "1280x800",
-   "dsf": 2,
-   "file": "exact-off-1280x800-light-after.png",
-   "px": "2560x1600",
-   "bytes": 1159052,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-off",
-   "theme": "light",
-   "css": "1920x1080",
-   "dsf": 1,
-   "file": "exact-off-1920x1080-light-after.png",
-   "px": "1920x1080",
-   "bytes": 1107985,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-off",
-   "theme": "dark",
-   "css": "1280x800",
-   "dsf": 2,
-   "file": "exact-off-1280x800-dark-after.png",
-   "px": "2560x1600",
-   "bytes": 1210863,
-   "prep": {
-    "found": true
-   }
-  },
-  {
-   "surface": "exact-off",
-   "theme": "dark",
-   "css": "1920x1080",
-   "dsf": 1,
-   "file": "exact-off-1920x1080-dark-after.png",
-   "px": "1920x1080",
-   "bytes": 1228645,
-   "prep": {
-    "found": true
-   }
-  },
-  {
    "surface": "wizard-gem-parts",
    "theme": "light",
    "css": "1280x800",
@@ -1788,6 +1692,102 @@
    "px": "1920x1080",
    "bytes": 799440,
    "prep": null
+  },
+  {
+   "surface": "exact-on",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-on-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1160325,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-on-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1112228,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-on-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1210941,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-on",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-on-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1233358,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "light",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-off-1280x800-light-after.png",
+   "px": "2560x1600",
+   "bytes": 1160406,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "light",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-off-1920x1080-light-after.png",
+   "px": "1920x1080",
+   "bytes": 1112000,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "dark",
+   "css": "1280x800",
+   "dsf": 2,
+   "file": "exact-off-1280x800-dark-after.png",
+   "px": "2560x1600",
+   "bytes": 1212188,
+   "prep": {
+    "found": true
+   }
+  },
+  {
+   "surface": "exact-off",
+   "theme": "dark",
+   "css": "1920x1080",
+   "dsf": 1,
+   "file": "exact-off-1920x1080-dark-after.png",
+   "px": "1920x1080",
+   "bytes": 1232795,
+   "prep": {
+    "found": true
+   }
   }
  ],
  "surfaces": {
@@ -2406,11 +2406,11 @@
     "device": "CPU · 32 threads",
     "precision": "live",
     "tof": {
-     "n": 750,
-     "min": 4.245526535345463,
+     "n": 1000,
+     "min": 3.196247163170681,
      "max": 4.262813677028871,
-     "mean": 4.251245304695877,
-     "std": 0.004287694842164868
+     "mean": 4.11450347966395,
+     "std": 0.24497243540357688
     },
     "surfaces": [
      [
@@ -2438,8 +2438,8 @@
      ]
     ]
    },
-   "ms": 4740,
-   "at": "2026-10-25T09:04:44.291Z"
+   "ms": 4495,
+   "at": "2026-10-25T14:06:24.226Z"
   },
   "exact-off": {
    "title": "Exact surface card OFF (grid-point collision, GPU live)",
@@ -2459,14 +2459,14 @@
     },
     "ions": 1000,
     "drawn": 300,
-    "device": "CPU · 32 threads",
+    "device": "NVIDIA GeForce RTX 3070 · Vulkan",
     "precision": "live",
     "tof": {
      "n": 1000,
-     "min": 3.7327746794808734,
-     "max": 4.262813677028871,
-     "mean": 4.124046831851392,
-     "std": 0.2209883870276443
+     "min": 3.732773879892193,
+     "max": 4.262812930508517,
+     "mean": 4.124046888353596,
+     "std": 0.2209884760799011
     },
     "surfaces": [
      [
@@ -2486,8 +2486,8 @@
      ]
     ]
    },
-   "ms": 3858,
-   "at": "2026-10-25T09:04:48.150Z"
+   "ms": 8075,
+   "at": "2026-10-25T14:06:51.440Z"
   },
   "wizard-gem-parts": {
    "title": "Import wizard (GEM): step 1 parts",

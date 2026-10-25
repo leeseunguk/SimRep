@@ -291,15 +291,16 @@
   {
     "id": "F22",
     "file": "F22.png",
-    "sha256": "a53bd5d3e1d1b6105346e7319217fa0fe337a2602993a2d13511e016360522f1",
+    "sha256": "62a1851905856cce46bf18be0938f1491a4893e9a667b94e3138fdcc0aec49ed",
     "kind": "app-capture",
-    "what_it_shows": "정확한 표면 스위치를 켠 경우(왼쪽, 정밀 CPU f64)와 끈 경우(오른쪽, 실시간 GPU f32)의 이온 섹션 카드와 비행 결과다. 켜면 이온이 실제 원기둥에서 멈춰 전극 2에 20개가 부딪히고, 끄면 격자점 계단에서 멈춰 결과가 751/249/0으로 달라진다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; F03과 같은 마법사 결과 배열(quad2). scripts/app/quadfly.js {precision:'precise', exact:true}와 {precision:'live', exact:false}(두 번째 비행에서 GPU 준비 완료), scrollto.js로 카드·결과 섹션을 각각 캡처, crop.py --stack/--row.",
+    "what_it_shows": "정확한 표면 스위치를 켠 경우(왼쪽, 정밀 CPU f64)와 끈 경우(오른쪽, 실시간 GPU f32)의 이온 섹션 카드와 비행 결과다. 켜면 이온이 실제 원기둥에서 멈춰 전극 2에 20개가 부딪히고(750/230/20), 끄면 격자점 계단에서 멈춰 결과가 751/249/0으로 달라진다. 두 쪽 모두 TOF 요약은 도착한 이온 1,000개 전체(+x 경계와 전극 표면 도착 포함)의 통계다.",
+    "source": "Windows 데스크톱 앱 simrep-app 0.1.0 debug + feature cad, 2026-10-26 다시 빌드(HEAD ae4f9d9f + 작업 트리, SurfaceElectrode 도착 통계 수정 포함): `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-26 00:11, exe sha256 d02a625f…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(sha256 fb250579…), particles.ion(sha256 8d0e731d…); scripts/app/wiz1.js → wizrun.js(F03과 같은 마법사 결과 배열, cut 노드 11,160, refine 잔차 5.58e-11) → quadfly.js {precision:'precise', exact:true, closeWizard:true} → quadfly.js {precision:'live', exact:false} 두 번(첫 비행은 장 업로드 중 CPU 대체, 두 번째 비행에서 GPU). 카드·결과 섹션은 scripts/app/rects.js(scrollto.js와 같은 스크롤 + 자를 영역 측정)로 각각 찍고 crop.py --stack/--row로 원본 픽셀 그대로 잘라 붙임. 자른 영역(장치 픽셀): 켜짐 카드 1872,150,2544,534, 결과 1872,166,2544,1074; 꺼짐 카드 1872,150,2544,498, 결과 1872,166,2544,1092. 현재 앱의 오른쪽 패널이 344 CSS px(이전 캡처 때 310)라 그림이 1272×1260에서 1368×1372로 바뀌었고, 스크롤바 띠는 잘라 냈다.",
     "numbers_checked": [
-      "켜짐: +x 750 / 전극 3 230 / 전극 2 20, 배지 '정밀'·'정확한 표면', CPU 32스레드, 계산 10 ms",
-      "꺼짐: +x 751 / 전극 3 249, 평균 TOF 4.124 µs, 배지 '실시간 미리보기'·'격자점', RTX 3070",
-      "CLI 대응값: frontend.md 표 '앱 표면 끔(계단) 751/249/0, 4.124046832'",
-      "꺼짐 쪽 계산 65 ms는 장 업로드 직후 첫 GPU 비행이라 속도 근거로 쓰지 않음"
+      "켜짐: +x 750(평균 4.251 µs) / 전극 3 230(3.741) / 전극 2 20(3.284), TOF 요약 '도착한 이온 1,000개' 최소 3.196 · 평균 4.115 · 최대 4.263 · 표준편차 0.245 µs (헤더 tof n=1000, mean 4.11450347966, std 0.244972435), 배지 '정밀 · CPU f64'·'정확한 표면', CPU 32스레드, 계산 13 ms",
+      "꺼짐: +x 751(4.251) / 전극 3 249(3.740), TOF 요약 '도착한 이온 1,000개' 최소 3.733 · 평균 4.124 · 최대 4.263 · 표준편차 0.221 µs (헤더 tof n=1000, mean 4.12404688835, std 0.220988476), 배지 '실시간 · GPU f32'·'격자점', RTX 3070, 계산 12 ms",
+      "켜짐 쪽 전체 평균 4.1145 µs는 F03·frontend.md 표 4.1145034797과 같다",
+      "CLI 대응값: frontend.md 표 '앱 표면 끔(계단) 751/249/0, 4.124046832'(CPU 대체 비행 4.124046832, GPU f32 4.124046888)",
+      "이전 그림(2026-10-25)의 켜짐 쪽 TOF 요약 '도착한 이온 750개'·평균 4.251·표준편차 0.004는 SurfaceElectrode 도착을 빠뜨린 수정 전 통계였다"
     ]
   }
 ]

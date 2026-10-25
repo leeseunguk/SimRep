@@ -82,7 +82,7 @@ table(
         ["GPU", "NVIDIA GeForce RTX 3070 8 GB (FP64 처리량은 FP32의 1/64)"],
         ["SIMION", "SIMION-2024 (C:\\Program Files\\SIMION-2024), --nogui 배치 실행"],
         ["운영체제", "Windows + WSL2 Linux. GPU 실행은 Windows 네이티브 빌드"],
-        ["SimRep GPU API", "wgpu (Vulkan, DX12). 셰이더는 WGSL"],
+        ["SimRep GPU API", "wgpu (Vulkan, DX12), WGSL·GLSL 셰이더"],
     ],
     "docs/PLAN.md의 2절 표와 bench/simion-baseline.md에 기록된 실행 환경",
 )
@@ -133,7 +133,7 @@ table(
         ["simrep-core", "격자, 전위 배열(PA), 공용 자료형", "Cargo.toml description"],
         ["simrep-solve", "전위 솔버: CPU/GPU 멀티그리드, cut-cell, 유전체, 자기정역학", "Cargo.toml description, docs/dielectric.md의 Discretization and interfaces 절, docs/magnetostatics.md의 Equations and flight contract 절"],
         ["simrep-fly", "전기장 재구성, 적분기, 이온 비행(CPU/GPU), 자기장, 충돌, 공간전하", "Cargo.toml description, docs/physics-magnetic-collision.md의 Units and magnetic fields·HS1·SDS 절, docs/physics-space-charge.md의 Direct Coulomb·PIC and Poisson 절"],
-        ["simrep-io", "SIMION 파일 형식(.pa, .fly2, .gem, .rec)과 STL", "Cargo.toml description"],
+        ["simrep-io", "SIMION 파일 형식(PA/PA#/PA0, fast adjust, ION, FLY2)과 외부 자기장 지도", "Cargo.toml description"],
         ["simrep-gem", "SIMION GEM 구성 형상 해석과 PA 래스터화", "Cargo.toml description"],
         ["simrep-lua", "SIMION 입력 형식이 함께 쓰는 제한된 Lua 5.1 실행 환경", "Cargo.toml description"],
         ["simrep-geom", "부호 거리 함수(SDF)로 나타낸 전극 형상", "Cargo.toml description"],
@@ -926,7 +926,7 @@ fig(
 table(
     ["분야", "대표 비교", "정확도", "계산 시간 배수"],
     [
-        ["전위 계산", "259³ 배열, GPU", "엄격 SIMION과 6.4e-5 V 이내", "19.3 (준비 포함 9.1)"],
+        ["전위 계산", "259³ 배열, GPU", "엄격 SIMION과 최대 6.42e-5 V 차이", "19.3 (준비 포함 9.1)"],
         ["경계 처리", "두 구 전극, 같은 메모리", "오차 78~84배 감소", "—"],
         ["비행", "einzel 1천 개, CPU(보존 one-cell 설정), T.Qual 209 대비", "RMS 0.226 대 1.106 mm", "46"],
         ["비행", "3D 4중극, 정확한 표면", "RMS 0.0034 대 2.38 mm", "71"],

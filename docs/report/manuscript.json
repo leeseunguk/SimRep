@@ -53,7 +53,7 @@
     ],
     [
      "SimRep GPU API",
-     "wgpu (Vulkan, DX12). 셰이더는 WGSL"
+     "wgpu (Vulkan, DX12), WGSL·GLSL 셰이더"
     ]
    ],
    "source": "docs/PLAN.md의 2절 표와 bench/simion-baseline.md에 기록된 실행 환경"
@@ -141,7 +141,7 @@
     ],
     [
      "simrep-io",
-     "SIMION 파일 형식(.pa, .fly2, .gem, .rec)과 STL",
+     "SIMION 파일 형식(PA/PA#/PA0, fast adjust, ION, FLY2)과 외부 자기장 지도",
      "Cargo.toml description"
     ],
     [
@@ -317,7 +317,7 @@
   },
   {
    "type": "p",
-   "text": "표 3의 SimRep 행은 bench/refine-real.md의 End-to-end performance 절, SIMION 행은 bench/simion-baseline.md의 Refine 절에서 가져왔고 배수는 이 문서에서 두 값을 나눈 것이다. GPU 풀이 시간에는 데이터 전송이 들어 있어 순수 커널 시간보다 크다. 그래도 준비 시간을 포함해 계산하면 GPU는 SIMION보다 9배 빠르다. CPU는 풀이만 놓고 보면 2.8배 빠르다. 준비 시간을 더하면 차이는 1.9배로 줄어든다. 정확도는 모든 격자점에서 엄격 설정 SIMION과 최대 6.4e-5 V 이내로 같았다(bench/refine-real.md의 Large-array tight reference and CPU/GPU agreement 절). 반면 SIMION의 기본 설정은 엄격 설정과 최대 0.92 V가 달랐다. 이 차이 때문에 1장의 규칙대로 엄격 설정을 비교 기준으로 삼았다."
+   "text": "표 3의 SimRep 행은 bench/refine-real.md의 End-to-end performance 절, SIMION 행은 bench/simion-baseline.md의 Refine 절에서 가져왔고 배수는 이 문서에서 두 값을 나눈 것이다. GPU 풀이 시간에는 데이터 전송이 들어 있어 순수 커널 시간보다 크다. 그래도 준비 시간을 포함해 계산하면 GPU는 SIMION보다 9배 빠르다. CPU는 풀이만 놓고 보면 2.8배 빠르다. 준비 시간을 더하면 차이는 1.9배로 줄어든다. 정확도는 모든 격자점에서 엄격 설정 SIMION과 최대 6.42e-5 V 차이로 같았다(bench/refine-real.md의 Large-array tight reference and CPU/GPU agreement 절). 반면 SIMION의 기본 설정은 엄격 설정과 최대 0.92 V가 달랐다. 이 차이 때문에 1장의 규칙대로 엄격 설정을 비교 기준으로 삼았다."
   },
   {
    "type": "h",
@@ -423,7 +423,7 @@
   {
    "type": "p",
    "role": "callout-body",
-   "text": "SimRep은 식 (1)을 갤러킨 멀티그리드로 풀고, 반복 변화량이 아닌 잔차로 수렴을 판정한다. 1,737만 점 배열에서 GPU 풀이는 엄격 설정 SIMION보다 19배(준비 포함 9배) 빠르고 결과는 6.4e-5 V 안에서 같다(표 3). cut-cell 경계는 같은 메모리에서 계단형보다 전위 오차를 약 80배 줄인다(docs/cutcell.md의 Equal memory budget 절)."
+   "text": "SimRep은 식 (1)을 갤러킨 멀티그리드로 풀고, 반복 변화량이 아닌 잔차로 수렴을 판정한다. 1,737만 점 배열에서 GPU 풀이는 엄격 설정 SIMION보다 19배(준비 포함 9배) 빠르고 결과는 최대 6.42e-5 V 차이로 같다(표 3). cut-cell 경계는 같은 메모리에서 계단형보다 전위 오차를 약 80배 줄인다(docs/cutcell.md의 Equal memory budget 절)."
   },
   {
    "type": "h",
@@ -1370,7 +1370,7 @@
     [
      "전위 계산",
      "259³ 배열, GPU",
-     "엄격 SIMION과 6.4e-5 V 이내",
+     "엄격 SIMION과 최대 6.42e-5 V 차이",
      "19.3 (준비 포함 9.1)"
     ],
     [
