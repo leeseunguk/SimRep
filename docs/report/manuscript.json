@@ -631,7 +631,7 @@
   },
   {
    "type": "p",
-   "text": "이온은 서로 독립이므로 GPU에서 이온 하나를 스레드 하나로 날린다. 정밀 모드는 배정밀도로 CPU와 같은 적분기와 재구성을 쓰고 앱의 실시간 미리보기는 단정밀도 미리보기 모드를 쓴다. einzel 렌즈 10만 개를 배정밀도 GPU로 날리면 계산에 0.637 s가 걸렸다. SIMION 기본 품질의 21.37 s보다 33.5배 짧다. 이 값은 bench/fly-gpu.md의 Native precision study 절과 bench/simion-baseline.md의 Fly 절에서 가져왔다."
+   "text": "이온은 서로 독립이므로 GPU에서 이온 하나를 스레드 하나로 날린다. 정밀 모드는 배정밀도로 CPU와 같은 적분기와 재구성을 쓰고, 앱의 실시간 미리보기는 단정밀도 미리보기 모드를 쓴다. einzel 렌즈 10만 개를 배정밀도 GPU로 날리면 계산에 2.46 s가 걸려 SIMION 기본 품질의 21.37 s보다 8.7배 짧다. 예전 기록 0.637 s는 재현되지 않았다. 이 값은 bench/fly-gpu.md의 Native dispatch safety 절과 bench/simion-baseline.md의 Fly 절에서 가져왔다."
   },
   {
    "type": "p",

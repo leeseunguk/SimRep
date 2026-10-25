@@ -66,7 +66,7 @@ for index, b in enumerate(blocks):
             reverted.append(n)
 if reverted:
     print(f"reverted polish to keep sources: {sorted(reverted)}")
-FINAL_FIXES = {"최대 6.4e-5 V 이내로 같았다": "최대 6.42e-5 V 차이로 같았다", "6.4e-5 V 안에서 같다": "최대 6.42e-5 V 차이로 같다", "(/mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html)": "(SIMION 2024와 함께 설치되는 도움말 문서)"}
+FINAL_FIXES = {"einzel 렌즈 10만 개를 배정밀도 GPU로 날리면 계산에 0.637 s가 걸렸다. SIMION 기본 품질의 21.37 s보다 33.5배 짧다. 이 값은 bench/fly-gpu.md의 Native precision study 절과 bench/simion-baseline.md의 Fly 절에서 가져왔다.": "einzel 렌즈 10만 개를 배정밀도 GPU로 날리면 계산에 2.46 s가 걸려 SIMION 기본 품질의 21.37 s보다 8.7배 짧다. 예전 기록 0.637 s는 재현되지 않았다. 이 값은 bench/fly-gpu.md의 Native dispatch safety 절과 bench/simion-baseline.md의 Fly 절에서 가져왔다.", "최대 6.4e-5 V 이내로 같았다": "최대 6.42e-5 V 차이로 같았다", "6.4e-5 V 안에서 같다": "최대 6.42e-5 V 차이로 같다", "(/mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html)": "(SIMION 2024와 함께 설치되는 도움말 문서)"}
 for b in blocks:
     for key in ("text", "caption"):
         if isinstance(b.get(key), str):
