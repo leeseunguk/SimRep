@@ -17,7 +17,22 @@ frontend runs in-process, with identical defaults, validation, output formats an
 feature gates. Other rows use the same public Rust simulation functions with
 owned NumPy inputs/outputs. Paths accept `str` or `Path`; vectors/matrices accept
 Python sequences, assignments and run settings accept dictionaries. Diagnostic
-and benchmark functions print the CLI report and return `None`.
+and benchmark functions return parsed, versioned dictionaries from the CLI's
+global `--json` interface; human diagnostics go to stderr. They do not print
+JSON or reports to stdout.
+
+`pa_info()` returns header fields (`dims`, `spacing_mm`, `mode`, `symmetry`,
+mirror flags and field type) and potential statistics. `gpu_info()` returns
+`adapter_name`, `adapter_type`, `backend`, `f64_support` and `software_adapter`.
+`gpu_smoke()` adds numerical `checks`; `fly_bench()`, `refine_bench()` and
+`refine_sdf()` return benchmark dictionaries. All include `schema_version=1`
+and `simrep_version`. The four `export_*()` functions now return
+`{"output_paths": [...], "schema_version": 1, "simrep_version": "..."}`.
+`gem2pa()` and `mesh_import()` still return `PA`; `refine()`, `refine_geometry()`
+and `fly()` retain their structured result types. File-based
+`refine_geometry().report` contains the CLI's executed device/precision,
+cycles, residual, convergence, separate compute/preparation times and paths.
+Native errors still raise `ValueError`, rather than returning error dictionaries.
 
 | CLI command / option | Python function / argument | Status |
 | --- | --- | --- |

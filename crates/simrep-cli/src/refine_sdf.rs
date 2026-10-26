@@ -19,16 +19,22 @@ enum TestGeometry {
 
 #[derive(Args)]
 pub struct SdfOptions {
+    /// Analytic geometry used for the cut-cell benchmark.
     #[arg(long, value_enum, default_value = "sphere")]
     geometry: TestGeometry,
+    /// Nodes per active axis; integer at least 3.
     #[arg(long, default_value_t = 65, value_parser = parse_grid_size)]
     n: usize,
+    /// Compute device for the benchmark.
     #[arg(long, value_enum, default_value = "cpu")]
     device: Device,
+    /// Native GPU backend (unused on CPU).
     #[arg(long, value_enum, default_value = "vulkan")]
     backend: Backend,
+    /// Positive finite relative residual tolerance.
     #[arg(long, default_value = "1e-10", value_parser = parse_tolerance)]
     tolerance: f64,
+    /// Maximum number of multigrid cycles.
     #[arg(long, default_value_t = 100)]
     max_cycles: usize,
     /// Also solve the same nodal electrode mask without subcell boundaries.
@@ -134,6 +140,7 @@ pub fn run(args: SdfOptions) -> GpuResult<()> {
     };
     let mut cut_error = 0.0;
     let mut cut_time = 0.0;
+    let mut reports = Vec::new();
     for staircase in [false, true] {
         if staircase && !args.compare_staircase {
             break;
@@ -216,6 +223,16 @@ pub fn run(args: SdfOptions) -> GpuResult<()> {
             }
         }
         let name = if staircase { "Staircase" } else { "SDF" };
+        reports.push(serde_json::json!({
+            "surface_mode": if staircase { "staircase" } else { "sdf" },
+            "cycles": cycles,
+            "final_residual": residual,
+            "converged": converged,
+            "prep_ms": setup.as_secs_f64() * 1000.0,
+            "compute_ms": compute.as_secs_f64() * 1000.0,
+            "max_potential_error": error,
+            "max_field_error": field_error,
+        }));
         println!(
             "{name}: setup {:.3} ms, compute {:.3} ms, cycles {cycles}, relative residual {residual:.9e}, max potential error {error:.9e}",
             setup.as_secs_f64() * 1000.0,
@@ -238,5 +255,12 @@ pub fn run(args: SdfOptions) -> GpuResult<()> {
             );
         }
     }
+    crate::json::set_summary(serde_json::json!({
+        "device": format!("{:?}", args.device).to_lowercase(),
+        "geometry": format!("{:?}", args.geometry).to_lowercase(),
+        "dims": grid.dims,
+        "tolerance": args.tolerance,
+        "reports": reports,
+    }));
     Ok(())
 }

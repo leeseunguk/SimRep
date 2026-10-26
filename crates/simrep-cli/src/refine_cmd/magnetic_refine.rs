@@ -38,7 +38,7 @@ fn refine(
     options: Options,
     gpu: Option<&Gpu>,
     timings: &mut Timings,
-) -> GpuResult<()> {
+) -> GpuResult<(bool, usize, f64)> {
     for i in 0..pa.array.potentials.len() {
         if antimirror_plane(&pa.array, i) {
             if pa.array.electrodes[i] && pa.array.potentials[i] != 0.0 {
@@ -56,6 +56,7 @@ fn refine(
         let report = problem.solve_gpu(gpu, &mut values, options)?;
         timings.setup += report.timings.setup;
         timings.solve += report.timings.upload + report.timings.solve + report.timings.readback;
+        timings.transfers += report.timings.upload + report.timings.readback;
         (
             report.converged,
             report.iterations,
@@ -83,7 +84,7 @@ fn refine(
     if !converged {
         return Err(format!("magnetic refinement did not converge after {cycles} cycles").into());
     }
-    Ok(())
+    Ok((converged, cycles, residual.relative))
 }
 fn magnetic_pa(path: &Path) -> GpuResult<PaFile> {
     if !path
@@ -119,10 +120,11 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
         .requests_gpu(primary_layout.grid, Some(false))
         || options.device == RefineDevice::Auto
             && magnetostatics::prefer_gpu(primary_layout.grid, true);
-    let mut reason = if request_gpu {
-        "magnetic grid meets measured GPU crossover"
-    } else {
-        "magnetic grid below measured GPU crossover"
+    let mut reason = match options.device {
+        RefineDevice::Cpu => "explicit --device cpu",
+        RefineDevice::Gpu => "explicit --device gpu",
+        RefineDevice::Auto if request_gpu => "magnetic grid meets measured GPU crossover",
+        RefineDevice::Auto => "magnetic grid below measured GPU crossover",
     };
     let gpu = if request_gpu {
         let candidate = pollster::block_on(Gpu::new(options.backend.backends()))?;
@@ -182,6 +184,10 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
         setup: start.elapsed(),
         ..Default::default()
     };
+    let mut cycles = 0;
+    let mut final_residual = 0.0_f64;
+    let mut converged = true;
+    let mut output_paths = Vec::new();
     let parent = spec_path.parent().unwrap_or(Path::new("."));
     let header = if spec.get("cartesian").is_some() {
         let spec: CartesianInput = serde_json::from_value(spec)?;
@@ -231,7 +237,7 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
                 }
             }
             timings.setup += prepare.elapsed();
-            refine(
+            let (component_converged, component_cycles, component_residual) = refine(
                 pa,
                 &layout,
                 &problem,
@@ -239,11 +245,15 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
                 gpu.as_ref(),
                 &mut timings,
             )?;
+            cycles += component_cycles;
+            final_residual = final_residual.max(component_residual);
+            converged &= component_converged;
             solid_cells = problem.solid_cells;
         }
         // Only write after every component has converged.
         for (path, pa) in paths.iter().zip(&components) {
             output(path, pa, &mut timings)?;
+            output_paths.push(path.clone());
         }
         FieldFile {
             version: 1,
@@ -267,7 +277,7 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
             primary.ng as f64,
         )?;
         timings.setup += prepare.elapsed();
-        refine(
+        let (component_converged, component_cycles, component_residual) = refine(
             &mut primary,
             &primary_layout,
             &problem,
@@ -275,7 +285,11 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
             gpu.as_ref(),
             &mut timings,
         )?;
+        cycles += component_cycles;
+        final_residual = final_residual.max(component_residual);
+        converged &= component_converged;
         output(&options.file, &primary, &mut timings)?;
+        output_paths.push(options.file.clone());
         FieldFile {
             version: 1,
             formulation: problem.formulation,
@@ -299,6 +313,7 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
     serde_json::to_writer(&mut writer, &header)?;
     writer.flush()?;
     println!("Wrote {}", sidecar.display());
+    output_paths.push(sidecar);
     println!(
         "Setup: {:.3} ms, solve: {:.3} ms, IO: {:.3} ms, end-to-end: {:.3} ms",
         ms(timings.setup),
@@ -306,5 +321,128 @@ pub(super) fn run(options: RefineOptions) -> GpuResult<()> {
         ms(timings.io),
         ms(total.elapsed())
     );
+    crate::json::set_summary(serde_json::json!({
+        "requested": {
+            "device": options.device.to_possible_value().unwrap().get_name(),
+            "backend": options.backend.to_possible_value().unwrap().get_name(),
+            "precision": "f64",
+        },
+        "executed": {
+            "device": if gpu.is_some() { "gpu" } else { "cpu" },
+            "backend": gpu.as_ref().map(|gpu| format!("{:?}", gpu.info.backend).to_lowercase()),
+            "precision": if gpu.is_some() { "mixed-f32-f64" } else { "f64" },
+        },
+        "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) {
+            Some("adapter lacks native f64; CPU f64 residual with GPU f32 corrections")
+        } else {
+            (request_gpu && gpu.is_none()).then_some(reason)
+        },
+        "reason": reason,
+        "cycles": cycles,
+        "final_residual": final_residual,
+        "tolerance": options.tolerance,
+        "converged": converged,
+        "compute_ms": ms(timings.solve - timings.transfers),
+        "prep_ms": ms(timings.setup + timings.transfers),
+        "output_paths": output_paths,
+    }));
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    fn cartesian_json_aggregates_reports_and_lists_every_output() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut expected_cycles = 0;
+        let mut expected_residual = 0.0_f64;
+        for (component, name) in ["ax", "ay", "az"].into_iter().enumerate() {
+            let mut a = PotentialArray::new(5, 5, 5);
+            a.field_type = FieldType::Magnetic;
+            for i in 0..a.potentials.len() {
+                let position = [i % 5, i / 5 % 5, i / 25];
+                a.electrodes[i] = position.iter().any(|&x| x == 0 || x == 4);
+                if a.electrodes[i] {
+                    a.potentials[i] = (component + 1) as f64 * position[component] as f64;
+                }
+            }
+            let mut pa = PaFile::new(a);
+            pa.ng = 1;
+            write_pa(dir.path().join(format!("{name}.pa")), &pa).unwrap();
+            write_pa(
+                dir.path().join(format!("j{name}.pa")),
+                &PaFile::new(PotentialArray::new(4, 4, 4)),
+            )
+            .unwrap();
+            let layout = Layout::new(&pa.array);
+            let problem = MagneticProblem::cartesian_current_component(
+                layout.grid,
+                &layout.fixed,
+                1.0,
+                &[0.0; 64],
+                1.0,
+            )
+            .unwrap();
+            let (_, cycles, residual) = refine(
+                &mut pa,
+                &layout,
+                &problem,
+                Options::default(),
+                None,
+                &mut Timings::default(),
+            )
+            .unwrap();
+            expected_cycles += cycles;
+            expected_residual = expected_residual.max(residual);
+        }
+        let spec = dir.path().join("material.json");
+        std::fs::write(
+            &spec,
+            r#"{"cartesian":{"potentials":["ax.pa","ay.pa","az.pa"],"current_density":["jax.pa","jay.pa","jaz.pa"]}}"#,
+        )
+        .unwrap();
+        let input = dir.path().join("ax.pa");
+        let summary = crate::json::capture(
+            crate::Cli::try_parse_from([
+                "simrep",
+                "--json",
+                "refine",
+                input.to_str().unwrap(),
+                "--device",
+                "cpu",
+                "--magnetic-material",
+                spec.to_str().unwrap(),
+            ])
+            .unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(
+            summary["requested"],
+            serde_json::json!({"device": "cpu", "backend": "vulkan", "precision": "f64"})
+        );
+        assert_eq!(
+            summary["executed"],
+            serde_json::json!({"device": "cpu", "backend": null, "precision": "f64"})
+        );
+        assert!(summary["fallback_reason"].is_null());
+        assert_eq!(summary["cycles"], expected_cycles);
+        assert_eq!(summary["final_residual"], expected_residual);
+        assert_eq!(summary["converged"], true);
+        assert_eq!(
+            summary["output_paths"],
+            serde_json::json!([
+                dir.path().join("ax.pa"),
+                dir.path().join("ay.pa"),
+                dir.path().join("az.pa"),
+                dir.path().join("ax.mag.json"),
+            ])
+        );
+        for path in summary["output_paths"].as_array().unwrap() {
+            assert!(Path::new(path.as_str().unwrap()).is_file());
+        }
+    }
 }

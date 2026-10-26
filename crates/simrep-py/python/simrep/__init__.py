@@ -280,8 +280,7 @@ def refine_geometry(source=None, *, electrodes, dims=None, spacing_mm=None,
                          "mesh input requires planar symmetry")
     if not analytic:
         def solve(stem):
-            start = perf_counter()
-            _command("refine-geometry", source, grid=dims, spacing=spacing_mm,
+            report = _command("refine-geometry", source, grid=dims, spacing=spacing_mm,
                      origin=origin_mm, electrode=[
                          f"{part}={number}:{voltage}" for part, (number, voltage) in electrodes.items()],
                      device=device, backend=backend, tolerance=tolerance,
@@ -291,7 +290,7 @@ def refine_geometry(source=None, *, electrodes, dims=None, spacing_mm=None,
                      cad_mode=cad_mode, cad_tolerance=cad_tolerance)
             result = load_field(Path(stem).with_suffix(".pa0"))
             result.origin_mm = tuple(origin_mm)
-            result.report = dict(compute_ms=(perf_counter() - start) * 1000, device=device)
+            result.report = report
             return result
         if out is not None:
             return solve(out)
@@ -465,7 +464,7 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
 
 
 def _command(name, *positionals, **options):
-    arguments = name.split() + [os.fspath(value) for value in positionals]
+    arguments = ["--json"] + name.split() + [os.fspath(value) for value in positionals]
     for key, value in options.items():
         if value is None or value is False:
             continue
@@ -480,7 +479,7 @@ def _command(name, *positionals, **options):
                 arguments.append(f"{flag}=" + ",".join(map(str, np.asarray(value).ravel())))
         else:
             arguments.append(f"{flag}={value}")
-    _native.command(arguments)
+    return json.loads(_native.command(arguments))
 
 
 def gem2pa(source, output=None):
@@ -510,7 +509,7 @@ def mesh_import(source, output, *, dims, spacing_mm=(1, 1, 1), origin_mm=(0, 0, 
 def export_geometry(source, output, *, origin_mm=(0, 0, 0), electrode=None,
                     angular_segments=64, sweep_degrees=360, extrusion_depth=1):
     """Export PA electrode surfaces to STL/OBJ/glTF/GLB using CLI defaults."""
-    _command("export geometry", source, output, origin=origin_mm, electrode=electrode,
+    return _command("export geometry", source, output, origin=origin_mm, electrode=electrode,
              angular_segments=angular_segments, sweep_degrees=sweep_degrees,
              extrusion_depth=extrusion_depth)
 
@@ -518,53 +517,53 @@ def export_geometry(source, output, *, origin_mm=(0, 0, 0), electrode=None,
 def export_grid(source, output, *, origin_mm=(0, 0, 0), no_field=False,
                 revolve=False, angular_segments=64, sweep_degrees=360):
     """Export PA potential/mask/field to VTI, or cylindrical revolution to VTS."""
-    _command("export grid", source, output, origin=origin_mm, no_field=no_field,
+    return _command("export grid", source, output, origin=origin_mm, no_field=no_field,
              revolve=revolve, angular_segments=angular_segments, sweep_degrees=sweep_degrees)
 
 
 def export_isosurface(source, output, *, potential, origin_mm=(0, 0, 0),
                       angular_segments=64, sweep_degrees=360, extrusion_depth=1):
     """Export a potential contour with the CLI's marching/swept mesh pipeline."""
-    _command("export isosurface", source, output, origin=origin_mm, potential=potential,
+    return _command("export isosurface", source, output, origin=origin_mm, potential=potential,
              angular_segments=angular_segments, sweep_degrees=sweep_degrees,
              extrusion_depth=extrusion_depth)
 
 
 def export_trajectories(source, output):
     """Convert numeric trajectory CSV to VTP polylines or normalized CSV."""
-    _command("export trajectories", source, output)
+    return _command("export trajectories", source, output)
 
 
 def pa_info(source):
-    """Print the same PA header and potential statistics as ``simrep pa-info``."""
-    _command("pa-info", source)
+    """Return the versioned PA header/statistics dictionary from ``--json``."""
+    return _command("pa-info", source)
 
 
 def gpu_info(*, backend="auto"):
-    """Print selected adapter/features (auto searches DX12 and Vulkan)."""
-    _command("gpu-info", backend=backend)
+    """Return selected adapter/features (auto searches DX12 and Vulkan)."""
+    return _command("gpu-info", backend=backend)
 
 
 def gpu_smoke(*, backend="auto"):
-    """Run and print the CLI's GPU residual checks against CPU f64."""
-    _command("gpu-smoke", backend=backend)
+    """Return the CLI's GPU residual check results against CPU f64."""
+    return _command("gpu-smoke", backend=backend)
 
 
 def fly_bench(*, ions=10000):
-    """Run and print the synthetic CPU einzel benchmark and deterministic checksum."""
-    _command("fly-bench", ions=ions)
+    """Return the synthetic CPU einzel benchmark and deterministic checksum."""
+    return _command("fly-bench", ions=ions)
 
 
 def refine_bench(*, device="cpu", backend="vulkan", n=128, tolerance=1e-10, max_cycles=100):
-    """Run and print the CLI's harmonic 3D multigrid benchmark."""
-    _command("refine-bench", device=device, backend=backend, n=n,
+    """Return the CLI's harmonic 3D multigrid benchmark."""
+    return _command("refine-bench", device=device, backend=backend, n=n,
              tolerance=tolerance, max_cycles=max_cycles)
 
 
 def refine_sdf(*, geometry="sphere", n=65, device="cpu", backend="vulkan",
                tolerance=1e-10, max_cycles=100, compare_staircase=False):
-    """Run the sphere/cylinder/cylindrical cut-cell validation benchmark."""
-    _command("refine-sdf", geometry=geometry, n=n, device=device, backend=backend,
+    """Return the sphere/cylinder/cylindrical cut-cell validation benchmark."""
+    return _command("refine-sdf", geometry=geometry, n=n, device=device, backend=backend,
              tolerance=tolerance, max_cycles=max_cycles, compare_staircase=compare_staircase)
 
 

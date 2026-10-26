@@ -62,6 +62,7 @@ pub struct FlyOptions {
     /// Auto uses the measured compute crossover; CPU for small beams.
     #[arg(long, value_enum, default_value = "auto")]
     device: FlyDevice,
+    /// Native GPU backend (unused on CPU).
     #[arg(long, value_enum, default_value = "vulkan")]
     backend: crate::Backend,
     /// SIMION PA or PA0; sibling PA1..PAN supply fast-adjust voltage changes.
@@ -94,6 +95,7 @@ pub struct FlyOptions {
     /// PA unit X,Y,Z directions in workbench coordinates, column by column.
     #[arg(long, default_value = "1,0,0,0,1,0,0,0,1", value_parser = numbers::<9>, allow_hyphen_values = true)]
     axes: [f64; 9],
+    /// Positive geometric scale of the PA instance.
     #[arg(long, default_value_t = 1.0)]
     scale: f64,
     /// xmin,ymin,zmin,xmax,ymax,zmax in mm; permits field-free drift outside PA.
@@ -102,7 +104,7 @@ pub struct FlyOptions {
     /// Detector nx,ny,nz,d: nx*x+ny*y+nz*z=d, in workbench mm.
     #[arg(long, value_parser = numbers::<4>, allow_hyphen_values = true)]
     plane: Option<[f64; 4]>,
-    /// CSV output path; omitted writes records to stdout.
+    /// CSV output path; omitted writes to stdout (stderr with --json).
     #[arg(long)]
     output: Option<PathBuf>,
     /// Override automatic field-aware absolute (mm, mm/us) and relative tolerances.
@@ -111,6 +113,7 @@ pub struct FlyOptions {
     /// Override the automatic geometry/physics step ceiling (microseconds).
     #[arg(long)]
     max_step_us: Option<f64>,
+    /// Maximum flight duration in microseconds.
     #[arg(long, default_value_t = 100.0)]
     duration_us: f64,
     /// Disable relativistic dynamics (SIMION enables them by default).
@@ -128,6 +131,7 @@ pub struct FlyOptions {
     /// External regular-grid vector B exports; repeated maps superpose.
     #[arg(long)]
     bfield_map: Vec<PathBuf>,
+    /// Input magnetic-map format.
     #[arg(long, default_value = "auto", value_parser = ["auto", "comsol", "opera", "csv", "txt", "axisymmetric"])]
     bfield_map_format: String,
     /// Coordinate,flux units: mm/G (default), m/T, cm/mT or inch/G.
@@ -139,8 +143,10 @@ pub struct FlyOptions {
     /// Zero-based source columns x,y,z,Bx,By,Bz (or z,r,Bz,Br).
     #[arg(long, value_delimiter = ',')]
     bfield_map_columns: Option<Vec<usize>>,
+    /// Column delimiter for text magnetic maps (auto-detected if omitted).
     #[arg(long)]
     bfield_map_delimiter: Option<char>,
+    /// Behavior outside imported magnetic maps.
     #[arg(long, default_value = "error", value_parser = ["error", "zero", "clamp"])]
     bfield_map_outside: String,
     /// Axial-vector mirror planes through source grid minima; x,y,z or axial z.
@@ -157,6 +163,7 @@ pub struct FlyOptions {
     /// Coupled equal-time ensemble; beam instead uses leader-normal planes.
     #[arg(long, value_enum)]
     space_charge: Option<SpaceChargeMethod>,
+    /// Interpret charge weights as factors, total coulombs, or steady beam current.
     #[arg(long, value_enum, default_value = "factor",
         requires_ifs([("factor", "space_charge"), ("coulombic", "space_charge")]))]
     charge_mode: ChargeModeName,
@@ -172,6 +179,7 @@ pub struct FlyOptions {
     /// Full Cartesian PIC mesh dimensions; requires explicit --bounds.
     #[arg(long, value_delimiter = ',', default_values_t = [33usize,33,33])]
     pic_dims: Vec<usize>,
+    /// Fraction of the local space-charge timescale used for a shared step.
     #[arg(long)]
     space_charge_step_fraction: Option<f64>,
 }
@@ -494,6 +502,13 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
             )
         })
         .transpose()?;
+    let surface_mode = match surface.as_ref().map(SurfaceModel::accuracy) {
+        Some(SurfaceAccuracy::ApproximateV1) => "approximate-v1",
+        Some(SurfaceAccuracy::SampledSdf) => "sampled-sdf",
+        Some(SurfaceAccuracy::SourceGeometry) => "source-geometry",
+        None if options.nearest_node_collisions => "nearest-node",
+        None => "staircase",
+    };
     if let Some(surface) = &surface {
         if options.device == FlyDevice::Gpu
             && !matches!(options.space_charge, Some(SpaceChargeMethod::Pic))
@@ -1043,8 +1058,9 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         };
         (results, setup, flight_start.elapsed())
     };
-    let writer: Box<dyn Write> = match options.output {
+    let writer: Box<dyn Write> = match &options.output {
         Some(path) => Box::new(File::create(path)?),
+        None if crate::json::enabled() => Box::new(io::stderr().lock()),
         None => Box::new(io::stdout().lock()),
     };
     let mut writer = BufWriter::new(writer);
@@ -1053,6 +1069,21 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         "ion,tof_us,x_mm,y_mm,z_mm,ke_ev,reason,electrode_number,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us"
     )?;
     let mut splats = 0;
+    let mut counts: BTreeMap<_, usize> = [
+        "electrode",
+        "outside",
+        "plane",
+        "time_limit",
+        "step_limit",
+        "step_underflow",
+        "nonfinite",
+        "beam_diverged",
+        "beam_leader_stopped",
+    ]
+    .into_iter()
+    .map(|reason| (reason, 0))
+    .collect();
+    let mut arrivals = Vec::new();
     for (i, (particle, result)) in particles.iter().zip(&results).enumerate() {
         let p = result.final_state.position_mm;
         let v2 = result
@@ -1080,6 +1111,10 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
                 SplatReason::NonFinite => "nonfinite",
             },
         };
+        *counts.get_mut(reason).unwrap() += 1;
+        if reason == "plane" {
+            arrivals.push(result.tof_us);
+        }
         if matches!(
             result.splat_reason,
             SplatReason::Electrode { .. }
@@ -1109,6 +1144,46 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         )?;
     }
     writer.flush()?;
+    let tof = (!arrivals.is_empty()).then(|| {
+        let mean = arrivals.iter().sum::<f64>() / arrivals.len() as f64;
+        serde_json::json!({
+            "mean": mean,
+            "std": (arrivals.iter().map(|t| (t - mean).powi(2)).sum::<f64>() / arrivals.len() as f64).sqrt(),
+            "min": arrivals.iter().copied().fold(f64::INFINITY, f64::min),
+            "max": arrivals.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+        })
+    });
+    crate::json::set_summary(serde_json::json!({
+        "ion_count": particles.len(),
+        "splat_counts": counts,
+        "arrivals": arrivals.len(),
+        "arrival_tof_us": tof.unwrap_or_else(|| serde_json::json!({"mean": null, "std": null, "min": null, "max": null})),
+        "compute_ms": flight.as_secs_f64() * 1000.0,
+        "prep_ms": setup.as_secs_f64() * 1000.0,
+        "requested": {
+            "device": format!("{:?}", options.device).to_lowercase(),
+            "precision": "f64",
+            "backend": format!("{:?}", options.backend).to_lowercase(),
+            "surface_mode": if options.no_cuts { "staircase" } else if options.cuts.is_some() { "continuous" } else if options.nearest_node_collisions { "nearest-node" } else { "auto" },
+        },
+        "executed": {
+            "device": if use_gpu { "gpu" } else { "cpu" },
+            "precision": if use_gpu && options.space_charge.is_some() { "mixed-f32-f64" } else if gpu.as_ref().is_none_or(Gpu::has_f64) { "f64" } else { "f32" },
+            "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()),
+            "surface_mode": surface_mode,
+        },
+        "reason": if options.device == FlyDevice::Auto { reason.as_str() } else { "explicit --device" },
+        "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) {
+            Some(if options.space_charge.is_some() {
+                "adapter lacks native f64; GPU f32 corrections with CPU f64 flight/residual"
+            } else {
+                "adapter lacks native f64; GPU f32 flight with two-float TOF"
+            })
+        } else {
+            (options.device == FlyDevice::Auto && !use_gpu).then_some(reason.as_str())
+        },
+        "output_paths": options.output.iter().collect::<Vec<_>>(),
+    }));
     eprintln!(
         "ions: {}, splats: {}, setup_s: {:.6}, fly_s: {:.6}, total_s: {:.6}, ions_per_s: {:.0}",
         particles.len(),

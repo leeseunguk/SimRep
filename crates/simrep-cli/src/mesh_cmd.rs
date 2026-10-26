@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 
 #[derive(Args)]
 pub struct MeshImportOptions {
+    /// Input STL, OBJ, PLY, 3MF, glTF or GLB mesh.
     pub input: PathBuf,
     /// Output PA#; potentials at metal points are electrode numbers.
     pub output: PathBuf,
@@ -26,7 +27,8 @@ pub struct MeshImportOptions {
     /// Position of grid node (0,0,0) in mesh coordinates, in mm.
     #[arg(long, default_value = "0,0,0", value_parser = numbers::<3>, allow_hyphen_values = true)]
     origin: [f64; 3],
-    /// Source unit override: mm, cm, m, inch (file default otherwise).
+    /// Source unit override: um/micron, mm/millimeter, cm/centimeter, m/meter, in/inch, ft/foot.
+    /// Defaults to the file's unit.
     #[arg(long)]
     units: Option<Unit>,
     /// Row-major 3x4 affine transform; translation in mm, after source scaling.
@@ -51,8 +53,11 @@ pub struct MeshImportOptions {
 
 #[derive(Args)]
 pub struct PaExport {
+    /// Input SIMION potential array.
     input: PathBuf,
+    /// Output STL, OBJ, glTF, GLB, VTI or VTS file, as required by the subcommand.
     output: PathBuf,
+    /// Position of grid node (0,0,0) in mm.
     #[arg(long, default_value = "0,0,0", value_parser = numbers::<3>, allow_hyphen_values = true)]
     origin: [f64; 3],
 }
@@ -102,6 +107,7 @@ pub enum ExportCommand {
     Grid {
         #[command(flatten)]
         files: PaExport,
+        /// Omit electric field vectors from the exported grid.
         #[arg(long)]
         no_field: bool,
         /// Revolve a cylindrical PA into 3D StructuredGrid (.vts).
@@ -114,13 +120,19 @@ pub enum ExportCommand {
     Isosurface {
         #[command(flatten)]
         files: PaExport,
+        /// Potential value of the exported surface, in volts.
         #[arg(long, allow_hyphen_values = true)]
         potential: f64,
         #[command(flatten)]
         surface: SurfaceExportOptions,
     },
     /// Numeric trajectory sample CSV to VTP polylines or normalized CSV.
-    Trajectories { input: PathBuf, output: PathBuf },
+    Trajectories {
+        /// Input trajectory sample CSV.
+        input: PathBuf,
+        /// Output VTP polylines or normalized CSV.
+        output: PathBuf,
+    },
 }
 
 fn numbers<const N: usize>(text: &str) -> Result<[f64; N], String> {
@@ -212,6 +224,7 @@ pub fn import(options: MeshImportOptions) -> GpuResult<()> {
         voxelize(&mesh, grid, &electrodes)?
     };
     write_pa(&options.output, &PaFile::new(result.array))?;
+    let mut output_paths = vec![options.output.display().to_string()];
     println!(
         "voxelization: {:.3} s, counts={:?}, overlap assignments={}",
         result.elapsed.as_secs_f64(),
@@ -223,28 +236,32 @@ pub fn import(options: MeshImportOptions) -> GpuResult<()> {
         for (i, part) in mesh.parts.iter().enumerate() {
             let sdf = sample_sdf(part, grid, electrodes[i], voltages[i])?;
             let stem = format!("{}-{i}", prefix.display());
-            write_scalar_vti(
-                format!("{stem}.vti"),
-                grid,
-                "signed_distance_mm",
-                &sdf.values,
-            )?;
+            let grid_path = format!("{stem}.vti");
+            write_scalar_vti(&grid_path, grid, "signed_distance_mm", &sdf.values)?;
             let metadata = serde_json::json!({
                 "name":sdf.name,"dims":sdf.dims,"origin":sdf.origin,"spacing":sdf.spacing,
                 "values":sdf.values,"electrode_number":sdf.electrode_number,"voltage":sdf.voltage,
                 "length_unit":"mm","inside":"negative","order":"x-fastest",
             });
-            let mut writer = BufWriter::new(File::create(format!("{stem}.json"))?);
+            let metadata_path = format!("{stem}.json");
+            let mut writer = BufWriter::new(File::create(&metadata_path)?);
             serde_json::to_writer(&mut writer, &metadata)?;
             writer.flush()?;
+            output_paths.extend([grid_path, metadata_path]);
             println!("SDF part {i}: {:.3} s", sdf.elapsed.as_secs_f64());
         }
     }
+    crate::json::set_summary(serde_json::json!({
+        "output_paths": output_paths,
+        "dims": grid.dims,
+        "spacing_mm": grid.spacing_mm,
+        "electrode_numbers": electrodes,
+    }));
     Ok(())
 }
 
 pub fn export(command: ExportCommand) -> GpuResult<()> {
-    match command {
+    let output = match command {
         ExportCommand::Geometry {
             files,
             electrode,
@@ -259,6 +276,7 @@ pub fn export(command: ExportCommand) -> GpuResult<()> {
                 mesh.triangle_count(),
                 mesh.parts.len()
             );
+            files.output
         }
         ExportCommand::Grid {
             files,
@@ -287,6 +305,7 @@ pub fn export(command: ExportCommand) -> GpuResult<()> {
                 }
                 write_vti(&files.output, &pa, files.origin, !no_field)?;
             }
+            files.output
         }
         ExportCommand::Isosurface {
             files,
@@ -298,6 +317,7 @@ pub fn export(command: ExportCommand) -> GpuResult<()> {
                 &files.output,
                 &pa_isosurface(&pa, files.origin, potential, surface.into())?,
             )?;
+            files.output
         }
         ExportCommand::Trajectories { input, output } => {
             let trajectories = read_trajectories(&input)?;
@@ -308,8 +328,12 @@ pub fn export(command: ExportCommand) -> GpuResult<()> {
             } else {
                 return Err("trajectory output must have .vtp or .csv extension".into());
             }
+            output
         }
-    }
+    };
+    crate::json::set_summary(serde_json::json!({
+        "output_paths": [output.display().to_string()],
+    }));
     Ok(())
 }
 
@@ -367,6 +391,87 @@ fn read_trajectories(path: &Path) -> io::Result<Vec<Trajectory>> {
 mod tests {
     use super::*;
     use clap::Parser;
+
+    #[test]
+    fn json_summaries_report_import_and_all_export_paths() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("cube.obj");
+        std::fs::write(&input, "o cube\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nv 0 0 1\nv 1 0 1\nv 1 1 1\nv 0 1 1\nf 1 4 3 2\nf 5 6 7 8\nf 1 2 6 5\nf 2 3 7 6\nf 3 4 8 7\nf 4 1 5 8\n").unwrap();
+        let run = |args: &[&str]| {
+            let cli = crate::Cli::try_parse_from(
+                ["simrep", "--json"].into_iter().chain(args.iter().copied()),
+            )
+            .unwrap();
+            crate::json::capture(cli).unwrap().unwrap()
+        };
+        let pa = dir.path().join("cube.pa#");
+        let sdf = dir.path().join("cube-sdf");
+        let summary = run(&[
+            "mesh-import",
+            input.to_str().unwrap(),
+            pa.to_str().unwrap(),
+            "--grid",
+            "5,5,5",
+            "--spacing",
+            "0.5,0.5,0.5",
+            "--origin",
+            "-0.5,-0.5,-0.5",
+            "--electrodes",
+            "7",
+            "--repair",
+            "--sdf-prefix",
+            sdf.to_str().unwrap(),
+        ]);
+        assert_eq!(summary["dims"], serde_json::json!([5, 5, 5]));
+        assert_eq!(summary["spacing_mm"], serde_json::json!([0.5, 0.5, 0.5]));
+        assert_eq!(summary["electrode_numbers"], serde_json::json!([7]));
+        assert_eq!(
+            summary["output_paths"],
+            serde_json::json!([
+                pa,
+                dir.path().join("cube-sdf-0.vti"),
+                dir.path().join("cube-sdf-0.json")
+            ])
+        );
+        for path in summary["output_paths"].as_array().unwrap() {
+            assert!(Path::new(path.as_str().unwrap()).is_file());
+        }
+        for (command, filename) in [
+            ("geometry", "electrode.stl"),
+            ("geometry", "electrode.obj"),
+            ("geometry", "electrode.gltf"),
+            ("geometry", "electrode.glb"),
+            ("grid", "cube.vti"),
+            ("isosurface", "iso.glb"),
+        ] {
+            let output = dir.path().join(filename);
+            let mut args = vec![
+                "export",
+                command,
+                pa.to_str().unwrap(),
+                output.to_str().unwrap(),
+            ];
+            if command == "isosurface" {
+                args.extend(["--potential", "3.5"]);
+            }
+            let summary = run(&args);
+            assert_eq!(summary["output_paths"], serde_json::json!([output]));
+            assert!(output.is_file());
+        }
+        let trajectories = dir.path().join("samples.csv");
+        std::fs::write(&trajectories, "trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us\n1,0,0,0,0,1,0,0\n1,1,1,0,0,1,0,0\n").unwrap();
+        for filename in ["paths.vtp", "paths.csv"] {
+            let output = dir.path().join(filename);
+            let summary = run(&[
+                "export",
+                "trajectories",
+                trajectories.to_str().unwrap(),
+                output.to_str().unwrap(),
+            ]);
+            assert_eq!(summary["output_paths"], serde_json::json!([output]));
+            assert!(output.is_file());
+        }
+    }
 
     #[test]
     fn parses_additive_mesh_commands() {

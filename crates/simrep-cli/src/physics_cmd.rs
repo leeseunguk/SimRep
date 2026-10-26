@@ -45,39 +45,52 @@ pub struct PhysicsOptions {
     /// JSON array of tagged segment/loop/solenoid coil definitions.
     #[arg(long)]
     bfield_coil: Option<PathBuf>,
+    /// Particle integration method.
     #[arg(long, value_enum, default_value = "rk45")]
     pub integrator: Integration,
     /// Fixed Boris step or adaptive initial RK45/SDS step, in microseconds.
     #[arg(long, default_value_t = 0.001)]
     pub step_us: f64,
+    /// Gas collision model (disabled if omitted).
     #[arg(long, value_enum)]
     collision: Option<Collisions>,
+    /// Deterministic random seed for particle/collision sampling.
     #[arg(long, default_value_t = 1)]
     seed: u64,
+    /// Background gas pressure in pascals.
     #[arg(long)]
     pressure_pa: Option<f64>,
+    /// Background gas temperature in kelvin.
     #[arg(long)]
     temperature_k: Option<f64>,
+    /// Background gas molecular mass in amu.
     #[arg(long)]
     gas_mass_amu: Option<f64>,
+    /// Background gas velocity vx,vy,vz in mm/us.
     #[arg(long, default_value = "0,0,0", value_parser = super::fly_cmd::numbers::<3>, allow_hyphen_values = true)]
     gas_velocity: [f64; 3],
+    /// HS1 collision cross section in square meters.
     #[arg(long, default_value_t = 2.27e-18)]
     cross_section_m2: f64,
+    /// Override HS1 mean free path in mm.
     #[arg(long)]
     mean_free_path_mm: Option<f64>,
+    /// Minimum integration steps per mean free collision time.
     #[arg(long, default_value_t = 20.0)]
     collision_steps: f64,
     /// Runtime path to SIMION example collision_sds/mbmr.dat (not bundled).
     #[arg(long)]
     mbmr: Option<PathBuf>,
+    /// SDS background gas diameter in nm.
     #[arg(long, default_value_t = 0.366)]
     gas_diameter_nm: f64,
+    /// SDS ion diameter in nm.
     #[arg(long)]
     ion_diameter_nm: Option<f64>,
     /// SDS reduced mobility at STP in 1e-4 m^2/(V s).
     #[arg(long)]
     mobility_stp: Option<f64>,
+    /// Disable random SDS diffusion.
     #[arg(long)]
     no_diffusion: bool,
     /// Treat the requested duration as a successful terminal event.

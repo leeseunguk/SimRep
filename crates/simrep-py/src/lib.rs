@@ -13,12 +13,14 @@ use pyo3::prelude::*;
 include!("../../simrep-cli/src/main.rs");
 
 #[pyfunction]
-fn command(py: Python<'_>, arguments: Vec<String>) -> PyResult<()> {
+fn command(py: Python<'_>, arguments: Vec<String>) -> PyResult<Option<String>> {
     let cli = Cli::try_parse_from(std::iter::once("simrep".to_owned()).chain(arguments))
         .map_err(pa::error)?;
     // Keep the CLI entry point linked; command execution uses its fallible run.
     let _entry = main;
-    py.detach(|| run(cli)).map_err(pa::error)
+    py.detach(|| json::capture(cli))
+        .map(|summary| summary.map(|value| value.to_string()))
+        .map_err(pa::error)
 }
 
 #[pymodule]

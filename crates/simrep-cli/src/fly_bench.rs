@@ -10,6 +10,7 @@ use simrep_solve::gpu::GpuResult;
 
 #[derive(Args)]
 pub struct FlyBenchOptions {
+    /// Positive number of reference ions to fly.
     #[arg(long, alias = "particles", default_value_t = 10_000, value_parser = clap::value_parser!(usize))]
     ions: usize,
 }
@@ -87,6 +88,15 @@ pub fn run(options: FlyBenchOptions) -> GpuResult<()> {
         options.ions as f64 / seconds
     );
     println!("trajectory checksum (TOF us + final y mm): {checksum:.12e}");
+    crate::json::set_summary(serde_json::json!({
+        "ion_count": options.ions,
+        "arrivals": arrived,
+        "compute_ms": seconds * 1000.0,
+        "prep_ms": setup_seconds * 1000.0,
+        "accepted_steps": steps,
+        "rejected_steps": rejected,
+        "checksum": checksum,
+    }));
     if let Some(baseline) = match options.ions {
         10_000 => Some(2.2),
         100_000 => Some(21.5),

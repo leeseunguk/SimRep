@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use clap::Args;
+use clap::{Args, ValueEnum};
 use rayon::prelude::*;
 use serde::Serialize;
 use simrep_core::{FieldType, PotentialArray, Symmetry};
@@ -32,6 +32,7 @@ enum CadMode {
 
 #[derive(Args, Clone)]
 pub struct GeometryOptions {
+    /// GEM, STEP/IGES CAD, or STL/OBJ/PLY/3MF/glTF mesh input.
     input: PathBuf,
     /// Node counts nx,ny,nz; defaults to GEM pa_define.
     #[arg(long, value_parser = dimensions)]
@@ -45,12 +46,16 @@ pub struct GeometryOptions {
     /// GEM source electrode value, or mesh/CAD part name/index = number:volts.
     #[arg(long, required = true, value_parser = assignment, allow_hyphen_values = true)]
     electrode: Vec<Assignment>,
+    /// Device used to refine each electrode basis.
     #[arg(long, value_enum, default_value = "cpu")]
     device: Device,
+    /// GPU backend used when --device gpu is selected.
     #[arg(long, value_enum, default_value = "vulkan")]
     backend: Backend,
+    /// Relative infinity norm tolerance for the physical f64 residual.
     #[arg(long, default_value = "1e-10", value_parser = parse_tolerance)]
     tolerance: f64,
+    /// Maximum multigrid cycles for each electrode basis.
     #[arg(long, default_value_t = 100)]
     max_cycles: usize,
     /// Output stem; produces .pa0, .pa1..N, .cuts.json and .pa#.
@@ -62,7 +67,7 @@ pub struct GeometryOptions {
     /// Fallback samples per PA interval with --sidecar-dense-sdf.
     #[arg(long, default_value_t = 2, value_parser = supersampling)]
     surface_supersampling: usize,
-    /// Mesh/CAD source unit override (file default otherwise).
+    /// Mesh/CAD units: um/micron, mm/millimeter, cm/centimeter, m/meter, in/inch, ft/foot.
     #[arg(long)]
     units: Option<Unit>,
     /// Weld exact vertices, remove duplicate/degenerate faces, fix winding.
@@ -685,7 +690,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     pa.array.potentials = owners.iter().map(|n| n.unwrap_or(0) as f64).collect();
     // Same physical mask as the cut-cell output, for an actual `simrep refine`
     // staircase comparison; no solver-only snapping is exported as metal.
-    write_pa(args.out.with_extension("pa#"), &pa)?;
+    let geometry_path = args.out.with_extension("pa#");
+    write_pa(&geometry_path, &pa)?;
+    let mut output_paths = vec![geometry_path];
     let sample_dims = dims.map(|n| {
         (n - 1)
             .checked_mul(args.surface_supersampling)
@@ -760,9 +767,11 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         surface_tolerance_mm: tolerance,
         snap_distance_mm: cuts.snap_distance,
     };
-    let mut writer = BufWriter::new(File::create(args.out.with_extension("cuts.json"))?);
+    let sidecar_path = args.out.with_extension("cuts.json");
+    let mut writer = BufWriter::new(File::create(&sidecar_path)?);
     sidecar.write(&mut writer)?;
     writer.flush()?;
+    output_paths.push(sidecar_path);
     let sidecar_time = phase.elapsed();
     println!(
         "geometry_preparation_ms: source={:.3}, owners={:.3}, cut_cells={:.3}, links={:.3}, samples={:.3}, sidecar={:.3}",
@@ -789,6 +798,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let mut compute = Duration::ZERO;
     let mut preparation = total.elapsed();
     let mut combined = vec![0.0; pa.array.potentials.len()];
+    let mut total_cycles = 0;
+    let mut final_residual = 0.0_f64;
+    let mut all_converged = true;
     for (&number, &voltage) in &voltages {
         let start = Instant::now();
         let cuts = cuts.with_voltages(|owner| {
@@ -831,6 +843,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
             )
         };
         compute += elapsed;
+        total_cycles += cycles;
+        final_residual = final_residual.max(residual);
+        all_converged &= converged;
         println!(
             "Basis {number}: compute_ms={:.6}, cycles={cycles}, relative_residual={residual:.9e}",
             elapsed.as_secs_f64() * 1000.0
@@ -848,7 +863,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         for (v, basis) in combined.iter_mut().zip(&pa.array.potentials) {
             *v += basis * (voltage / REFERENCE);
         }
-        write_pa(args.out.with_extension(format!("pa{number}")), &pa)?;
+        let path = args.out.with_extension(format!("pa{number}"));
+        write_pa(&path, &pa)?;
+        output_paths.push(path);
     }
     pa.array.potentials = combined;
     pa.pa0 = Some(Pa0Metadata {
@@ -856,7 +873,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         electrode_indices: indices,
         scalable: None,
     });
-    write_pa(args.out.with_extension("pa0"), &pa)?;
+    let path = args.out.with_extension("pa0");
+    write_pa(&path, &pa)?;
+    output_paths.push(path);
     println!(
         "Grid: {dims:?}, origin_mm={:?}, spacing_mm={spacing:?}, cut_nodes={}",
         args.origin,
@@ -868,6 +887,28 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         preparation.as_secs_f64() * 1000.0,
         total.elapsed().as_secs_f64() * 1000.0
     );
+    crate::json::set_summary(serde_json::json!({
+        "requested": {
+            "device": args.device.to_possible_value().unwrap().get_name(),
+            "backend": args.backend.to_possible_value().unwrap().get_name(),
+            "precision": "f64",
+        },
+        "executed": {
+            "device": if gpu.is_some() { "gpu" } else { "cpu" },
+            "backend": gpu.as_ref().map(|gpu| format!("{:?}", gpu.info.backend).to_lowercase()),
+            "precision": if gpu.is_some() { "mixed-f32-f64" } else { "f64" },
+        },
+        "fallback_reason": gpu.as_ref().filter(|g| !g.has_f64())
+            .map(|_| "adapter lacks native f64; CPU f64 residual with GPU f32 corrections"),
+        "reason": if gpu.is_some() { "explicit --device gpu" } else { "explicit --device cpu" },
+        "cycles": total_cycles,
+        "final_residual": final_residual,
+        "tolerance": args.tolerance,
+        "converged": all_converged,
+        "compute_ms": compute.as_secs_f64() * 1000.0,
+        "prep_ms": preparation.as_secs_f64() * 1000.0,
+        "output_paths": output_paths,
+    }));
     Ok(())
 }
 

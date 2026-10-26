@@ -129,6 +129,28 @@ simrep export grid quadrupole.pa0 field.vti
 그 밖에 메시 가져오기(`mesh-import`), 외부 프로그램(COMSOL, Opera 등)의 자기장 지도(`fly --bfield-map`), 시간 가변 전압(`--voltage-expr`)을 지원합니다.
 각 명령의 옵션은 `simrep <명령> --help`로 볼 수 있습니다.
 
+### `--json` 출력
+
+자동화·AI 에이전트에서는 전역 옵션 `--json`을 명령 앞이나 뒤에 붙이세요.
+정상 실행은 마지막에 JSON 객체 하나만 stdout에 쓰고, 진행 메시지는 stderr로 보냅니다.
+`--help`·`--version`은 기존 텍스트를 출력합니다. 비행 CSV는 `--output`으로 파일에 저장하세요.
+파일을 지정하지 않으면 JSON 모드에서는 CSV도 stderr로 갑니다.
+
+```sh
+simrep --json refine quadrupole.pa# --device cpu
+simrep fly --json --pa quadrupole.pa0 --particles ions.ion --output flight.csv
+```
+
+모든 요약에는 `schema_version: 1`, `simrep_version`이 있습니다.
+비행은 `splat_counts`, 검출면 `arrivals`, `arrival_tof_us`(평균·모집단 표준편차·최솟값·최댓값; 도착 없으면 null)를,
+전위 계산은 `cycles`, `final_residual`(상대 잔차), `tolerance`, `converged`를 반환합니다.
+두 명령군은 `compute_ms`와 `prep_ms`, `requested`·`executed`, `fallback_reason`을 나눠 보고합니다.
+여러 기저를 풀면 cycles는 합계, residual은 마지막 잔차 중 최댓값입니다. CPU의 실행 backend는 null입니다.
+GPU 전위 계산의 `mixed-f32-f64`는 f32 보정과 f64 해·잔차를 뜻합니다.
+변환·내보내기는 `output_paths`로 실제 작성 파일을 알려 줍니다.
+실패하면 `{"error":{"message":"...","kind":"..."},...}` 한 객체와 종료 코드 1을 반환하고, stderr에도 오류를 남깁니다.
+`error.kind`는 `invalid_arguments`, `io`, `command_failed` 중 하나입니다.
+
 ---
 
 ## Python 패키지 `simrep`

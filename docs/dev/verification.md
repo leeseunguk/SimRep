@@ -138,6 +138,17 @@ cargo clippy -p simrep-py --features python -- -D warnings
 cargo test --workspace --release
 ```
 
+`crates/simrep-cli/tests/json_cli.rs` runs tiny generated GEM, PA, ION and OBJ
+fixtures through `--json`: `gem2pa`, `refine`, `refine-geometry`, `fly`,
+`mesh-import`, `pa-info`, every `export` subcommand and CPU benchmarks.
+It parses all stdout as one JSON object, checks version/key types, arrival TOF
+statistics (including no arrivals), requested/executed settings, output files
+and exit-1 error objects for invalid arguments and bad files. `gpu-info` and
+`gpu-smoke` accept software Vulkan; the test reports an explicit skip when
+no adapter is available. No hardware GPU is required.
+Python CLI-parity tests compare the parsed diagnostic/export/benchmark results
+and check that these helpers no longer print to stdout.
+
 The 15 external-fixture/benchmark tests below are reported as **ignored** by
 default, even when their environment variables are set. Run them with both
 the variables and `--ignored`. An explicit run without a required variable

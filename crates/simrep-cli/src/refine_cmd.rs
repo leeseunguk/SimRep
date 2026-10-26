@@ -38,11 +38,13 @@ pub struct RefineOptions {
     /// Auto uses the measured linear/nonlinear 3D dielectric crossover.
     #[arg(long, value_enum, default_value = "auto")]
     device: RefineDevice,
+    /// GPU backend used when GPU refinement is selected.
     #[arg(long, value_enum, default_value = "vulkan")]
     backend: Backend,
     /// Relative infinity norm of the physical f64 Laplace residual.
     #[arg(long, default_value = "1e-10", value_parser = parse_tolerance)]
     tolerance: f64,
+    /// Maximum multigrid cycles for each refinement.
     #[arg(long, default_value_t = 100)]
     max_cycles: usize,
     /// SIMION cell-permittivity PA or linear/nonlinear JSON material specification.
@@ -57,6 +59,7 @@ pub struct RefineOptions {
 struct Timings {
     setup: Duration,
     solve: Duration,
+    transfers: Duration,
     io: Duration,
 }
 
@@ -106,7 +109,7 @@ impl Layout {
         gpu: Option<&Gpu>,
         permittivity: Option<&LoadedMaterial>,
         timings: &mut Timings,
-    ) -> GpuResult<()> {
+    ) -> GpuResult<(bool, usize, f64)> {
         let start = Instant::now();
         // Odd reflection has phi=0 on the origin plane. These solver-only
         // constraints must not turn free grid nodes into file electrodes.
@@ -138,6 +141,7 @@ impl Layout {
             let report = gpu.solve(&mut values, &self.fixed, self.grid, options)?;
             timings.setup += report.timings.setup;
             timings.solve += report.timings.upload + report.timings.solve + report.timings.readback;
+            timings.transfers += report.timings.upload + report.timings.readback;
             println!(
                 "  GPU setup: {:.3} ms, upload: {:.3} ms, solve: {:.3} ms, readback: {:.3} ms; residual: {} f64",
                 ms(report.timings.setup),
@@ -175,7 +179,7 @@ impl Layout {
         if !converged {
             return Err(format!("refinement did not converge after {cycles} cycles").into());
         }
-        Ok(())
+        Ok((converged, cycles, residual.relative))
     }
 }
 
@@ -294,12 +298,14 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
         layout.grid,
         permittivity.as_ref().map(LoadedMaterial::is_nonlinear),
     );
-    let mut reason = if permittivity.is_none() {
-        "no dielectric material; use --device gpu for GPU refine"
-    } else if request_gpu {
-        "dielectric grid meets measured GPU crossover"
-    } else {
-        "dielectric grid below measured GPU crossover"
+    let mut reason = match options.device {
+        RefineDevice::Cpu => "explicit --device cpu",
+        RefineDevice::Gpu => "explicit --device gpu",
+        RefineDevice::Auto if permittivity.is_none() => {
+            "no dielectric material; use --device gpu for GPU refine"
+        }
+        RefineDevice::Auto if request_gpu => "dielectric grid meets measured GPU crossover",
+        RefineDevice::Auto => "dielectric grid below measured GPU crossover",
     };
     let gpu = if request_gpu {
         let candidate = pollster::block_on(Gpu::new(options.backend.backends()))?;
@@ -361,6 +367,10 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
         ..Options::default()
     };
     timings.setup += start.elapsed();
+    let mut cycles = 0;
+    let mut final_residual = 0.0_f64;
+    let mut converged = true;
+    let mut output_paths = Vec::new();
     if adjustable {
         let start = Instant::now();
         let indices = electrode_table(&pa.array);
@@ -389,14 +399,19 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
             let start = Instant::now();
             initialize_basis(&mut basis, &pa, slot, scalable_voltage);
             timings.setup += start.elapsed();
-            layout.refine(
+            let (basis_converged, basis_cycles, basis_residual) = layout.refine(
                 &mut basis.array,
                 solver_options,
                 gpu.as_ref(),
                 permittivity.as_ref(),
                 &mut timings,
             )?;
-            output(&options.file.with_extension(suffix), &basis, &mut timings)?;
+            cycles += basis_cycles;
+            final_residual = final_residual.max(basis_residual);
+            converged &= basis_converged;
+            let path = options.file.with_extension(suffix);
+            output(&path, &basis, &mut timings)?;
+            output_paths.push(path);
             if slot == 0 {
                 let start = Instant::now();
                 base.array
@@ -424,16 +439,22 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
             electrode_indices: indices,
             scalable: None,
         });
-        output(&options.file.with_extension("pa0"), &base, &mut timings)?;
+        let path = options.file.with_extension("pa0");
+        output(&path, &base, &mut timings)?;
+        output_paths.push(path);
     } else {
-        layout.refine(
+        let (basis_converged, basis_cycles, basis_residual) = layout.refine(
             &mut pa.array,
             solver_options,
             gpu.as_ref(),
             permittivity.as_ref(),
             &mut timings,
         )?;
+        cycles += basis_cycles;
+        final_residual = final_residual.max(basis_residual);
+        converged &= basis_converged;
         output(&options.file, &pa, &mut timings)?;
+        output_paths.push(options.file.clone());
     }
     println!(
         "Setup: {:.3} ms, solve: {:.3} ms, IO: {:.3} ms, end-to-end: {:.3} ms",
@@ -442,6 +463,31 @@ pub fn run(options: RefineOptions) -> GpuResult<()> {
         ms(timings.io),
         ms(total.elapsed()),
     );
+    crate::json::set_summary(serde_json::json!({
+        "requested": {
+            "device": options.device.to_possible_value().unwrap().get_name(),
+            "backend": options.backend.to_possible_value().unwrap().get_name(),
+            "precision": "f64",
+        },
+        "executed": {
+            "device": if gpu.is_some() { "gpu" } else { "cpu" },
+            "backend": gpu.as_ref().map(|gpu| format!("{:?}", gpu.info.backend).to_lowercase()),
+            "precision": if gpu.is_some() { "mixed-f32-f64" } else { "f64" },
+        },
+        "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) {
+            Some("adapter lacks native f64; CPU f64 residual with GPU f32 corrections")
+        } else {
+            (request_gpu && gpu.is_none()).then_some(reason)
+        },
+        "reason": reason,
+        "cycles": cycles,
+        "final_residual": final_residual,
+        "tolerance": options.tolerance,
+        "converged": converged,
+        "compute_ms": ms(timings.solve - timings.transfers),
+        "prep_ms": ms(timings.setup + timings.transfers),
+        "output_paths": output_paths,
+    }));
     Ok(())
 }
 
@@ -493,7 +539,66 @@ mod tests {
             }
             let original = PaFile::new(a);
             write_pa(&input, &original).unwrap();
-            run(options(input.clone())).unwrap();
+            let summary = crate::json::capture(
+                crate::Cli::try_parse_from([
+                    "simrep",
+                    "--json",
+                    "refine",
+                    input.to_str().unwrap(),
+                    "--device",
+                    "cpu",
+                    "--tolerance",
+                    "1e-12",
+                ])
+                .unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+            assert_eq!(
+                summary["requested"],
+                serde_json::json!({"device": "cpu", "backend": "vulkan", "precision": "f64"})
+            );
+            assert_eq!(
+                summary["executed"],
+                serde_json::json!({"device": "cpu", "backend": null, "precision": "f64"})
+            );
+            assert!(summary["fallback_reason"].is_null());
+            assert_eq!(summary["converged"], true);
+            assert_eq!(summary["tolerance"], 1e-12);
+            assert!(summary["compute_ms"].as_f64().unwrap() >= 0.0);
+            assert!(summary["prep_ms"].as_f64().unwrap() >= 0.0);
+            assert_eq!(
+                summary["output_paths"],
+                serde_json::json!([
+                    input.with_extension("pa_"),
+                    input.with_extension("pa1"),
+                    input.with_extension("pa500"),
+                    input.with_extension("pa0"),
+                ])
+            );
+            let layout = Layout::new(&original.array);
+            let mut expected_cycles = 0;
+            let mut expected_residual = 0.0_f64;
+            for slot in [0, 1, 500] {
+                let mut basis = original.clone();
+                initialize_basis(&mut basis, &original, slot, -2.5);
+                let (_, cycles, residual) = layout
+                    .refine(
+                        &mut basis.array,
+                        Options {
+                            relative_tolerance: 1e-12,
+                            ..Options::default()
+                        },
+                        None,
+                        None,
+                        &mut Timings::default(),
+                    )
+                    .unwrap();
+                expected_cycles += cycles;
+                expected_residual = expected_residual.max(residual);
+            }
+            assert_eq!(summary["cycles"], expected_cycles);
+            assert_eq!(summary["final_residual"], expected_residual);
             assert_eq!(read_pa(&input).unwrap(), original);
             let base = read_pa(input.with_extension("pa0")).unwrap();
             let first = read_pa(input.with_extension("pa1")).unwrap();

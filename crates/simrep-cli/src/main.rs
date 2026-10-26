@@ -7,8 +7,20 @@ use simrep_io::read_pa;
 use simrep_solve::gpu::{Backends, GRID_SIZE, Gpu, GpuResult};
 use simrep_solve::mg::{Geometry, Grid, Options, solve};
 
+// Preserve the human CLI while keeping stdout exclusively machine-readable.
+macro_rules! println {
+    ($($arg:tt)*) => {
+        if crate::json::enabled() {
+            ::std::eprintln!($($arg)*);
+        } else {
+            ::std::println!($($arg)*);
+        }
+    };
+}
+
 mod fly_bench;
 mod fly_cmd;
+mod json;
 mod mesh_cmd;
 mod physics_cmd;
 mod refine_cmd;
@@ -18,6 +30,9 @@ mod refine_sdf;
 #[derive(Parser)]
 #[command(name = "simrep", version, about = "Native ion optics simulator")]
 struct Cli {
+    /// Print one JSON summary to stdout; send human output and CSV records to stderr.
+    #[arg(long, global = true)]
+    json: bool,
     #[command(subcommand)]
     command: Command,
 }
@@ -30,18 +45,23 @@ enum Command {
     GpuSmoke(GpuOptions),
     /// Print the header and potential statistics of a SIMION PA file.
     PaInfo {
+        /// SIMION PA, PA#, PA0 or numbered basis file.
         file: PathBuf,
     },
     /// Compile SIMION GEM geometry (including GEM Lua preprocessing) to a potential array.
     Gem2pa {
+        /// Source GEM geometry file.
         input: PathBuf,
+        /// Destination PA# (defaults to the input stem with .pa#).
         output: Option<PathBuf>,
     },
     /// Fly CPU f64 reference ions through a synthetic einzel-like grid.
     FlyBench(fly_bench::FlyBenchOptions),
+    /// Fly particles through electric/magnetic fields and report terminal events.
     Fly(Box<fly_cmd::FlyOptions>),
     /// Benchmark multigrid on a 3D harmonic boundary case.
     RefineBench(RefineBenchOptions),
+    /// Refine a PA or PA# and write potentials or fast-adjust basis files.
     Refine(refine_cmd::RefineOptions),
     /// Refine analytic continuous electrodes with symmetric ghost-fluid boundaries.
     RefineSdf(refine_sdf::SdfOptions),
@@ -56,20 +76,26 @@ enum Command {
 
 #[derive(Args)]
 struct GpuOptions {
+    /// Native compute backend used to select an adapter.
     #[arg(long, value_enum, default_value = "auto")]
     backend: Backend,
 }
 
 #[derive(Args)]
 struct RefineBenchOptions {
+    /// Compute device for the multigrid solve.
     #[arg(long, value_enum, default_value = "cpu")]
     device: Device,
+    /// Native GPU backend (unused on CPU).
     #[arg(long, value_enum, default_value = "vulkan")]
     backend: Backend,
+    /// Nodes along each axis; integer at least 3.
     #[arg(long, default_value_t = 128, value_parser = parse_grid_size)]
     n: usize,
+    /// Positive finite relative residual tolerance.
     #[arg(long, default_value = "1e-10", value_parser = parse_tolerance)]
     tolerance: f64,
+    /// Maximum number of multigrid cycles.
     #[arg(long, default_value_t = 100)]
     max_cycles: usize,
 }
@@ -98,7 +124,7 @@ fn parse_tolerance(value: &str) -> Result<f64, String> {
     Ok(tolerance)
 }
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, Debug, ValueEnum)]
 enum Backend {
     /// Prefer a high-performance adapter among DX12 and Vulkan devices.
     Auto,
@@ -134,10 +160,40 @@ fn report_gpu_residual(native_f64: bool) {
 }
 
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
-        Ok(()) => ExitCode::SUCCESS,
+    let arguments: Vec<_> = std::env::args_os().collect();
+    let json_requested = arguments.iter().any(|argument| argument == "--json");
+    let cli = match Cli::try_parse_from(arguments) {
+        Ok(cli) => cli,
+        Err(error) => {
+            if !error.use_stderr() {
+                let _ = error.print();
+                return ExitCode::SUCCESS;
+            }
+            let _ = error.print();
+            if json_requested {
+                ::std::println!("{}", json::error(&error.to_string(), "invalid_arguments"));
+                return ExitCode::FAILURE;
+            }
+            return ExitCode::from(error.exit_code() as u8);
+        }
+    };
+    match json::capture(cli) {
+        Ok(summary) => {
+            if let Some(summary) = summary {
+                ::std::println!("{summary}");
+            }
+            ExitCode::SUCCESS
+        }
         Err(error) => {
             eprintln!("error: {error}");
+            if json_requested {
+                let kind = if error.is::<std::io::Error>() {
+                    "io"
+                } else {
+                    "command_failed"
+                };
+                ::std::println!("{}", json::error(&error.to_string(), kind));
+            }
             ExitCode::FAILURE
         }
     }
@@ -200,6 +256,28 @@ fn pa_info(file: &Path) -> GpuResult<()> {
         println!("adjustable_electrodes: {count}");
         println!("reference_voltage: {}", metadata.reference_voltage);
     }
+    json::set_summary(serde_json::json!({
+        "file": file,
+        "mode": pa.mode.value(),
+        "header_bytes": pa.mode.header_bytes(),
+        "dims": [a.nx, a.ny, a.nz],
+        "symmetry": match a.symmetry { Symmetry::Planar => "planar", Symmetry::Cylindrical => "cylindrical" },
+        "mirrors": [a.mirrors.x, a.mirrors.y, a.mirrors.z],
+        "anti_mirrors": [a.anti_mirrors.x, a.anti_mirrors.y, a.anti_mirrors.z],
+        "field_type": match a.field_type { FieldType::Electrostatic => "electrostatic", FieldType::Magnetic => "magnetic" },
+        "spacing_mm": [a.dx_mm, a.dy_mm, a.dz_mm],
+        "refinable": a.refinable,
+        "max_voltage": pa.max_voltage,
+        "ng": pa.ng,
+        "points": a.potentials.len(),
+        "electrode_points": electrodes,
+        "non_electrode_points": a.potentials.len() - electrodes,
+        "potential_min": min,
+        "potential_max": max,
+        "potential_mean": a.potentials.iter().sum::<f64>() / a.potentials.len() as f64,
+        "adjustable_electrodes": pa.pa0.as_ref().map(|m| m.electrode_indices.iter().filter(|&&i| i != -1).count()),
+        "reference_voltage": pa.pa0.as_ref().map(|m| m.reference_voltage),
+    }));
     Ok(())
 }
 
@@ -214,6 +292,31 @@ fn run(cli: Cli) -> GpuResult<()> {
             let output = output.unwrap_or_else(|| input.with_extension("pa#"));
             simrep_io::write_pa(&output, &result.pa)?;
             result.write_surfaces(&output)?;
+            let mut paths = vec![output.clone()];
+            if result
+                .surfaces
+                .as_ref()
+                .is_some_and(|s| s.axes.iter().any(|a| !a.is_empty()))
+            {
+                paths.push(output.with_extension("pa-surf"));
+            }
+            let electrode_numbers: std::collections::BTreeSet<_> = result
+                .pa
+                .array
+                .potentials
+                .iter()
+                .zip(&result.pa.array.electrodes)
+                .filter_map(|(&v, &e)| {
+                    (e && (1.0..=1000.0).contains(&v) && v.fract() == 0.0).then_some(v as u32)
+                })
+                .collect();
+            json::set_summary(serde_json::json!({
+                "output_paths": paths,
+                "dims": gem.dimensions,
+                "spacing_mm": gem.spacing_mm,
+                "electrode_numbers": electrode_numbers,
+                "compute_ms": result.compute_time.as_secs_f64() * 1000.0,
+            }));
             println!("output: {}", output.display());
             println!(
                 "dimensions: {} x {} x {}",
@@ -247,9 +350,27 @@ fn run(cli: Cli) -> GpuResult<()> {
     println!("Driver: {} ({})", gpu.info.driver, gpu.info.driver_info);
     println!("Adapter features: {:?}", gpu.adapter_features);
     println!("SHADER_F64: {}", gpu.has_f64());
+    let mut summary = serde_json::json!({
+        "adapter_name": gpu.info.name,
+        "adapter_type": format!("{:?}", gpu.info.device_type),
+        "backend": format!("{:?}", gpu.info.backend).to_lowercase(),
+        "f64_support": gpu.has_f64(),
+        "software_adapter": gpu.info.device_type == simrep_solve::gpu::DeviceType::Cpu,
+        "driver": gpu.info.driver,
+        "driver_info": gpu.info.driver_info,
+    });
     if smoke {
+        let mut checks = Vec::new();
         println!("Grid: {GRID_SIZE}^3, unit-spacing residual b - Laplacian(x)");
         for result in gpu.smoke()? {
+            checks.push(serde_json::json!({
+                "precision": result.precision,
+                "kernel_ms": result.kernel_time.map(|t| t.as_secs_f64() * 1000.0),
+                "submit_readback_ms": result.submit_readback_time.as_secs_f64() * 1000.0,
+                "max_abs_error": result.max_abs_error,
+                "tolerance": result.tolerance,
+                "cells_checked": result.cells_checked,
+            }));
             let kernel_time = result
                 .kernel_time
                 .map(|time| format!("{:.3} ms", time.as_secs_f64() * 1_000.0))
@@ -268,7 +389,9 @@ fn run(cli: Cli) -> GpuResult<()> {
         if !gpu.has_f64() {
             println!("f64 SKIP: SHADER_F64 unavailable; residual correction must use CPU f64.");
         }
+        summary["checks"] = serde_json::json!(checks);
     }
+    json::set_summary(summary);
     Ok(())
 }
 
@@ -404,6 +527,17 @@ fn run_refine_bench(options: RefineBenchOptions) -> GpuResult<()> {
         first.relative, last.relative
     );
     println!("Max analytic discretization error: {error:.9e}");
+    json::set_summary(serde_json::json!({
+        "device": format!("{:?}", options.device).to_lowercase(),
+        "dims": [n, n, n],
+        "cycles": iterations,
+        "levels": levels,
+        "converged": converged,
+        "final_residual": last.relative,
+        "tolerance": options.tolerance,
+        "elapsed_ms": elapsed.as_secs_f64() * 1000.0,
+        "max_analytic_error": error,
+    }));
     if !converged {
         return Err(format!("refinement did not converge after {iterations} cycles").into());
     }

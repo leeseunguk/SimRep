@@ -4,7 +4,6 @@ import csv
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 
 import numpy as np
@@ -408,7 +407,7 @@ def test_mesh_import_options_and_sdf_outputs(cli, tmp_path, mesh):
 
 @pytest.mark.parametrize("kind,extension", [("geometry", "obj"), ("grid", "vti"),
                                           ("isosurface", "obj"), ("trajectories", "vtp")])
-def test_export_commands_match_cli_bytes(cli, tmp_path, kind, extension):
+def test_export_commands_match_cli_bytes(cli, tmp_path, capfd, kind, extension):
     source = tmp_path / "input.pa"
     values = np.broadcast_to(np.arange(9), (1, 7, 9)).copy().astype(float)
     fixed = np.zeros_like(values, bool)
@@ -423,7 +422,10 @@ def test_export_commands_match_cli_bytes(cli, tmp_path, kind, extension):
         source = tmp_path / "input.csv"
         source.write_text("trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us\n"
                           "1,0,0,0,0,1,0,0\n1,1,1,0,0,1,0,0\n")
-    getattr(simrep, "export_" + kind)(source, actual, **options)
+    summary = getattr(simrep, "export_" + kind)(source, actual, **options)
+    assert summary["output_paths"] == [str(actual)]
+    assert summary["schema_version"] == 1
+    assert capfd.readouterr().out == ""
     cli("export", kind, source, expected, *arguments)
     assert actual.read_bytes() == expected.read_bytes()
 
@@ -431,38 +433,41 @@ def test_export_commands_match_cli_bytes(cli, tmp_path, kind, extension):
 def test_pa_info_matches_cli(cli, tmp_path, capfd):
     source = tmp_path / "info.pa"
     simrep.PA(np.zeros((3, 3)), np.zeros((3, 3), bool)).write(source)
-    expected = cli("pa-info", source).stdout
-    simrep.pa_info(source)
-    assert capfd.readouterr().out == expected
+    expected = json.loads(cli("--json", "pa-info", source).stdout)
+    assert simrep.pa_info(source) == expected
+    assert capfd.readouterr().out == ""
 
 
 def test_gpu_info_matches_cli(cli, gpu, capfd):
-    simrep.gpu_info(backend="vulkan")
-    assert capfd.readouterr().out == gpu
+    expected = json.loads(cli("--json", "gpu-info", "--backend=vulkan").stdout)
+    assert simrep.gpu_info(backend="vulkan") == expected
+    assert capfd.readouterr().out == ""
 
 
 def test_gpu_smoke_matches_cli(cli, gpu, capfd):
-    expected = cli("gpu-smoke", "--backend=vulkan").stdout
-    simrep.gpu_smoke(backend="vulkan")
-    actual = capfd.readouterr().out
+    expected = json.loads(cli("--json", "gpu-smoke", "--backend=vulkan").stdout)
+    actual = simrep.gpu_smoke(backend="vulkan")
+    assert capfd.readouterr().out == ""
     # Compare computed errors, not elapsed wall/GPU timestamp observations.
-    errors = r"max abs error vs CPU f64 = ([^ ]+)"
-    assert re.findall(errors, actual) == re.findall(errors, expected)
-    assert re.findall(errors, actual)
+    assert [check["max_abs_error"] for check in actual["checks"]] == [
+        check["max_abs_error"] for check in expected["checks"]]
 
 
-@pytest.mark.parametrize("name,options,arguments,pattern", [
-    ("fly_bench", dict(ions=2), ["--ions=2"], r"trajectory checksum .*: ([^\n]+)"),
-    ("refine_bench", dict(n=7), ["--n=7"], r"Max analytic discretization error: ([^\n]+)"),
-    ("refine_sdf", dict(n=9), ["--n=9"], r"potential ([^,\n]+)"),
+@pytest.mark.parametrize("name,options,arguments,key", [
+    ("fly_bench", dict(ions=2), ["--ions=2"], "checksum"),
+    ("refine_bench", dict(n=7), ["--n=7"], "max_analytic_error"),
+    ("refine_sdf", dict(n=9), ["--n=9"], "reports"),
 ])
-def test_benchmark_commands_match_cli(cli, capfd, name, options, arguments, pattern):
-    expected = cli(name.replace("_", "-"), *arguments).stdout
-    getattr(simrep, name)(**options)
-    actual = capfd.readouterr().out
-    left, right = re.findall(pattern, actual), re.findall(pattern, expected)
-    assert left == right
-    assert left
+def test_benchmark_commands_match_cli(cli, capfd, name, options, arguments, key):
+    expected = json.loads(cli("--json", name.replace("_", "-"), *arguments).stdout)
+    actual = getattr(simrep, name)(**options)
+    assert capfd.readouterr().out == ""
+    if key == "reports":
+        for left, right in zip(actual[key], expected[key], strict=True):
+            assert left["max_potential_error"] == right["max_potential_error"]
+    else:
+        assert actual[key] == expected[key]
+    assert actual["schema_version"] == 1
 
 
 def test_mesh_transform_and_defect_opt_in(cli, tmp_path, mesh):
