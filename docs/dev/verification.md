@@ -23,9 +23,10 @@ Before the compatibility fix, Rust 1.99.1 Clippy rejected constant
 conversions fix these and the same lint elsewhere in the default workspace.
 They keep complete chunks in order and ignore the remainder, exactly as
 `chunks_exact` did; numerical operations and test assertions are unchanged.
-Workspace and Python-feature Clippy with `-D warnings` now pass on both Rust
-1.95.0 and 1.99.1. The CI pin remains 1.95.0 until a complete stable-toolchain
-CI run is verified; passing local Clippy alone does not lift that gate.
+Workspace and Python-feature Clippy with `-D warnings`, and the complete
+release workspace tests, now pass on both Rust 1.95.0 and 1.99.1. The CI pin
+remains 1.95.0 until a complete stable-toolchain CI run is verified; passing
+local checks alone does not lift that gate.
 
 The histogram-axis test checks the selected decade within one binary64 ULP
 and verifies that it brackets half the smallest positive bin. Node 22.23.4
@@ -62,6 +63,62 @@ Rust also executes the Vulkan kernel smoke check. This verifies software
 Vulkan, not physical GPU performance. The 15 external-fixture tests remain ignored, and Python hardware
 GPU numeric parity tests report skips. CAD/OCCT and Windows installer/hardware
 checks remain the explicit local paths below.
+
+### CPU/ISA verification evidence
+
+The uncapped control at `5a21e5a` is
+[run 40222435247](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40222435247).
+Attempt 1 used Intel Xeon Platinum 8573C, with AVX-512 flags reported by
+`lscpu`, and both magnetic tests failed. The imported-map result reported
+`NonFinite` with zero accepted steps. Attempt 2 reran Rust on AMD EPYC 9V74
+at the same SHA and both tests passed. Both adapters reported Mesa 26.0.8,
+LLVM 21.1.8, and 256 bits, and both runners had two vCPUs: fixing vector
+width alone cannot distinguish that control failure.
+
+Configured jobs use the AVX2-tier cap and 256-bit width described above.
+The tables record completed jobs separately because a job-only rerun does
+not re-execute the other jobs.
+
+| Rust run / attempt | Head | CPU | Imported maps | Uniform PA/coils/Boris |
+| --- | --- | --- | --- | --- |
+| [40245295332 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40245295332) | `73a63b1` | AMD EPYC 7763 | pass | pass |
+| [40246518664 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 7763 | pass | pass |
+| [40246518664 / 2](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 9V74 | pass | pass |
+| [40246550259 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | pass | pass |
+| [40247877017 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40247877017) | `e297a09` | AMD EPYC 7763 | pass | pass |
+
+| Python run / attempt | Head | CPU | Result |
+| --- | --- | --- | --- |
+| [40245295332 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40245295332) | `73a63b1` | AMD EPYC 7763 | 80 pass, 1 output-parity failure, 6 hardware-only skips |
+| [40246518664 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 2](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 3](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 4](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 5](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 6](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 7](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 8](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 9](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 10](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 11](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 12](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 13](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 14](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40247877017 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40247877017) | `e297a09` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40250762926 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40250762926) | `2a23bb9` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+
+The first configured run's Python failure came from setting
+`GALLIUM_DUMP_CPU` for the entire job: process-start diagnostics changed
+the CLI-output oracle. Scoping it to the Vulkan probe fixed that failure
+without changing the parity assertion. Run 40246550259 attempt 1 was green
+across all five jobs.
+
+No configured Intel job has been allocated yet. These AMD results do not
+establish that the Intel failure is fixed. Sampling includes new push and
+dispatch runs, job-only reruns, and a temporary explicit `ubuntu-26.04`
+request; the repository currently has no self-hosted runner to target a
+particular CPU vendor.
 
 ## Default workspace
 
