@@ -49,15 +49,19 @@ fn arrays(bytes: &[u8]) -> HashMap<String, Vec<u8>> {
 
 fn floats(bytes: &[u8]) -> Vec<f64> {
     bytes
-        .chunks_exact(8)
-        .map(|b| f64::from_le_bytes(b.try_into().unwrap()))
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|&b| f64::from_le_bytes(b))
         .collect()
 }
 
 fn integers(bytes: &[u8]) -> Vec<u64> {
     bytes
-        .chunks_exact(8)
-        .map(|b| u64::from_le_bytes(b.try_into().unwrap()))
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|&b| u64::from_le_bytes(b))
         .collect()
 }
 
@@ -91,7 +95,7 @@ fn vti_payload_order_lengths_and_anisotropic_linear_field() {
     );
     let field = floats(&payload["field"]);
     assert_eq!(field.len(), pa.potentials.len() * 3);
-    for value in field.chunks_exact(3) {
+    for &value in field.as_chunks::<3>().0 {
         assert_eq!(value, [-5.0, 2.0, -3.0]);
     }
 }
@@ -123,10 +127,10 @@ fn planar_2d_vti_expands_even_and_odd_mirrors_without_duplicate_plane_nodes() {
     let payload = arrays(&bytes);
     let potential = floats(&payload["potential"]);
     assert_eq!(potential.len(), 25);
-    for row in potential.chunks_exact(5) {
+    for &row in potential.as_chunks::<5>().0 {
         assert_eq!(row, [-3.0, -1.5, 0.0, 1.5, 3.0]);
     }
-    for f in floats(&payload["field"]).chunks_exact(3) {
+    for &f in floats(&payload["field"]).as_chunks::<3>().0 {
         assert_eq!(f, [-3.0, 0.0, 0.0]);
     }
     assert_eq!(payload["electrode"].iter().filter(|&&e| e == 1).count(), 10);

@@ -17,11 +17,15 @@ shell formatting is checked separately from the root workspace.
 `AtomicU64::try_update` (stable since Rust 1.95.0) replaces the identically
 behaving `fetch_update`, deprecated in Rust 1.99.0. See the
 [Rust 1.95 atomic API](https://doc.rust-lang.org/1.95.0/std/sync/atomic/struct.AtomicU64.html#method.try_update).
-The Rust pin remains: local Rust 1.99.1 workspace and Python-feature Clippy
-reject pre-existing constant `chunks_exact` calls in `simrep-gem`
-(`geometry.rs:945`, `raster.rs:130`, `stl.rs:106,133`) with
-`chunks_exact_to_as_chunks`. The changed Lua crate passes Clippy on 1.99.1,
-and the 1.95.0 workspace and Python-feature Clippy checks pass.
+Before the compatibility fix, Rust 1.99.1 Clippy rejected constant
+`chunks_exact` calls in `simrep-gem` (`geometry.rs:945`, `raster.rs:130`,
+`stl.rs:106,133`) with `chunks_exact_to_as_chunks`. Equivalent `as_chunks`
+conversions fix these and the same lint elsewhere in the default workspace.
+They keep complete chunks in order and ignore the remainder, exactly as
+`chunks_exact` did; numerical operations and test assertions are unchanged.
+Workspace and Python-feature Clippy with `-D warnings` now pass on both Rust
+1.95.0 and 1.99.1. The CI pin remains 1.95.0 until a complete stable-toolchain
+CI run is verified; passing local Clippy alone does not lift that gate.
 
 The histogram-axis test checks the selected decade within one binary64 ULP
 and verifies that it brackets half the smallest positive bin. Node 22.23.4
@@ -88,6 +92,24 @@ SIMION_ROOT=/path/to/SIMION-2024 cargo test --release -p simrep-io \
 ```
 
 An explicit run fails if `SIMION_ROOT` or its `examples` directory is absent.
+The installed examples passed when explicitly enabled on the validation
+workstation. An explicit run with `SIMION_ROOT` unset failed with
+`requires SIMION_ROOT`, rather than reporting an unexecuted pass.
+
+## Local portability validation
+
+The ISA-cap change was also checked locally with Rust 1.95.0, Mesa 25.2.8,
+LLVM 20.1.2, `GALLIUM_OVERRIDE_CPU_CAPS=avx`, and
+`LP_NATIVE_VECTOR_WIDTH=256`. Root and native-shell formatting checks,
+workspace and Python-feature Clippy with `-D warnings`, the complete
+release workspace suite, and the Vulkan kernel smoke check passed. Both
+magnetic GPU tests executed and passed with native f64. The kernel smoke
+check passed f32 and f64, with f64 maximum absolute error zero against the
+CPU reference.
+
+Rust 1.99.1 and both Node results are described above. Rust and TypeScript
+language-server diagnostics were unavailable on the workstation; the
+compiler, Clippy, and `npm run typecheck` were used instead.
 
 ## Ignored CPU oracle and sweep tests
 

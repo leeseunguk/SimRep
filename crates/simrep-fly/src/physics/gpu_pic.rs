@@ -397,7 +397,9 @@ impl GpuPic {
         self.gpu.queue().submit([encoder.finish()]);
         Ok(self
             .download(&self.output, self.count * 8)?
-            .chunks_exact(8)
+            .as_chunks::<8>()
+            .0
+            .iter()
             .map(|v| [v[0], v[1], v[2]])
             .collect())
     }
@@ -461,7 +463,9 @@ impl GpuPic {
         self.gpu.queue().submit([encoder.finish()]);
         Ok(self
             .download(&self.output, self.count * 8)?
-            .chunks_exact(8)
+            .as_chunks::<8>()
+            .0
+            .iter()
             .map(|v| ParticleState {
                 position_mm: [v[0], v[1], v[2]],
                 time_us: v[3],

@@ -312,11 +312,7 @@ pub fn isosurface(values: &[f64], grid: GridSpec, level: f64) -> io::Result<Mesh
     let mut part = Part {
         name: format!("isopotential-{level}"),
         vertices,
-        triangles: generated
-            .indices
-            .chunks_exact(3)
-            .map(|v| [v[0], v[1], v[2]])
-            .collect(),
+        triangles: generated.indices.as_chunks::<3>().0.to_vec(),
     };
     repair(&mut part)?;
     Ok(Mesh { parts: vec![part] })

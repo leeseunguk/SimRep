@@ -127,7 +127,9 @@ impl Primitive {
             }
             Self::Mesh(triangles) => {
                 let hits = crate::stl::intersections(triangles, p, d);
-                hits.chunks_exact(2)
+                hits.as_chunks::<2>()
+                    .0
+                    .iter()
                     .map(|v| {
                         (
                             v[0] - m[0] / dot(d, d).sqrt(),

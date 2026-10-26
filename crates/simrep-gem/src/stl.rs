@@ -103,7 +103,7 @@ pub(crate) fn read(path: &Path, selector: Option<Point>) -> Result<Vec<Triangle>
     if bytes.len() >= 84
         && 84 + u32::from_le_bytes(bytes[80..84].try_into().unwrap()) as usize * 50 == bytes.len()
     {
-        for record in bytes[84..].chunks_exact(50) {
+        for record in bytes[84..].as_chunks::<50>().0 {
             let mut triangle = [[0.; 3]; 3];
             for (i, v) in triangle.iter_mut().flatten().enumerate() {
                 *v = f32::from_le_bytes(record[12 + 4 * i..16 + 4 * i].try_into().unwrap()) as f64;
@@ -130,7 +130,7 @@ pub(crate) fn read(path: &Path, selector: Option<Point>) -> Result<Vec<Triangle>
         if !vertices.len().is_multiple_of(3) {
             return Err(Error("STL has an incomplete triangle".into()));
         }
-        triangles.extend(vertices.chunks_exact(3).map(|v| [v[0], v[1], v[2]]));
+        triangles.extend_from_slice(vertices.as_chunks::<3>().0);
     }
     if triangles.is_empty() || triangles.iter().flatten().flatten().any(|v| !v.is_finite()) {
         return Err(Error("STL requires finite, nonempty triangles".into()));

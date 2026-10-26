@@ -730,7 +730,7 @@ fn stencil_product(row: &[f64; 27], offsets: &[isize; 27], i: usize, x: &[f64]) 
     let mut ax = 0.0;
     let halo = offsets[26] as usize;
     if i >= halo && i + halo < x.len() {
-        for (r, coefficients) in row.chunks_exact(3).enumerate() {
+        for (r, coefficients) in row.as_chunks::<3>().0.iter().enumerate() {
             let begin = i.wrapping_add_signed(offsets[3 * r]);
             let neighbors = &x[begin..begin + 3];
             ax += coefficients[0] * neighbors[0];

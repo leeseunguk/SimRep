@@ -243,7 +243,9 @@ impl DiffusionStatistics {
                 .enumerate()
                 .any(|(i, v)| !v.is_finite() || *v < 0.0 || (*v == 0.0 && i % 1002 != 0))
             || values
-                .chunks_exact(1002)
+                .as_chunks::<1002>()
+                .0
+                .iter()
                 .any(|icdf| icdf.windows(2).any(|w| w[0] > w[1]))
         {
             return Err("mbmr.dat must contain five nonnegative, monotone 1002-point ICDFs (zero only at the origin)".into());

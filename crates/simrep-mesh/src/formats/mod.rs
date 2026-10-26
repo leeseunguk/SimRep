@@ -119,16 +119,11 @@ fn read_obj(path: &Path) -> io::Result<Mesh> {
         .into_iter()
         .filter(|model| !model.mesh.indices.is_empty())
         .map(|model| {
-            let vertices: Vec<Point> = model
-                .mesh
-                .positions
-                .chunks_exact(3)
-                .map(|v| [v[0], v[1], v[2]])
-                .collect();
+            let vertices: Vec<Point> = model.mesh.positions.as_chunks::<3>().0.to_vec();
             let indices: Vec<usize> = model.mesh.indices.iter().map(|&i| i as usize).collect();
             let mut triangles = Vec::new();
             if model.mesh.face_arities.is_empty() {
-                for face in indices.chunks_exact(3) {
+                for face in indices.as_chunks::<3>().0 {
                     triangles.extend(triangulate(face, &vertices)?);
                 }
             } else {
@@ -185,7 +180,9 @@ fn triangulate(face: &[usize], vertices: &[Point]) -> io::Result<Vec<[usize; 3]>
     let indices = earcutr::earcut(&projected, &[], 2)
         .map_err(|e| invalid(format!("polygon triangulation: {e:?}")))?;
     Ok(indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|v| {
             let mut triangle = [face[v[0]], face[v[1]], face[v[2]]];
             let [a, b, c] = triangle.map(|i| vertices[i]);

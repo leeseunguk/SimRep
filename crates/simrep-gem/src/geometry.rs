@@ -942,7 +942,9 @@ pub(crate) fn primitive(node: &Node) -> Result<Option<Primitive>> {
             }
             let points = node
                 .args
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|p| Ok([p[0].number()?, p[1].number()?]))
                 .collect::<Result<Vec<_>>>()?;
             if points.iter().flatten().any(|v| v.is_nan()) {

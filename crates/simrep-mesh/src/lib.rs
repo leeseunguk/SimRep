@@ -87,12 +87,12 @@ impl Part {
             return Err(invalid("cuts mesh counts do not match payload"));
         }
         let mut part = Self::default();
-        for record in bytes[16..16 + 24 * vertices].chunks_exact(24) {
+        for record in bytes[16..16 + 24 * vertices].as_chunks::<24>().0 {
             part.vertices.push(std::array::from_fn(|a| {
                 f64::from_le_bytes(record[8 * a..8 * a + 8].try_into().unwrap())
             }));
         }
-        for record in bytes[16 + 24 * vertices..].chunks_exact(24) {
+        for record in bytes[16 + 24 * vertices..].as_chunks::<24>().0 {
             let mut face = [0; 3];
             for a in 0..3 {
                 face[a] = usize::try_from(u64::from_le_bytes(

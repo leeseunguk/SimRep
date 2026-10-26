@@ -86,10 +86,7 @@ pub(super) fn read(path: &Path) -> io::Result<Mesh> {
                                 "glTF TRIANGLES index count is not divisible by 3",
                             ));
                         }
-                        indices
-                            .chunks_exact(3)
-                            .map(|v| [v[0], v[1], v[2]])
-                            .collect()
+                        indices.as_chunks::<3>().0.to_vec()
                     }
                     Mode::TriangleStrip => indices
                         .windows(3)
