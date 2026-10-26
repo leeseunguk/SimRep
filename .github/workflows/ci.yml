@@ -20,7 +20,8 @@ env:
 
 jobs:
   rust:
-    runs-on: ubuntu-latest
+    # Temporary explicit-image request for CPU sampling.
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     env:
       # Mesa's "avx" tier retains AVX2/FMA but disables every AVX-512 feature.
@@ -65,7 +66,8 @@ jobs:
         run: cargo test --workspace --release
 
   python:
-    runs-on: ubuntu-latest
+    # Temporary explicit-image request for CPU sampling.
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     env:
       GALLIUM_OVERRIDE_CPU_CAPS: avx
