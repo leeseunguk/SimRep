@@ -1,0 +1,13 @@
+; A spherical electrode in the beam path plus a grounded exit wall.
+; Grid: x/y/z 0..40, -10..10, -10..10 mm? No: PA grids start at the origin,
+; so geometry lives in x 0..40, y 0..20, z 0..20 mm at 0.5 mm spacing.
+; The curved surface makes staircase collisions land about half a cell away
+; from the true surface, so exact vs staircase impact positions differ.
+pa_define{nx=81, ny=41, nz=41, symmetry='planar', dx=0.5, dy=0.5, dz=0.5, surface='none'}
+
+e(1) {
+  fill { within { sphere(20,10,10, 8) } }
+}
+e(2) {
+  fill { within { box3d(36,0,0, 40,30,30) } }
+}

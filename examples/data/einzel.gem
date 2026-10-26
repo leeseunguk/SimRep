@@ -1,0 +1,16 @@
+; Einzel lens: three coaxial tubes in a cylindrical PA (x = axial, y = radial).
+; A tube is a thin cylinder3d wall: center at bore radius, wall 1 mm thick.
+pa_define{nx=121, ny=21, nz=1, symmetry='cylindrical', mirror='y', dx=0.5, dy=0.5, surface='none'}
+
+e(1) {
+  ; entrance tube, axial 4..16 mm
+  fill { within { cylinder3d(4,4,0, 16,4,0, 1) } }
+}
+e(2) {
+  ; center lens electrode, axial 20..40 mm
+  fill { within { cylinder3d(20,4,0, 40,4,0, 1) } }
+}
+e(3) {
+  ; exit tube, axial 44..56 mm
+  fill { within { cylinder3d(44,4,0, 56,4,0, 1) } }
+}

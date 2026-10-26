@@ -1,0 +1,46 @@
+# SimRep
+
+> Native Rust SIMION-compatible ion optics simulator: electrostatic and
+> magnetostatic potential solving (multigrid, CPU + GPU) and ion trajectory
+> flight, usable as a `simrep` CLI, a `simrep` Python package, and a Tauri
+> desktop app. Reads SIMION PA/PA#/PA0, GEM, ION and FLY2 files. Units: mm,
+> us, V, gauss, amu, eV.
+
+## Getting started
+
+- [README.md](README.md): project overview, install, CLI quick start (Korean)
+- [AGENTS.md](AGENTS.md): agent-oriented build, workflow, units, device rules, error catalog
+- [examples/](examples/README.md): runnable end-to-end Python examples with CLI equivalents
+- [docs/PLAN.md](docs/PLAN.md): development plan and architecture entry point
+
+## User documentation
+
+- [docs/python.md](docs/python.md): Python/NumPy API, CLI parity table, build and checks
+- [docs/gem.md](docs/gem.md): GEM geometry conversion to PA#, Lua preprocessing, surface modes
+- [docs/geometry-pipeline.md](docs/geometry-pipeline.md): geometry to a refined fast-adjust field
+- [docs/mesh-io.md](docs/mesh-io.md): triangle mesh import (STL/OBJ/PLY/3MF/glTF) and scientific export
+- [docs/step-import.md](docs/step-import.md): STEP/IGES electrode import via the cad feature
+- [docs/bfield-import.md](docs/bfield-import.md): external magnetic field map import (COMSOL, Opera, generic)
+- [docs/fly2.md](docs/fly2.md): FLY2 particle definitions and workbench context
+- [docs/pa-flight-geometry.md](docs/pa-flight-geometry.md): PA electrode geometry during flight
+- [docs/physics-magnetic-collision.md](docs/physics-magnetic-collision.md): magnetic fields and neutral-gas collisions (HS1/SDS)
+- [docs/physics-space-charge.md](docs/physics-space-charge.md): synchronized space charge (direct, PIC, beam)
+- [docs/dielectric.md](docs/dielectric.md): variable-permittivity electrostatics
+- [docs/magnetostatics.md](docs/magnetostatics.md): permeability, magnetization, current formulations
+
+## Solver internals
+
+- [docs/cpu-solver.md](docs/cpu-solver.md): CPU reference multigrid potential solver
+- [docs/gpu-solver.md](docs/gpu-solver.md): GPU potential solver (wgpu, f64/f32 paths)
+- [docs/cutcell.md](docs/cutcell.md): continuous-electrode ghost-fluid refinement
+
+## Validation and development
+
+- [docs/dev/verification.md](docs/dev/verification.md): verification commands, CI evidence, gated tests
+- [docs/dev/frontend.md](docs/dev/frontend.md): desktop app development and Windows packaging
+- [docs/dev/windows-gpu.md](docs/dev/windows-gpu.md): Windows GPU development from WSL2
+- [docs/dev/windows-occt.md](docs/dev/windows-occt.md): Windows OCCT SDK for the cad feature
+- [docs/gem-validation.md](docs/gem-validation.md): installed GEM oracle comparison
+- [docs/fly2-validation.md](docs/fly2-validation.md): FLY2 oracle validation
+- [docs/claims.json](docs/claims.json): published quantitative claims checked by tools/check_claims.py
+- [tools/check_claims.py](tools/check_claims.py): verifies documented numbers against recorded sources
