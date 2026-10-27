@@ -165,6 +165,9 @@ Quoted strings are the real messages emitted by the code.
 - `electrode {number} has no inside/on-surface node; refine the grid`:
   the electrode's surface contains no grid node; use a finer `--grid` or
   thicker part. Analytic-shape input needs a node on the surface.
+- `gap check failed: fewer than 2.5 cells across an electrode gap or an unresolved GEM gap`:
+  reduce `--spacing` (10 cells across is recommended), or explicitly select
+  `--gap-check warn|off`; GEM reports certified brackets, not exact distances.
 - `refine input must have a .pa or .pa# extension` /
   `refine-geometry input must be .gem, .step, .stp, .iges, .igs, .stl,
   .obj, .ply, .3mf, .gltf or .glb`: wrong file kind for the command.

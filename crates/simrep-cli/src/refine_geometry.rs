@@ -21,8 +21,18 @@ use simrep_solve::mg::{Geometry, Grid, Options};
 
 use crate::{Backend, Device, parse_tolerance};
 
+#[path = "geometry_gap.rs"]
+mod gap;
+
 const REFERENCE: f64 = 10_000.0;
-type Source = (String, Arc<dyn SignedDistance>, SourceGeometry);
+type Source = (String, Arc<dyn SignedDistance>, SourceGeometry, GapSource);
+
+enum GapSource {
+    Gem([[f64; 3]; 2]),
+    Mesh(Arc<Solid>),
+    #[cfg(feature = "cad")]
+    Cad(usize),
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 enum CadMode {
@@ -83,6 +93,9 @@ pub struct GeometryOptions {
     /// Cartesian base-node box xmin,ymin,zmin,xmax,ymax,zmax:factor (2 or 4).
     #[arg(long, value_parser = refine_region, allow_hyphen_values = true)]
     refine_region: Vec<Region>,
+    /// Inter-electrode gap resolution policy (2.5 cells minimum, 10 recommended).
+    #[arg(long, value_enum, default_value = "warn")]
+    gap_check: gap::Mode,
 }
 
 fn refine_region(text: &str) -> Result<Region, String> {
@@ -175,6 +188,7 @@ struct Part {
     shape: Arc<dyn SignedDistance>,
     assignment: Assignment,
     source: SourceGeometry,
+    gap_source: GapSource,
 }
 
 struct SolverShape {
@@ -540,7 +554,13 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
             .map(|s| {
                 let name = s.voltage.to_string();
                 let source = SourceGeometry::gem(&s)?;
-                Ok((name, Arc::new(s) as Arc<dyn SignedDistance>, source))
+                let bounds = s.bounds_mm();
+                Ok((
+                    name,
+                    Arc::new(s) as Arc<dyn SignedDistance>,
+                    source,
+                    GapSource::Gem(bounds),
+                ))
             })
             .collect::<Result<Vec<_>, Box<dyn std::error::Error + Send + Sync>>>()?;
         let mut pa = PaFile::new(a);
@@ -568,7 +588,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
                 let report = repair(part)?;
                 println!("Repair part {i} {:?}: {report:?}", part.name);
             }
-            let solid = Solid::new(part)?;
+            let solid = Arc::new(Solid::new(part)?);
             let name = if part.name.is_empty() {
                 i.to_string()
             } else {
@@ -576,8 +596,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
             };
             sources.push((
                 name,
-                Arc::new(solid) as Arc<dyn SignedDistance>,
+                Arc::clone(&solid) as Arc<dyn SignedDistance>,
                 SourceGeometry::mesh(part, None)?,
+                GapSource::Mesh(solid),
             ));
         }
         let mut a = PotentialArray::new(dims[0], dims[1], dims[2]);
@@ -599,7 +620,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let mut used = vec![false; args.electrode.len()];
     let mut voltages = BTreeMap::new();
     let mut parts = Vec::new();
-    for (i, (name, shape, source)) in sources.into_iter().enumerate() {
+    for (i, (name, shape, source, gap_source)) in sources.into_iter().enumerate() {
         let matches: Vec<_> = args
             .electrode
             .iter()
@@ -631,6 +652,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
             shape,
             assignment: assignment.clone(),
             source,
+            gap_source,
         });
     }
     if used.contains(&false) {
@@ -641,6 +663,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         .map(|a| spacing[a])
         .fold(f64::INFINITY, f64::min);
     let tolerance = 1e-9 * h_min;
+    let gap_check = gap::check(&args, &parts, dims, spacing)?;
     let source_time = total.elapsed();
     let phase = Instant::now();
     let mut owners = vec![None; a.potentials.len()];
@@ -1029,6 +1052,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         "compute_ms": compute.as_secs_f64() * 1000.0,
         "prep_ms": preparation.as_secs_f64() * 1000.0,
         "output_paths": output_paths,
+        "gap_check": gap_check,
     }));
     Ok(())
 }
@@ -1332,7 +1356,12 @@ fn cad_sources(
                 part,
                 failed: Arc::clone(&failed),
             };
-            Ok((name, Arc::new(shape) as Arc<dyn SignedDistance>, source))
+            Ok((
+                name,
+                Arc::new(shape) as Arc<dyn SignedDistance>,
+                source,
+                GapSource::Cad(i),
+            ))
         })
         .collect::<GpuResult<Vec<_>>>()?;
     let mut array = PotentialArray::new(dims[0], dims[1], dims[2]);

@@ -124,6 +124,14 @@ pub struct Solid {
     outward: bool,
 }
 
+/// Euclidean boundary-to-boundary minimum, in millimeters, with witnesses.
+/// This is not a solid-overlap test: nested boundaries can have positive gaps.
+#[derive(Clone, Copy, Debug)]
+pub struct SurfaceGap {
+    pub distance_mm: f64,
+    pub points_mm: [Point; 2],
+}
+
 impl simrep_geom::SignedDistance for Solid {
     fn distance(&self, point: Point) -> f64 {
         self.signed_distance(point)
@@ -207,6 +215,61 @@ impl simrep_geom::SignedDistance for Solid {
 }
 
 impl Solid {
+    /// Exact to the stored triangles. Traverse both BVHs simultaneously and
+    /// prune node pairs only by their Euclidean AABB separation.
+    pub fn surface_gap(&self, other: &Self) -> SurfaceGap {
+        let mut points = [self.triangles[0].points[0], other.triangles[0].points[0]];
+        let mut best = dot(sub(points[0], points[1]), sub(points[0], points[1]));
+        self.minimum_pair(&self.root, other, &other.root, &mut best, &mut points);
+        SurfaceGap {
+            distance_mm: best.sqrt(),
+            points_mm: points,
+        }
+    }
+
+    fn minimum_pair(
+        &self,
+        left: &Node,
+        other: &Self,
+        right: &Node,
+        best: &mut f64,
+        points: &mut [Point; 2],
+    ) {
+        let bound = |a: &Node, b: &Node| {
+            aabb_gap(a.bounds.min, a.bounds.max, b.bounds.min, b.bounds.max).powi(2)
+        };
+        if bound(left, right) >= *best {
+            return;
+        }
+        match (&left.children, &right.children) {
+            (Some(children), _)
+                if right.children.is_none() || left.range.len() >= right.range.len() =>
+            {
+                let first = usize::from(bound(&children[0], right) > bound(&children[1], right));
+                self.minimum_pair(&children[first], other, right, best, points);
+                self.minimum_pair(&children[1 - first], other, right, best, points);
+            }
+            (_, Some(children)) => {
+                let first = usize::from(bound(left, &children[0]) > bound(left, &children[1]));
+                self.minimum_pair(left, other, &children[first], best, points);
+                self.minimum_pair(left, other, &children[1 - first], best, points);
+            }
+            _ => {
+                for a in &self.triangles[left.range.clone()] {
+                    for b in &other.triangles[right.range.clone()] {
+                        let candidate = triangle_pair(a.points, b.points);
+                        let delta = sub(candidate[0], candidate[1]);
+                        let distance = dot(delta, delta);
+                        if distance < *best {
+                            *best = distance;
+                            *points = candidate;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub fn new(part: &Part) -> io::Result<Self> {
         let report = inspect(part)?;
         if !report.is_closed_manifold() || report.inconsistent_edges != 0 {
@@ -777,6 +840,89 @@ fn triangle_distance2(p: Point, triangle: [Point; 3]) -> f64 {
     triangle_closest(p, triangle).0
 }
 
+fn segment_point(p: Point, a: Point, b: Point) -> Point {
+    let d = sub(b, a);
+    let t = if dot(d, d) == 0.0 {
+        0.0
+    } else {
+        (dot(sub(p, a), d) / dot(d, d)).clamp(0.0, 1.0)
+    };
+    add(a, mul(d, t))
+}
+
+fn face_inside(p: Point, tri: [Point; 3], normal: Point) -> bool {
+    (0..3).all(|i| dot(cross(sub(tri[(i + 1) % 3], tri[i]), sub(p, tri[i])), normal) >= 0.0)
+}
+
+fn face_point(p: Point, tri: [Point; 3]) -> Point {
+    let normal = cross(sub(tri[1], tri[0]), sub(tri[2], tri[0]));
+    let projection = sub(
+        p,
+        mul(normal, dot(sub(p, tri[0]), normal) / dot(normal, normal)),
+    );
+    if face_inside(projection, tri, normal) {
+        return projection;
+    }
+    (0..3)
+        .map(|i| segment_point(p, tri[i], tri[(i + 1) % 3]))
+        .min_by(|a, b| dot(sub(p, *a), sub(p, *a)).total_cmp(&dot(sub(p, *b), sub(p, *b))))
+        .unwrap()
+}
+
+fn face_crossing(a: Point, b: Point, tri: [Point; 3]) -> Option<Point> {
+    let normal = cross(sub(tri[1], tri[0]), sub(tri[2], tri[0]));
+    let h0 = dot(sub(a, tri[0]), normal);
+    let h1 = dot(sub(b, tri[0]), normal);
+    if h0 == h1 {
+        return None; // Coplanar contacts are covered by vertex/edge minima.
+    }
+    let t = h0 / (h0 - h1);
+    let point = add(a, mul(sub(b, a), t));
+    ((0.0..=1.0).contains(&t) && face_inside(point, tri, normal)).then_some(point)
+}
+
+fn triangle_pair(a: [Point; 3], b: [Point; 3]) -> [Point; 2] {
+    let mut points = [a[0], b[0]];
+    let mut best = f64::INFINITY;
+    let mut update = |candidate: [Point; 2]| {
+        let delta = sub(candidate[0], candidate[1]);
+        let distance = dot(delta, delta);
+        if distance < best {
+            best = distance;
+            points = candidate;
+        }
+    };
+    for i in 0..3 {
+        for (p, q, tri) in [(a[i], a[(i + 1) % 3], b), (b[i], b[(i + 1) % 3], a)] {
+            if let Some(point) = face_crossing(p, q, tri) {
+                return [point; 2];
+            }
+        }
+        update([a[i], face_point(a[i], b)]);
+        update([face_point(b[i], a), b[i]]);
+        for j in 0..3 {
+            let (p, q, r, s) = (a[i], a[(i + 1) % 3], b[j], b[(j + 1) % 3]);
+            update([p, segment_point(p, r, s)]);
+            update([q, segment_point(q, r, s)]);
+            update([segment_point(r, p, q), r]);
+            update([segment_point(s, p, q), s]);
+            let u = sub(q, p);
+            let v = sub(s, r);
+            let w = sub(p, r);
+            let uv = dot(u, v);
+            let determinant = dot(cross(u, v), cross(u, v));
+            if determinant > 0.0 {
+                let t = (uv * dot(v, w) - dot(v, v) * dot(u, w)) / determinant;
+                let s = (dot(u, u) * dot(v, w) - uv * dot(u, w)) / determinant;
+                if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&s) {
+                    update([add(p, mul(u, t)), add(r, mul(v, s))]);
+                }
+            }
+        }
+    }
+    points
+}
+
 /// Squared distance and whether the closest point is in the relative interior
 /// of the face (not on an edge or vertex).
 fn triangle_closest(p: Point, [a, b, c]: [Point; 3]) -> (f64, bool) {
@@ -825,4 +971,78 @@ fn triangle_closest(p: Point, [a, b, c]: [Point; 3]) -> (f64, bool) {
     // Stay off edges: a nearest point on a silhouette edge does not have a unique normal.
     let face = va > 1e-3 * sum && vb > 1e-3 * sum && vc > 1e-3 * sum;
     (dot(delta, delta), face)
+}
+
+#[cfg(test)]
+mod gap_tests {
+    use super::*;
+
+    fn surface(triangles: Vec<[Point; 3]>) -> Solid {
+        let mut part = Part::default();
+        for triangle in triangles {
+            let start = part.vertices.len();
+            part.vertices.extend(triangle);
+            part.triangles.push([start, start + 1, start + 2]);
+        }
+        Solid::from_surface(&part).unwrap()
+    }
+
+    #[test]
+    fn triangle_gap_witnesses_cover_crossings_coplanar_and_edge_minima() {
+        let a = [[-2.0, -1.0, 0.0], [2.0, -1.0, 0.0], [0.0, 2.0, 0.0]];
+        for b in [
+            [[0.0, 0.0, -1.0], [0.0, 0.0, 1.0], [3.0, 0.0, 1.0]],
+            [[0.0, 0.0, 0.0], [0.1, 0.0, 0.0], [0.0, 0.1, 0.0]],
+        ] {
+            let gap = surface(vec![a]).surface_gap(&surface(vec![b]));
+            assert_eq!(gap.distance_mm, 0.0);
+            assert_eq!(gap.points_mm[0], gap.points_mm[1]);
+        }
+        let a = [[-2.0, 0.0, 0.0], [2.0, 0.0, 0.0], [-2.0, -1.0, 0.0]];
+        let b = [[0.0, -2.0, 0.7], [0.0, 2.0, 0.7], [0.0, -2.0, 1.7]];
+        let gap = surface(vec![a]).surface_gap(&surface(vec![b]));
+        assert!((gap.distance_mm - 0.7).abs() < 1e-12);
+        for (p, triangle) in gap.points_mm.into_iter().zip([a, b]) {
+            assert!(triangle_distance2(p, triangle) < 1e-24);
+        }
+    }
+
+    #[test]
+    fn simultaneous_bvh_minimum_matches_brute_force() {
+        let triangles: Vec<_> = (0..48)
+            .map(|i| {
+                let x = (i % 8) as f64;
+                let y = (i / 8) as f64;
+                [[x, y, 0.0], [x + 0.3, y, 0.0], [x, y + 0.4, 0.1]]
+            })
+            .collect();
+        for shift in [[0.2, 0.3, 0.5], [10.0, -0.3, -0.5], [0.0; 3]] {
+            let shifted: Vec<_> = triangles.iter().map(|t| t.map(|p| add(p, shift))).collect();
+            let expected = triangles
+                .iter()
+                .flat_map(|a| {
+                    shifted.iter().map(|b| {
+                        let p = triangle_pair(*a, *b);
+                        dot(sub(p[0], p[1]), sub(p[0], p[1]))
+                    })
+                })
+                .fold(f64::INFINITY, f64::min)
+                .sqrt();
+            let a = surface(triangles.clone());
+            let b = surface(shifted);
+            let gap = a.surface_gap(&b);
+            assert!((gap.distance_mm - expected).abs() < 1e-12);
+            assert!((b.surface_gap(&a).distance_mm - expected).abs() < 1e-12);
+            for (point, solid) in gap.points_mm.into_iter().zip([&a, &b]) {
+                assert!(
+                    solid
+                        .triangles
+                        .iter()
+                        .map(|t| triangle_distance2(point, t.points))
+                        .fold(f64::INFINITY, f64::min)
+                        < 1e-24
+                );
+            }
+        }
+    }
 }

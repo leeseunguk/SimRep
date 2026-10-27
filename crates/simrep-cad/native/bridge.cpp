@@ -260,14 +260,15 @@ void* simrep_cad_read(const char* path, bool iges, double override_mm,
       catch (const std::exception& e) { error(err, size, e.what()); }
     return nullptr;
 }
-void* simrep_cad_read_measurement(const char* path, bool iges, char* err, size_t size) {
+void* simrep_cad_read_measurement(const char* path, bool iges, double override_mm,
+                                char* err, size_t size) {
     // OCCT's exchange diagnostics use cout independently of Rust's CLI output.
     // EXCHANGE serializes readers/writers while this scoped routing is active.
     struct DiagnosticStream {
         std::streambuf* previous = std::cout.rdbuf(std::cerr.rdbuf());
         ~DiagnosticStream() { std::cout.flush(); std::cout.rdbuf(previous); }
     } diagnostics;
-    return simrep_cad_read(path, iges, 0.0, err, size);
+    return simrep_cad_read(path, iges, override_mm, err, size);
 }
 void simrep_cad_free(void* model) { delete static_cast<Model*>(model); }
 size_t simrep_cad_count(void* model) { return static_cast<Model*>(model)->bodies.size(); }

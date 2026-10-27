@@ -16,7 +16,7 @@ pub use grid::{
     GridSpec, SignedDistanceGrid, Voxelization, sample_sdf, voxelize, voxelize_with_defects,
 };
 pub use repair::{MeshReport, RepairReport, inspect, repair, weld_and_orient};
-pub use spatial::Solid;
+pub use spatial::{Solid, SurfaceGap};
 pub use surface::{
     SurfaceOptions, electrode_surface, electrode_surface_with_options, isosurface, pa_isosurface,
 };

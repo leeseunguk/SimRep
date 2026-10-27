@@ -20,6 +20,7 @@ unsafe extern "C" {
     fn simrep_cad_read_measurement(
         path: *const c_char,
         iges: bool,
+        units: f64,
         error: *mut c_char,
         size: usize,
     ) -> *mut c_void;
@@ -181,6 +182,11 @@ impl MeasurementModel {
     }
 
     pub fn read(path: impl AsRef<Path>) -> io::Result<Self> {
+        Self::read_with_units(path, None)
+    }
+
+    /// Same declared-unit override and placement scaling as [`read_cad`].
+    pub fn read_with_units(path: impl AsRef<Path>, units: Option<Unit>) -> io::Result<Self> {
         let path = path.as_ref();
         let iges = match path
             .extension()
@@ -198,7 +204,13 @@ impl MeasurementModel {
         let pointer = {
             let _exchange = EXCHANGE.lock().unwrap();
             unsafe {
-                simrep_cad_read_measurement(path.as_ptr(), iges, error.as_mut_ptr(), error.len())
+                simrep_cad_read_measurement(
+                    path.as_ptr(),
+                    iges,
+                    units.map_or(0.0, Unit::millimeters),
+                    error.as_mut_ptr(),
+                    error.len(),
+                )
             }
         };
         let native = Native(NonNull::new(pointer).ok_or_else(|| native_error(&error))?);

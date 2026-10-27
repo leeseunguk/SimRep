@@ -1,6 +1,45 @@
 #![cfg(feature = "occt")]
 
 use simrep_cad::{MeasureOptions, MeasurementModel, write_fixture};
+use simrep_geom::SignedDistance;
+use simrep_mesh::Unit;
+
+#[test]
+fn measurement_and_refinement_imports_agree_on_units_and_placements() {
+    let dir = tempfile::tempdir().unwrap();
+    for extension in ["step", "igs"] {
+        let path = dir.path().join(format!("pair.{extension}"));
+        write_fixture(&path, 3, "AP242DIS", "MM").unwrap();
+        for units in [
+            None,
+            Some(Unit::Millimeter),
+            Some(Unit::Centimeter),
+            Some(Unit::Inch),
+        ] {
+            let scale = units.map_or(1.0, Unit::millimeters);
+            let model = MeasurementModel::read_with_units(&path, units).unwrap();
+            let gap = model.gap("0", "1", MeasureOptions::default()).unwrap();
+            assert!((gap.min_distance_mm - 0.58 * scale).abs() < 1e-8);
+            let parts = simrep_cad::read_cad(
+                &path,
+                simrep_cad::ImportOptions {
+                    units,
+                    band_mm: scale,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            for (point, part) in gap.closest_points_mm.into_iter().zip(&parts) {
+                assert!(part.distance(point).abs() < 1e-8);
+            }
+            let expected_bounds = [[-0.91, -0.29], [0.29, 0.91]];
+            for (part, bounds) in parts.iter().zip(expected_bounds) {
+                assert!((part.bounds_mm[0][0] - bounds[0] * scale).abs() < 1e-6 * scale);
+                assert!((part.bounds_mm[1][0] - bounds[1] * scale).abs() < 1e-6 * scale);
+            }
+        }
+    }
+}
 
 #[test]
 fn placed_spheres_have_analytic_gap_and_witnesses_in_step_and_iges() {

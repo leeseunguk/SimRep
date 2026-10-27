@@ -43,6 +43,63 @@ geometry is accepted by this command.
 
 ## Geometry and solver boundary
 
+### Inter-electrode gap resolution
+
+Before constructing masks, cuts, or output files, `refine-geometry` measures
+each pair of different electrode numbers. `--gap-check warn` is the default:
+it warns below **2.5 cells across** a gap and reports the spacing for
+**10 cells across**. The 2.5-cell threshold is the resolvability rule from
+Iteration-CFD's site-mesh guidance; 10 cells is accuracy guidance, not an
+error estimate or a replacement for grid convergence. Here `cells_across=g/h`,
+where `h` is the largest spacing on active PA axes (conservative for
+anisotropic grids). The recommended spacing is `g/10`, using the smallest
+pair gap. These checks do not measure thin features of a single electrode.
+
+`--gap-check error` fails before writing any PA or cuts file when a pair has
+fewer than 2.5 cells across or a GEM pair is unresolved. `off` skips all gap
+measurements. The check only reads source geometry; PA and cuts bytes are
+identical with checking enabled or disabled.
+
+Mesh gaps are Euclidean triangle-surface minima, using simultaneous BVH
+traversal, AABB lower-bound pruning, and face/edge/vertex witnesses. CAD gaps
+use exact placed B-rep face sets and an independent tessellation cross-check,
+even when the solve uses `--cad-mode tessellated`. These are surface
+separations, not solid-overlap tests; nested boundaries may have positive
+separation. Parts sharing a number are not checked against each other; the
+reported number-pair gap is the minimum over their different-number part pairs.
+
+GEM CSG distances are conservative bounds, **not Euclidean distances**.
+The adaptive search maintains a bracket `[lower,upper]` in mm. It covers the
+enclosing hull of the electrodes' conservative source bounds, rather than
+only their overlap (disjoint bounds have no overlap). On each box,
+`abs(d_A(center))+abs(d_B(center))-box_diagonal` is a lower bound;
+the distance between the source bounds supplies another lower bound.
+Boxes whose lower bound exceeds the best upper bound are discarded.
+Upper bounds come from sign-changing surface brackets found with gradient
+projection and bisection; the physical bracket widths are added to the
+witness distance, rather than treating a small SDF value as a surface error.
+
+The search stops at bracket width `min(h/10, 0.001 mm)` or 32,768 box
+subdivisions per source pair. GEM results are certified **only as the
+reported bracket**, not as an exact gap. Conservative CSG fields can retain
+a loose lower bound even after spatial refinement. Such pairs are reported
+as `unresolved`, with their bracket, and warn in default mode. Unbounded
+source axes are searched within the PA extent for upper-bound witnesses,
+but only the global source-box separation supplies their lower bound (zero
+when the boxes overlap): finite PA samples cannot prove a global gap.
+If no witness is found, the upper endpoint and
+location are `null` (no finite upper bound). Resolution and recommended
+spacing use the lower endpoint, never a guessed midpoint.
+
+The standard `--json` summary keeps schema version 1 and adds `gap_check`:
+`mode`, `threshold_cells` (2.5), `recommended_cells` (10), `pairs`, and
+`recommended_spacing_mm`. Each pair has `electrodes`, `method`
+(`exact` or `bounded`), either `gap_mm` or `gap_bracket_mm`, `cells_across`,
+`location_mm` (two witness points in electrode order), and `status`
+(`ok`, `warn`, or `unresolved`). The recommendation is `null` when there are
+no checked pairs. Off mode returns an empty `pairs` array. The same
+measurements and guidance appear in the human log.
+
 GEM's physical CSG SDFs are evaluated directly, without staircase rasterization
 margins or an intermediate lattice. Primitive distances are combined after
 evaluation, so aperture/cap corners retain their source sign and zero set.

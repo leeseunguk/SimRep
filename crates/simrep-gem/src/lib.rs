@@ -82,6 +82,25 @@ pub struct ElectrodeSdf {
 }
 
 impl ElectrodeSdf {
+    /// Conservative physical bounds of the electrode's positive fills.
+    /// Vacuum/other-electrode overwrites can only shrink these bounds.
+    /// Unbounded primitive axes remain infinite.
+    pub fn bounds_mm(&self) -> [[f64; 3]; 2] {
+        let mut bounds = [[f64::INFINITY; 3], [f64::NEG_INFINITY; 3]];
+        for fill in self
+            .fills
+            .iter()
+            .filter(|fill| fill.electrode && fill.potential == self.voltage)
+        {
+            let (min, max) = fill.shape.bounds([0.0; 3]);
+            for a in 0..3 {
+                bounds[0][a] = bounds[0][a].min(min[a] * self.coordinate_scale[a]);
+                bounds[1][a] = bounds[1][a].max(max[a] * self.coordinate_scale[a]);
+            }
+        }
+        bounds
+    }
+
     pub fn try_distance(&self, point_mm: [f64; 3]) -> Result<f64> {
         let p = std::array::from_fn(|a| point_mm[a] / self.coordinate_scale[a]);
         let mut distance = f64::MAX;

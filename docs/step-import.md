@@ -105,6 +105,18 @@ A mixed-unit STEP file is rejected when an override would be ambiguous.
 Millimeter, meter and inch exchange round trips and overrides are tested.
 Translations in the imported assembly are scaled together with the bodies.
 
+The pre-solve `--gap-check warn|error|off` policy defaults to `warn`.
+Different-electrode B-rep surface gaps are measured exactly and cross-checked
+against tessellation before masks, cuts, or PA files are written, including
+when the solve uses tessellated mode. Below 2.5 cells across a gap the default
+warns; error mode rejects it. The reported accuracy recommendation is 10 cells
+across (`spacing <= gap/10`). Cells across use the largest active-axis spacing,
+so anisotropic grids cannot pass merely because one axis is fine. This is
+inter-electrode spacing guidance, not a single-electrode thin-feature check.
+The additive schema-1 `gap_check` JSON object and witness points are described
+in [geometry-pipeline.md](geometry-pipeline.md#inter-electrode-gap-resolution).
+Checking on/off leaves all PA and cuts bytes identical.
+
 ### Guarded face-set gap measurement
 
 The `cad` feature also provides a grid-independent measurement command:
@@ -153,6 +165,10 @@ the usual `error.message`/`error.kind` object and exit status 1.
 
 Rust callers use `simrep_cad::MeasurementModel::read(path)`, `parts()`,
 `gap(selector_a, selector_b, MeasureOptions::default())`, or `all_pairs`.
+`MeasurementModel::read_with_units(path, units)` applies the same optional
+declared-unit override as `read_cad` and `refine-geometry --units`, scaling both
+the shapes and assembly placements. The one-argument reader preserves its
+existing declared-unit behavior.
 The MCP equivalent is `cad_measure` with `file`, either a two-string `gap`
 array or `all_pairs: true`, and optional `cad_tolerance`/`touch_tolerance`.
 
