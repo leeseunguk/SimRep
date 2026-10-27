@@ -54,6 +54,9 @@ L_h V_i = Σ_a (V_{i-e_a} − 2 V_i + V_{i+e_a}) / h_a²,   −L_h V = ρ/ε₀
 - 테스트: `crates/simrep-solve/tests/mg_reference.rs`(독립 SOR 기준해와 비교,
   원통 조화 다항식, 환형 `log(r)` 2차 수렴 등), `tests/poisson.rs`
   (manufactured 평면·원통 푸아송 해와 우변 부호·단위).
+  `crates/simrep-solve/tests/mms.rs::multigrid_mms_orders` adds analytic-source
+  Laplace/Poisson ladders in Cartesian 2D/3D and axisymmetric coordinates,
+  including the free regularity axis. Expected potential order: 2.
 
 ### 식 (2). 잔차 수렴 판정 (보고서 식 (2))
 
@@ -104,6 +107,12 @@ c (V_j − V_i)  →  (c/θ)(V_Γ − V_i),   0 < θ ≤ 1
   (`curved_boundaries_have_second_order_potential_and_first_order_field`,
   `tiny_cuts_snap_with_quadratic_not_linear_displacement`,
   `a_thin_electrode_between_free_endpoints_is_not_lost`).
+  `crates/simrep-solve/tests/mms.rs::exact_surface_mms_orders_and_shifted_reference_frame`
+  reports sphere/cylinder potential (expected 2) and near-surface field
+  (expected 1) independently. The phase sweep translates both geometry and
+  analytic solution. CI-fast coarse ladders can be pre-asymptotic; measured
+  orders, including shortfalls, are retained in
+  [`../validation/GATES.md`](../validation/GATES.md).
 
 ### 식 (4). 갤러킨 거친 격자 연산자
 
@@ -206,6 +215,12 @@ V(ξ) = Σ_{k=0}^{5} c_k ξ^k   (셀 내부 좌표 ξ, 축별 6계수 텐서 곱
   `vacuum_boundary_derivatives_exclude_flat_metal_interior`,
   `vacuum_boundary_reconstruction_preserves_axis_and_reflection_conditions`,
   `grid_flight_converges_at_least_cubically_against_analytic_field`.
+  `crates/simrep-fly/tests/mms.rs::field_reconstruction_mms_orders` isolates
+  interpolation with exact nodal potentials and fixed physical interior
+  probes, for global cubic and boundary-aware reconstruction. The smooth
+  interior baseline is potential order 4 and gradient order 3 (not order 5
+  just because there are six coefficients). This does not claim that a
+  second-order solved potential produces a fourth-order physical field.
 
 ### 식 (8). 도착 위치 RMS 판정 규약 (보고서 식 (5))
 
@@ -490,6 +505,10 @@ r_jump = L · ICDF(log10(m_ion/m_gas), U) · √((V_thermal/L)·Δt / 100000)
   `dielectric_sphere_converges_to_uniform_field_solution`,
   `variable_dielectric_free_charge_and_uniform_laplace_regression`),
   `tests/nonlinear_dielectric.rs`(비선형 구성 법칙 반복).
+  `crates/simrep-solve/tests/mms.rs::linear_dielectric_mms_order` uses
+  `epsilon_r = 1+x`, analytic `V = sin(pi*x) sin(pi*y)` and independently
+  differentiated free-charge source; expected smooth order 2. This is not
+  a curved discontinuous-interface order claim.
 
 ### 식 (18). 연결 계수의 조화평균과 셀 면적평균 (보고서 식 (8) 뒷식)
 

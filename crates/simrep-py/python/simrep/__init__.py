@@ -12,8 +12,10 @@ from time import perf_counter
 import numpy as np
 
 from . import _native
+from . import uncertainty
 
 __all__ = [
+    "uncertainty",
     "PA", "Field", "FlightResult", "read_pa", "write_pa", "read_particles",
     "load_field", "refine", "refine_geometry", "fast_adjust", "fly",
     "particles_from_energy",

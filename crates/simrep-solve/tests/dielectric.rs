@@ -139,6 +139,12 @@ fn coaxial_dielectric_sleeve_is_second_order() {
     println!("coax order={order:.6}");
     assert!(errors[1] < errors[0] / 3.5 && errors[2] < errors[1] / 3.5);
     assert!(order > 1.9 && order < 2.1);
+    simrep_core::validation::record_order(
+        "comparison-dielectric-coax",
+        "dielectric.rs coaxial_dielectric_sleeve_is_second_order",
+        errors,
+        2.0,
+    );
 }
 
 fn sphere(n: usize) -> f64 {

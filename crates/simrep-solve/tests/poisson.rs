@@ -61,6 +61,27 @@ fn manufactured_planar_and_cylindrical_poisson() {
                 "{geometry:?}: {value} != {expected}"
             );
         }
+        simrep_core::validation::Gate {
+            name: if geometry == Geometry::Planar {
+                "comparison-poisson-planar"
+            } else {
+                "comparison-poisson-cylindrical"
+            },
+            reference: "poisson.rs manufactured_planar_and_cylindrical_poisson",
+            metric: "maximum potential error (V)",
+            value: values
+                .iter()
+                .zip(&exact)
+                .map(|(v, e)| (v - e).abs())
+                .fold(0.0_f64, f64::max),
+            datum: 0.0,
+            u_num: None,
+            u_input: 0.0,
+            u_datum: 0.0,
+            band: "existing assertion: max error < 1e-9 V; not an uncertainty",
+        }
+        .record()
+        .unwrap();
         // A warm start must measure the nonzero physical RHS as well.
         let warm = solve_poisson(
             &mut values,

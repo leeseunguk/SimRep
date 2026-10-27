@@ -62,6 +62,8 @@ jobs:
         env:
           RUST_TEST_NOCAPTURE: "1"
         run: cargo test --workspace --release
+      - name: Check computed validation gates
+        run: python3 tools/validation_gates.py --check
 
   python:
     runs-on: ubuntu-latest

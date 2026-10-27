@@ -1,5 +1,8 @@
 //! Grid, potential array, geometry and shared types.
 
+pub mod uncertainty;
+pub mod validation;
+
 /// Symmetry of a potential array.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Symmetry {

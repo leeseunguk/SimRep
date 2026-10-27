@@ -5,6 +5,7 @@ mod flight;
 mod geometry;
 mod pa;
 mod refine;
+mod uncertainty;
 
 use pyo3::prelude::*;
 
@@ -26,6 +27,7 @@ fn command(py: Python<'_>, arguments: Vec<String>) -> PyResult<Option<String>> {
 #[pymodule]
 fn _native(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(command, module)?)?;
+    module.add_function(wrap_pyfunction!(uncertainty::grid_uncertainty, module)?)?;
     module.add_function(wrap_pyfunction!(pa::read, module)?)?;
     module.add_function(wrap_pyfunction!(pa::write, module)?)?;
     module.add_function(wrap_pyfunction!(pa::adjust, module)?)?;

@@ -66,6 +66,19 @@ fn parallel_plate_tof_and_birth_time() {
     );
     assert_eq!(result.splat_reason, SplatReason::StopPlane);
     assert!(relative < 1e-12);
+    simrep_core::validation::Gate {
+        name: "comparison-parallel-plate-tof",
+        reference: "accuracy.rs parallel_plate_tof_and_birth_time",
+        metric: "relative TOF error",
+        value: result.tof_us / expected - 1.0,
+        datum: 0.0,
+        u_num: None,
+        u_input: 0.0,
+        u_datum: 0.0,
+        band: "existing assertion: relative error < 1e-12; not an uncertainty",
+    }
+    .record()
+    .unwrap();
     assert!((result.final_state.position_mm[0] - 10.0).abs() < 1e-11);
     assert_eq!(result.final_state.time_us, 7.25 + result.tof_us);
     let samples = result.trajectory.unwrap();

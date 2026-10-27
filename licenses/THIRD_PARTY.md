@@ -1,5 +1,25 @@
 # Third-party notices
 
+## Numerical verification and verdict registry
+
+`crates/simrep-core/src/uncertainty.rs` adapts `rust/src/vv.rs` from
+[using76/Iteration-CFD](https://github.com/using76/Iteration-CFD/blob/main/rust/src/vv.rs)
+(retrieved 2026-10-27). It retains Celik's triplet procedure and Eca-Hoekstra's
+Appendix A weighted/fixed-exponent fit selection; SimRep uses CPU f64 and adds
+input checks and independent worked-example tests.
+`crates/simrep-core/src/validation.rs` adapts the explicit registry concept from
+[`rust/src/capture/registry.rs`](https://github.com/using76/Iteration-CFD/blob/main/rust/src/capture/registry.rs),
+with new runtime numerical records and a generated Markdown table instead of
+CUDA capture gates. No GPU capture code was copied.
+
+These adapted files are under the Prosperity Public License 3.0.0, whose
+complete upstream text and contributor/source notices appear below.
+Copyright (c) 2026 Iterations Co., Ltd.
+Collaborator and contributor: Meteo Simulation Co., Ltd.
+Source code: https://github.com/using76/Iteration-CFD
+The Python wrapper, manufactured solutions, generator and new tests are
+original SimRep code.
+
 ## CAD face-set measurement reference (October 27, 2026)
 
 The complete-face measurement contract in `crates/simrep-cad/native/bridge.cpp`
