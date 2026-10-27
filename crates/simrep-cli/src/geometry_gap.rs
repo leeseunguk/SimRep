@@ -30,6 +30,20 @@ pub(super) struct Report {
     recommended_spacing_mm: Option<f64>,
 }
 
+impl Report {
+    pub(super) fn hints(&self) -> Vec<super::auto::GapHint> {
+        self.pairs
+            .iter()
+            .map(|p| super::auto::GapHint {
+                electrodes: p.electrodes,
+                bracket_mm: p.gap_bracket_mm.unwrap_or([p.gap_mm; 2]),
+                points_mm: p.location_mm,
+                resolved: p.status != "unresolved",
+            })
+            .collect()
+    }
+}
+
 #[derive(Serialize)]
 struct Pair {
     electrodes: [usize; 2],
@@ -65,7 +79,7 @@ pub(super) fn check(
         pairs: Vec::new(),
         recommended_spacing_mm: None,
     };
-    if args.gap_check == Mode::Off {
+    if args.gap_check == Mode::Off && args.refine.is_none() {
         return Ok(report);
     }
     // A gap can point along the coarsest active axis. Using h_min could
@@ -190,7 +204,7 @@ pub(super) fn check(
             range,
             measurement.points,
         );
-        if status != "ok" {
+        if status != "ok" && args.gap_check != Mode::Off {
             eprintln!(
                 "gap check {status}: electrodes {}-{} have {cells:.6} cells across (minimum 2.5); recommended spacing {recommended:.9} mm for 10 cells",
                 electrodes[0], electrodes[1],
@@ -213,7 +227,10 @@ pub(super) fn check(
             status,
         });
     }
-    if args.gap_check == Mode::Error && report.pairs.iter().any(|p| p.status != "ok") {
+    if args.gap_check == Mode::Error
+        && args.refine.is_none()
+        && report.pairs.iter().any(|p| p.status != "ok")
+    {
         return Err("gap check failed: fewer than 2.5 cells across an electrode gap or an unresolved GEM gap; refine --spacing or use --gap-check warn/off".into());
     }
     Ok(report)

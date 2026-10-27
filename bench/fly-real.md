@@ -759,6 +759,80 @@ python3 tools/simion-oracle/compare_fly.py classify \
 cargo run --release -p simrep-cli --example einzel_convergence
 ```
 
+## Vacuum-continuation reconstruction comparison
+
+The earlier quadrupole figures, including 0.00343534 mm RMS and its speed
+ratio, were measured with the **pre-2026-10-28 reconstruction**. They remain
+historical measurements, not current-code figures. The ghost-fill update
+changes field preparation as well as retaining exact surface collisions.
+
+The retained physical 8x reference was itself produced by SimRep: an
+independently solved 481x289x289 half-length/quadrant cut-cell field using
+the old global cubic reconstruction. It was not an independent analytic or
+strict-SIMION answer. New 4x and 8x references were solved with the same
+physical geometry and then prepared with numerical ghost filling and the
+memory-bounded global cubic. The coarse user route still uses the shared
+Hermite reconstruction. All comparisons use the same retained 1,000 ions,
+voltages, exact collisions and integration settings stated above.
+
+| Reconstruction / reference | Endpoint RMS mm | Maximum mm | Exit-class changes |
+| --- | ---: | ---: | ---: |
+| Historical, retained 8x | 0.003435341053206124 | 0.020189608872753964 | 0 |
+| Historical, regenerated 8x | 0.0034596258435769366 | 0.020189267351086903 | 0 |
+| Current, retained 8x | 0.003856357804507607 | 0.02106932896042975 | 0 |
+| Current, regenerated 8x | 0.0038781692882620886 | 0.021123911205298784 | 0 |
+| Retained 8x versus regenerated 8x | 0.00023985048574372102 | 0.005266565143925879 | 0 |
+| Regenerated 4x versus regenerated 8x | 0.0005483710188906788 | 0.0049610951154609876 | 0 |
+
+Current versus regenerated 8x therefore rounds to **0.00388 mm**, whereas
+**0.00386 mm** uses the retained old reference. Both remain below the
+existing 0.005 mm RMS / zero-class-change bound. The measured increase
+against the new reference is smaller than its 0.00055 mm refinement drift:
+this is a movement within reference uncertainty, not an independently
+established physical regression. The historical README/report value is
+labelled and the two current comparisons and refinement sensitivity are
+registered in `docs/claims.json`.
+
+This interior quadrupole metric is distinct from the near-plate spherical
+analyzer diagnostic: the latter's solved-data slit-centroid bias improves
+from +4.88% at n=65 to -0.43%, -0.059%, -0.026% at n=65/129/257 after filling.
+The center orbit stays about 0.012% at n=65. Full max/RMS band orders,
+fallback counts and the remaining solved-data field-order finding are in
+`docs/validation/CUT_GHOST_FILL.md`.
+
+Reference regeneration is opt-in and leaves the historical CSV names intact:
+
+```sh
+cargo build --release -p simrep-cli --example quadrupole_convergence
+# Run the built executable in a separate directory for new cached PA files.
+quadrupole_convergence physical 4 --ghost-fill
+quadrupole_convergence physical 8 --ghost-fill
+```
+
+The generated `physical-{4,8}-global-ghost.csv` files use the newly filled
+reference; the unfilled default is retained for historical reproduction.
+
+Five final interleaved serial processes per reconstruction, 16 Rayon threads,
+with the verification/reference jobs finished before timing, give:
+
+| Reconstruction | Median preparation ms | Median flight compute ms |
+| --- | ---: | ---: |
+| Pre-update executable | 163.103499 | 51.667600 |
+| Ghost fill with parallel fits and band mask | 892.960587 | 50.363999 |
+
+The added cost is preparation: geometry/sample collection, pivoted QR at
+39,706 metal knots, then a second existing jet/coefficient build. The static
+CPU route prepares one combined PA; dynamic bases are each prepared once.
+Fits are already parallel and an O(nodes) sliding-window band mask avoids
+searches deep inside thick metal. Prepared coefficients are cached for
+flight, not recomputed per ion or voltage-expression sample. The small
+compute-time difference is not promoted to a speedup claim.
+
+The same 1,000-ion `--no-cuts` CSV is byte-identical between the original
+and updated executables (`cmp`, exit 0), SHA-256
+`97ea53037f933a824d9697b42da45ef4be9608628fbe31e1a3769f98ecd1ec31`.
+GPU staircase reconstruction is unchanged; these timings are CPU f64.
+
 ## Historical 2D validation and Windows process hygiene
 
 Final `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets --

@@ -150,6 +150,97 @@ fn absent_refine_flag_preserves_uniform_family_bytes() {
 }
 
 #[test]
+fn auto_selection_reports_nodes_and_preserves_affine_potential() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("plates.gem"), "pa_define(9,5,1,planar)\ne(1){fill{within{box(-1,-1,0,5)}}}\ne(2){fill{within{box(8,-1,9,5)}}}").unwrap();
+    let mut selection = None;
+    for stem in ["first", "second"] {
+        let text = run(
+            dir.path(),
+            &[
+                "--json",
+                "refine-geometry",
+                "plates.gem",
+                "--electrode",
+                "1=3:0",
+                "--electrode",
+                "2=7:8",
+                "--refine",
+                "auto",
+                "--gap-check",
+                "warn",
+                "--out",
+                stem,
+            ],
+        );
+        let summary: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(summary["schema_version"], 1);
+        let report = &summary["auto_refinement"];
+        if let Some(previous) = &selection {
+            assert_eq!(previous, report);
+        }
+        selection = Some(report.clone());
+        assert_eq!(report["base_nodes"], 45);
+        assert_eq!(report["patch_nodes"], 153);
+        assert_eq!(report["stored_nodes"], 198);
+        assert_eq!(report["boxes"][0]["factor"], 2);
+        assert!(
+            summary["adaptive_profiles"][0]["phases"]["mg_cycles"]
+                .as_u64()
+                .unwrap()
+                > 0
+        );
+        let pa = simrep_io::read_pa(dir.path().join(format!("{stem}.pa0"))).unwrap();
+        for (i, v) in pa.array.potentials.iter().enumerate() {
+            assert!((v - (i % 9) as f64).abs() < 2e-7);
+        }
+    }
+    for extension in [
+        "pa0",
+        "pa3",
+        "pa7",
+        "pa#",
+        "cuts.json",
+        "patch0.pa0",
+        "patch0.pa3",
+        "patch0.pa7",
+    ] {
+        assert_eq!(
+            fs::read(dir.path().join(format!("first.{extension}"))).unwrap(),
+            fs::read(dir.path().join(format!("second.{extension}"))).unwrap()
+        );
+    }
+}
+
+#[test]
+fn auto_rejects_invalid_factors_and_unsupported_geometry() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(
+        dir.path().join("cyl.gem"),
+        "pa_define(9,5,1,cylindrical)\ne(1){fill{within{box(-1,-1,0,5)}}}",
+    )
+    .unwrap();
+    for flag in ["auto", "auto:3", "uniform"] {
+        let output = Command::new(env!("CARGO_BIN_EXE_simrep"))
+            .current_dir(dir.path())
+            .args([
+                "refine-geometry",
+                "cyl.gem",
+                "--electrode",
+                "1=1:0",
+                "--refine",
+                flag,
+                "--out",
+                "bad",
+            ])
+            .output()
+            .unwrap();
+        assert!(!output.status.success());
+        assert!(!dir.path().join("bad.pa0").exists());
+    }
+}
+
+#[test]
 fn invalid_regions_and_unsupported_devices_fail() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(

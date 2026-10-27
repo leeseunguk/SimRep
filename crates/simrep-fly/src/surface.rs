@@ -132,6 +132,7 @@ pub enum SurfaceAccuracy {
     ApproximateV1,
 }
 
+#[derive(Clone)]
 struct Electrode {
     number: usize,
     shape: Arc<dyn SignedDistance>,
@@ -147,6 +148,12 @@ pub struct SurfaceModel {
     accuracy: SurfaceAccuracy,
     domain: Option<Domain>,
     tolerance_mm: f64,
+    pub(crate) reconstruction_cuts: Option<ReconstructionCuts>,
+}
+
+pub(crate) struct ReconstructionCuts {
+    pub(crate) nodes: Vec<Option<usize>>,
+    pub(crate) links: Vec<LinkIntersections>,
 }
 
 #[derive(Clone)]
@@ -184,10 +191,10 @@ struct Sidecar {
 }
 
 #[derive(Deserialize)]
-struct LinkIntersections {
-    node: usize,
-    fractions: [Option<f64>; 6],
-    electrodes: [Option<usize>; 6],
+pub(crate) struct LinkIntersections {
+    pub(crate) node: usize,
+    pub(crate) fractions: [Option<f64>; 6],
+    pub(crate) electrodes: [Option<usize>; 6],
 }
 
 impl SurfaceModel {
@@ -215,6 +222,7 @@ impl SurfaceModel {
             accuracy: SurfaceAccuracy::SourceGeometry,
             domain: None,
             tolerance_mm,
+            reconstruction_cuts: None,
         })
     }
 
@@ -369,6 +377,32 @@ impl SurfaceModel {
         if electrodes.is_empty() {
             return Err(FlyError("cuts sidecar contains no electrodes").into());
         }
+        let nodes = if let Some(runs) = data.node_electrode_runs {
+            runs.into_iter()
+                .flat_map(|(lo, hi, number)| std::iter::repeat_n(number, hi - lo))
+                .collect()
+        } else {
+            data.node_electrodes
+        };
+        let links = if let Some(links) = data.link_intersections {
+            links
+        } else {
+            data.cut_fractions
+                .into_iter()
+                .zip(data.cut_electrodes)
+                .enumerate()
+                .filter_map(|(i, (fractions, numbers))| {
+                    fractions
+                        .iter()
+                        .any(Option::is_some)
+                        .then_some(LinkIntersections {
+                            node: i,
+                            fractions,
+                            electrodes: numbers,
+                        })
+                })
+                .collect()
+        };
         Ok(Self {
             electrodes,
             accuracy,
@@ -380,7 +414,28 @@ impl SurfaceModel {
                 mirrors: data.mirrors,
             }),
             tolerance_mm: 1e-10 * h,
+            reconstruction_cuts: Some(ReconstructionCuts { nodes, links }),
         })
+    }
+
+    pub(crate) fn electrode_numbers(&self) -> impl Iterator<Item = usize> + '_ {
+        self.electrodes.iter().map(|e| e.number)
+    }
+
+    /// A refined patch has its own grid links, but the same source geometry.
+    pub(crate) fn reconstruction_domain(
+        &self,
+        array: &PotentialArray,
+        offset: Vector,
+    ) -> Result<Self, FlyError> {
+        Self {
+            electrodes: self.electrodes.clone(),
+            accuracy: self.accuracy,
+            domain: None,
+            tolerance_mm: self.tolerance_mm,
+            reconstruction_cuts: None,
+        }
+        .with_pa_domain(array, self.source_point(offset))
     }
 
     pub fn accuracy(&self) -> SurfaceAccuracy {

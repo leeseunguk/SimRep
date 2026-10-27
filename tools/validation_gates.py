@@ -20,6 +20,8 @@ EXPECTED = set(SMOOTH + [f"{name}-center" for name in SMOOTH] + [
     "mms-cut-cylinder-potential", "mms-cut-cylinder-field",
     "mms-global-cubic-potential", "mms-global-cubic-field",
     "mms-boundary-aware-potential", "mms-boundary-aware-field",
+    *[f"mms-cut-flight-{shape}-{metric}" for shape in ("sphere", "cylinder")
+      for metric in ("potential-max", "field-max", "potential-rms", "field-rms")],
     "comparison-poisson-planar", "comparison-poisson-cylindrical",
     "comparison-dielectric-coax", "comparison-parallel-plate-tof",
 ])
@@ -28,6 +30,7 @@ EXPECTED.update(gate for case in CATALOG["cases"] for gate in case["gates"])
 RUNS = [
     ("simrep-solve", "mms", None),
     ("simrep-fly", "mms", None),
+    ("simrep-fly", "surface_reconstruction", "exact_surface_band_reconstruction_converges"),
     ("simrep-solve", "poisson", "manufactured_planar_and_cylindrical_poisson"),
     ("simrep-solve", "dielectric", "coaxial_dielectric_sleeve_is_second_order"),
     ("simrep-fly", "accuracy", "parallel_plate_tof_and_birth_time"),

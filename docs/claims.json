@@ -130,6 +130,24 @@
       "section": "Source-geometry cuts v3 (October 23, 2026)",
       "pattern": "median flight compute \\*\\*([0-9.,eE+-]+) s cuts"
     },
+    "quad_ghost_rms_retained_reference": {
+      "kind": "regex",
+      "file": "bench/fly-real.md",
+      "section": "Vacuum-continuation reconstruction comparison",
+      "pattern": "^\\| Current, retained 8x \\| ([0-9.,eE+-]+) \\|"
+    },
+    "quad_ghost_rms_regenerated_reference": {
+      "kind": "regex",
+      "file": "bench/fly-real.md",
+      "section": "Vacuum-continuation reconstruction comparison",
+      "pattern": "^\\| Current, regenerated 8x \\| ([0-9.,eE+-]+) \\|"
+    },
+    "quad_ghost_reference_refinement_drift": {
+      "kind": "regex",
+      "file": "bench/fly-real.md",
+      "section": "Vacuum-continuation reconstruction comparison",
+      "pattern": "^\\| Regenerated 4x versus regenerated 8x \\| ([0-9.,eE+-]+) \\|"
+    },
     "quad_simion_s": {
       "kind": "regex",
       "file": "bench/fly-real.md",
@@ -478,14 +496,45 @@
       "number": "700",
       "derive": "quad_simion_rms / quad_exact_rms",
       "rounding": "1e2",
-      "note": "Approximate one-significant-figure ratio, not an exact factor of 700."
+      "note": "Approximate one-significant-figure ratio measured with the pre-2026-10-28 reconstruction, not an exact factor of 700 or a current-code remeasurement."
     },
     {
       "id": "readme-quad-speed",
       "fragment": "71배",
       "number": "71",
       "derive": "quad_simion_s / quad_exact_s",
-      "rounding": "1"
+      "rounding": "1",
+      "note": "Retained pre-2026-10-28 reconstruction timing; current continuation measurements are separate."
+    },
+    {
+      "id": "readme-quad-historical-rms",
+      "fragment": "그 재구성의 RMS는 **0.0034 mm**",
+      "number": "0.0034",
+      "derive": "quad_exact_rms",
+      "rounding": "0.0001",
+      "note": "Explicitly labelled pre-2026-10-28 reconstruction."
+    },
+    {
+      "id": "readme-quad-ghost-retained-reference-rms",
+      "fragment": "이전 `8x` 기준해에 대해 **0.00386 mm**",
+      "number": "0.00386",
+      "derive": "quad_ghost_rms_retained_reference",
+      "rounding": "0.00001"
+    },
+    {
+      "id": "readme-quad-ghost-regenerated-reference-rms",
+      "fragment": "재구성한 `8x` 기준해에 대해 **0.00388 mm**",
+      "number": "0.00388",
+      "derive": "quad_ghost_rms_regenerated_reference",
+      "rounding": "0.00001"
+    },
+    {
+      "id": "readme-quad-ghost-reference-refinement-drift",
+      "fragment": "정련 차이는 **0.00055 mm**",
+      "number": "0.00055",
+      "derive": "quad_ghost_reference_refinement_drift",
+      "rounding": "0.00001",
+      "note": "Refinement sensitivity, not a calibrated standard uncertainty or rigorous bound."
     },
     {
       "id": "readme-hs1-speed",
@@ -747,7 +796,8 @@
       "fragment": "RMS 0.0034 대 2.38 mm",
       "number": "0.0034",
       "derive": "quad_exact_rms",
-      "rounding": "0.0001"
+      "rounding": "0.0001",
+      "note": "Historical pre-2026-10-28 reconstruction; current-code/reference sensitivity is stated beside the report table."
     },
     {
       "id": "table13-quad-simion-rms",

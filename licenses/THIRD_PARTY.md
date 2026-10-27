@@ -1,5 +1,25 @@
 # Third-party notices
 
+## Automatic refinement policy (October 27, 2026)
+
+`crates/simrep-cli/src/auto_refine.rs` adapts the dyadic spatial marking,
+sorted fixed-point balance policy and size-relative clearance ideas from
+[using76/Iteration-CFD](https://github.com/using76/Iteration-CFD):
+`rust/src/automesher/octree.rs`, `rust/src/adapt.rs`, and
+`docs/08-site-mesh-playbook.md`, retrieved October 27, 2026. The last file's
+`g/2.5` rule and distinction between unresolved gaps and refinement targets
+inform the policy. The implementation is new Rust code for SimRep's disjoint
+nodal boxes, not a copy of the upstream polyhedral mesh implementation.
+The upstream feature, quality, castellate and driver stages and adaptive
+rebuild/transfer modules were read as design references; their field-transfer,
+snapping and polyhedral topology code is not used.
+
+This adapted policy retains the Prosperity Public License 3.0.0 notice:
+Copyright (c) 2026 Iterations Co., Ltd.; collaborator and contributor:
+Meteo Simulation Co., Ltd. Source: https://github.com/using76/Iteration-CFD.
+The complete licence text is reproduced below. The selector's tests,
+CLI wiring, solver profiling and study measurements are original SimRep code.
+
 ## Numerical verification and verdict registry
 
 `crates/simrep-core/src/uncertainty.rs` adapts `rust/src/vv.rs` from

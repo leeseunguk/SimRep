@@ -569,8 +569,9 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
                     .with_tolerance(options.tolerance.unwrap_or(1e-12) / options.scale)?,
             )
         })
-        .transpose()?;
-    let surface_mode = match surface.as_ref().map(SurfaceModel::accuracy) {
+        .transpose()?
+        .map(std::sync::Arc::new);
+    let surface_mode = match surface.as_ref().map(|surface| surface.accuracy()) {
         Some(SurfaceAccuracy::ApproximateV1) => "approximate-v1",
         Some(SurfaceAccuracy::SampledSdf) => "sampled-sdf",
         Some(SurfaceAccuracy::SourceGeometry) => "source-geometry",
@@ -709,13 +710,19 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         if let Some(adaptive) = adaptive {
             source = source.with_adaptive(adaptive);
         }
+        if let Some(surface) = &surface {
+            source = source.with_surface(surface.clone())?;
+        }
         let provider = |_, point| {
             let sample = source.sample(point, 0.0);
             Ok(Fly2Field {
                 potential_v: sample.potential_v,
                 electric_v_per_mm: sample.electric_v_per_mm,
                 magnetic_gauss: magnetic.sample(point, 0.0).magnetic_gauss,
-                electrode: matches!(source.status(point), Some(SplatReason::Electrode { .. })),
+                electrode: matches!(
+                    source.status(point),
+                    Some(SplatReason::Electrode { .. } | SplatReason::SurfaceElectrode { .. })
+                ),
             })
         };
         read_particles_in(
@@ -894,7 +901,11 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         field = field.with_adaptive(adaptive);
     }
     if let Some(surface) = surface {
-        field = field.with_surface(std::sync::Arc::new(surface))?;
+        field = field.with_surface(surface)?;
+    }
+    let ghost_fill = field.ghost_fill_report();
+    if let Some(report) = &ghost_fill {
+        eprintln!("ghost_fill: {}", serde_json::to_string(report)?);
     }
     if (beam_mode || options.space_charge.is_some()) && collision.is_some() {
         return Err("space charge does not support collision models".into());
@@ -1237,6 +1248,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         "arrival_tof_us": tof.unwrap_or_else(|| serde_json::json!({"mean": null, "std": null, "min": null, "max": null})),
         "compute_ms": flight.as_secs_f64() * 1000.0,
         "prep_ms": setup.as_secs_f64() * 1000.0,
+        "ghost_fill": ghost_fill,
         "requested": {
             "device": format!("{:?}", options.device).to_lowercase(),
             "precision": "f64",

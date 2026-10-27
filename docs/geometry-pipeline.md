@@ -238,10 +238,12 @@ The Rust API provides `surface::SurfaceModel::from_reader` and `from_sdfs`;
 the latter accepts numbered `Arc<dyn simrep_geom::SignedDistance>` sources
 without resampling. For source geometry with PA symmetry or a nonzero source
 origin, call `.with_pa_domain(&array, source_origin_mm)` before attaching it.
-Attach either with `InstanceField::with_surface`.
-Field reconstruction remains independent of collision geometry (its boundary-aware
-quintic Hermite math is described in `crates/simrep-fly/README.md` and
-`docs/spec/equations.md`). Grid exits,
+Attach either with `InstanceField::with_surface`. Attaching a surface also
+rebuilds the background and every voltage basis on a vacuum continuation of
+near-surface metal knots. `GridField::with_surface(&model)` exposes the same
+reconstruction preparation without changing collision geometry.
+The shared-jet/quintic Hermite assembly itself is unchanged.
+Grid exits,
 workbench bounds, detector planes, placement, scaling, mirrors and cylindrical
 axial-x/radial-y revolution retain their event semantics.
 `SplatReason::SurfaceElectrode { number }` reports the physical electrode number;
@@ -249,6 +251,55 @@ axial-x/radial-y revolution retain their event semantics.
 `electrode_number` column, empty for staircase or non-electrode events.
 Surface collisions currently run on CPU: `--device auto` selects CPU even for
 large beams; explicit `--device gpu` with a surface returns a clear error.
+
+### Near-surface field preparation (October 27, 2026)
+
+Physical constant-voltage metal samples are not a smooth continuation of the
+vacuum solution through an off-node surface. Using them as integer-coordinate
+spline endpoints caused first-order off-node potential and nonconvergent
+field errors in partial cells, even with exact vacuum nodal data.
+
+The CPU exact-surface path now fills metal knots within eight Chebyshev layers
+of vacuum, then runs the existing shared-jet/Hermite reconstruction on that
+temporary array. Original PA potentials and electrode flags are retained.
+Three layers were insufficient: the directional cubic spline solve has
+exponentially decaying nonlocal influence, not a strictly compact stencil.
+Eight layers recover the measured band orders on the registered study.
+
+Each ghost value is a weighted least-squares vacuum-side polynomial evaluated
+at the metal knot. The data are original vacuum-node potentials and the true
+grid-line intersections stored in the cuts sidecar, with the electrode's
+Dirichlet voltage at each intersection. In-memory SDF sources obtain the
+same intersections during preparation. Total degree 3 is tried first, then
+2 and 1; Householder QR with column pivoting requires at least 1.5 times as
+many samples as coefficients and `cond_inf(R) <= 1e8`. The weights are
+`1/(r^2 + (0.1*h_min)^2)`. A tiny cut fraction is a sample coordinate, never
+a divisor. Failed linear fits retain their original metal value.
+
+An electrode's voltage is taken only from its own flagged PA metal nodes,
+which must exist and have a constant value. Missing or nonconstant values
+skip that electrode's fill rather than inventing a voltage. Each background
+and unit-voltage basis is filled separately; fit choices depend only on
+geometry, preserving linear superposition to roundoff. Either surface/basis
+attachment order works. FLY2 initial potential/field queries use this same
+surface-aware preparation. Adaptive fields rebuild their owned base and
+patch fields as well; each patch uses the source geometry on its own grid,
+origin and spacing rather than reusing coarse-grid cut fractions.
+
+`GridField::ghost_fill_report()` and `InstanceField::ghost_fill_report()`
+expose degree counts (degrees 1, 2, 3), failed-fit `kept_nodes`,
+`skipped_electrodes`, and `layers`. The flight log and additive JSON
+`ghost_fill` key report these counts, summed across background, adaptive
+patches and dynamic bases; `skipped_electrodes` is the union over those
+individual PA grids. The JSON schema remains version 1. With no surface the key is `null`,
+and non-cut samples/flight results retain their bits. GPU staircase flights
+and their reconstruction are unchanged.
+
+The [ghost-fill validation record](validation/CUT_GHOST_FILL.md) separates
+interpolation-only orders from solved-data errors and records the analyzer
+and compute/preparation measurements. The dated surface-flight measurements
+below predate this preparation change and retain their historical inputs
+and results.
 
 ### Historical V2 surface-flight acceptance (October 23, 2026)
 

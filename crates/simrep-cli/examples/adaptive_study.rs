@@ -6,6 +6,9 @@ use simrep_solve::cutcell::CutCells;
 use simrep_solve::mg::{Geometry, Grid, Options};
 use std::error::Error;
 
+#[path = "../src/auto_refine.rs"]
+mod auto;
+
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 const INNER: f64 = 0.31;
 const OUTER: f64 = 0.83;
@@ -36,6 +39,22 @@ fn sample(adaptive: &AdaptiveGrid, solution: &Solution, p: [f64; 3]) -> f64 {
         }
     }
     interpolate(&solution.base, adaptive.base.grid, adaptive.base.origin, p)
+}
+
+fn profile(case: &str, label: &str, adaptive: &AdaptiveGrid, result: &Solution) -> Result<()> {
+    println!(
+        "profile,{case},{label},iterations={},setup_ms={:.6},base_snap_mm={:.9e},patch_snap_mm={:?},phases={}",
+        result.report.iterations,
+        result.report.timings.setup.as_secs_f64() * 1000.0,
+        adaptive.base.snap_distance,
+        adaptive
+            .patches
+            .iter()
+            .map(|p| p.cuts.snap_distance)
+            .collect::<Vec<_>>(),
+        serde_json::to_string(&result.profile)?
+    );
+    Ok(())
 }
 
 fn sphere_errors(cuts: &CutCells, values: &[f64]) -> (f64, f64, f64) {
@@ -111,6 +130,7 @@ fn sphere() -> Result<()> {
             values.len() * 8,
             report.timings.solve.as_secs_f64() * 1000.0
         );
+        println!("iterations,sphere,uniform{n},{}", report.iterations);
     }
     let adaptive = AdaptiveGrid::new(
         make(17)?,
@@ -135,6 +155,41 @@ fn sphere() -> Result<()> {
         result.matrix_bytes,
         result.report.timings.solve.as_secs_f64() * 1000.0
     );
+    profile("sphere", "adaptive17x2", &adaptive, &result)?;
+    let base = make(17)?;
+    let selection = auto::select(
+        base.grid,
+        base.origin,
+        &electrodes
+            .iter()
+            .map(|e| e.shape.clone())
+            .collect::<Vec<_>>(),
+        &[auto::GapHint {
+            electrodes: [1, 2],
+            bracket_mm: [Some(OUTER - INNER); 2],
+            points_mm: Some([[INNER, 0.0, 0.0], [OUTER, 0.0, 0.0]]),
+            resolved: true,
+        }],
+        2,
+    )?;
+    println!(
+        "auto_selection,sphere,{}",
+        serde_json::to_string(&selection)?
+    );
+    let adaptive = AdaptiveGrid::new(base, &selection.regions(), &electrodes)?;
+    let result = adaptive.solve(options())?;
+    assert!(result.report.converged);
+    assert_eq!(adaptive.patches.len(), 1);
+    let (v, e, pass) = sphere_errors(&adaptive.patches[0].cuts, &result.patches[0]);
+    println!(
+        "sphere,auto17x2,{},{},{},{},{:.6},{v:.9e},{e:.9e},{pass:.9e}",
+        selection.stored_nodes,
+        result.unknowns,
+        selection.stored_nodes * 8,
+        result.matrix_bytes,
+        result.report.timings.solve.as_secs_f64() * 1000.0
+    );
+    profile("sphere", "auto17x2", &adaptive, &result)?;
     println!(
         "sphere_exact_passband,{:.12e}",
         INNER * OUTER / (OUTER * OUTER - INNER * INNER)
@@ -212,6 +267,14 @@ fn einzel() -> Result<()> {
             values.len() * 8,
             report.timings.solve.as_secs_f64() * 1000.0
         );
+        println!("iterations,einzel,uniform{factor},{}", report.iterations);
+        for p in probes {
+            println!(
+                "uniform_probe,einzel,uniform{factor},{p:?},v={:.9e},reference_v={:.9e}",
+                interpolate(&values, cuts.grid, origin, p),
+                interpolate(&reference_values, reference.grid, origin, p)
+            );
+        }
     }
     let regions = [
         Region {
@@ -239,6 +302,7 @@ fn einzel() -> Result<()> {
         result.matrix_bytes,
         result.report.timings.solve.as_secs_f64() * 1000.0
     );
+    profile("einzel", "adaptive1x2", &adaptive, &result)?;
     for p in probes {
         println!(
             "einzel_probe,{p:?},adaptive_v={:.9e},reference_v={:.9e}",
@@ -246,6 +310,90 @@ fn einzel() -> Result<()> {
             interpolate(&reference_values, reference.grid, origin, p)
         );
     }
+    // Move only the internal interfaces, preserving fine h and transverse
+    // extent, to distinguish placement error from the fine surface mask.
+    let wider = [
+        Region {
+            bounds_mm: [[20.0, -20.0, -20.0], [38.0, 20.0, 20.0]],
+            factor: 2,
+        },
+        Region {
+            bounds_mm: [[48.0, -20.0, -20.0], [66.0, 20.0, 20.0]],
+            factor: 2,
+        },
+    ];
+    let wider_grid = AdaptiveGrid::new(make(1)?, &wider, &electrodes)?;
+    let wider_result = wider_grid.solve(options())?;
+    assert!(wider_result.report.converged);
+    println!(
+        "einzel,wider1x2,{},{},{},{},{:.6},{:.9e},NA,NA",
+        wider_result.base.len() + wider_result.patches.iter().map(Vec::len).sum::<usize>(),
+        wider_result.unknowns,
+        (wider_result.base.len() + wider_result.patches.iter().map(Vec::len).sum::<usize>()) * 8,
+        wider_result.matrix_bytes,
+        wider_result.report.timings.solve.as_secs_f64() * 1000.0,
+        error(&|p| sample(&wider_grid, &wider_result, p))
+    );
+    profile("einzel", "wider1x2", &wider_grid, &wider_result)?;
+    let base = make(1)?;
+    let gaps = [28.0, 56.0].map(|x| auto::GapHint {
+        electrodes: [1 + usize::from(x > 28.0), 2 + usize::from(x > 28.0)],
+        bracket_mm: [Some(2.0); 2],
+        points_mm: Some([[x, 18.0, 0.0], [x + 2.0, 18.0, 0.0]]),
+        resolved: true,
+    });
+    let selection = auto::select(
+        base.grid,
+        origin,
+        &electrodes
+            .iter()
+            .map(|e| e.shape.clone())
+            .collect::<Vec<_>>(),
+        &gaps,
+        2,
+    )?;
+    println!(
+        "auto_selection,einzel,{}",
+        serde_json::to_string(&selection)?
+    );
+    let auto_grid = AdaptiveGrid::new(base, &selection.regions(), &electrodes)?;
+    let auto_result = auto_grid.solve(options())?;
+    assert!(auto_result.report.converged);
+    println!(
+        "einzel,auto1x2,{},{},{},{},{:.6},{:.9e},NA,NA",
+        selection.stored_nodes,
+        auto_result.unknowns,
+        selection.stored_nodes * 8,
+        auto_result.matrix_bytes,
+        auto_result.report.timings.solve.as_secs_f64() * 1000.0,
+        error(&|p| sample(&auto_grid, &auto_result, p))
+    );
+    profile("einzel", "auto1x2", &auto_grid, &auto_result)?;
+    // Same surfaces, axial extent and fine h; only the outer boundary differs.
+    let cylindrical: Vec<_> = electrodes
+        .iter()
+        .map(|e| {
+            let shape = e.shape.clone();
+            Electrode::new(e.voltage, move |p: [f64; 3]| {
+                shape.distance([p[1], p[0], 0.0])
+            })
+        })
+        .collect();
+    let cyl = CutCells::new(
+        Grid {
+            dims: [39, 181, 1],
+            spacing: [0.5; 3],
+            geometry: Geometry::Cylindrical { radial_origin: 0.0 },
+        },
+        [0.0; 3],
+        &cylindrical,
+    )?;
+    let mut values = cyl.values.clone();
+    assert!(cyl.solve(&mut values, options())?.converged);
+    println!(
+        "einzel_boundary,cartesian_square_vs_cylindrical_r19,max_probe_difference_v={:.9e}",
+        error(&|p| interpolate(&values, cyl.grid, cyl.origin, [p[1].hypot(p[2]), p[0], 0.0]))
+    );
     Ok(())
 }
 

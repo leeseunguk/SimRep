@@ -151,7 +151,8 @@ impl InstanceField {
         })
     }
 
-    /// Replace PA conductor collisions without changing field samples.
+    /// Replace PA conductor collisions and rebuild background/basis samples
+    /// with a vacuum continuation at exact-surface metal knots.
     /// The electrode-free geometry grid retains PA exits, mirrors and cylinders;
     /// workbench bounds and detector events are still merged below.
     pub fn with_surface(mut self, surface: Arc<SurfaceModel>) -> Result<Self, FlyError> {
@@ -160,23 +161,61 @@ impl InstanceField {
         domain.electrodes.fill(false);
         domain.potentials.fill(0.0);
         self.surface_domain = Some(GridField::new(domain)?);
+        self.grid = self.grid.with_surface(&surface)?;
+        for (basis, _) in &mut self.voltage_bases {
+            *basis = basis.clone().with_surface(&surface)?;
+        }
+        if let Some(adaptive) = self.adaptive.take() {
+            self.adaptive = Some(Arc::new(
+                Arc::unwrap_or_clone(adaptive).with_surface(self.grid.clone(), &surface)?,
+            ));
+        }
         self.surface = Some(surface);
         Ok(self)
+    }
+
+    /// Preparation counts summed over the background and unit-voltage bases.
+    pub fn ghost_fill_report(&self) -> Option<crate::GhostFillReport> {
+        let mut report = if let Some(adaptive) = &self.adaptive {
+            adaptive.ghost_fill_report()?
+        } else {
+            self.grid.ghost_fill_report()?.clone()
+        };
+        for (basis, _) in &self.voltage_bases {
+            if let Some(basis_report) = basis.ghost_fill_report() {
+                report.merge(basis_report);
+            }
+        }
+        Some(report)
     }
 
     /// Add unit-voltage bases to the fixed background, sharing its placement.
     pub fn with_voltage_expressions(
         mut self,
-        bases: Vec<(GridField, VoltageExpression)>,
+        mut bases: Vec<(GridField, VoltageExpression)>,
     ) -> Result<Self, FlyError> {
         if bases.iter().any(|(grid, _)| !self.grid.compatible(grid)) {
             return Err(FlyError("voltage bases must share the instance geometry"));
+        }
+        if let Some(surface) = &self.surface {
+            for (basis, _) in &mut bases {
+                *basis = basis.clone().with_surface(surface)?;
+            }
         }
         self.voltage_bases = bases;
         Ok(self)
     }
 
     pub fn with_adaptive(mut self, field: crate::AdaptiveField) -> Self {
+        let field = if let Some(surface) = &self.surface {
+            // AdaptiveField owns validated GridFields; patch domains are made
+            // from those same grids, so this does not introduce new validation.
+            field
+                .with_surface(self.grid.clone(), surface)
+                .expect("validated adaptive grids accept surface reconstruction")
+        } else {
+            field
+        };
         self.adaptive = Some(Arc::new(field));
         self
     }

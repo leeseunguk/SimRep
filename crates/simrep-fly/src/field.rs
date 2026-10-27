@@ -3,6 +3,9 @@ use simrep_core::{FieldType, PotentialArray, Symmetry};
 use crate::{FlyError, SplatReason, Vector};
 
 mod boundary;
+mod ghost;
+
+pub use ghost::GhostFillReport;
 
 /// Boundary-aware vacuum reconstruction, or the original spline through metal.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -79,6 +82,9 @@ pub struct GridField {
     transparent_faces: [bool; 6],
     node_cell_collisions: bool,
     solid_cells: Option<Vec<bool>>,
+    reconstruction: Reconstruction,
+    compact: bool,
+    ghost_fill: Option<GhostFillReport>,
 }
 
 impl GridField {
@@ -200,7 +206,32 @@ impl GridField {
             transparent_faces: [false; 6],
             node_cell_collisions: true,
             solid_cells: None,
+            reconstruction,
+            compact,
+            ghost_fill: None,
         })
+    }
+
+    /// Rebuild shared jets on a vacuum continuation of near-surface metal
+    /// knots. The original PA and its collision mask remain unchanged.
+    pub fn with_surface(
+        mut self,
+        surface: &crate::surface::SurfaceModel,
+    ) -> Result<Self, FlyError> {
+        surface.validate_array(&self.array)?;
+        let (filled, report) = ghost::fill(&self.array, surface);
+        if report.degree_counts.iter().sum::<usize>() > 0 {
+            let rebuilt = Self::build(filled, self.reconstruction, self.compact)?;
+            self.coefficients = rebuilt.coefficients;
+            self.coefficient_dims = rebuilt.coefficient_dims;
+            self.boundary = rebuilt.boundary;
+        }
+        self.ghost_fill = Some(report);
+        Ok(self)
+    }
+
+    pub fn ghost_fill_report(&self) -> Option<&GhostFillReport> {
+        self.ghost_fill.as_ref()
     }
 
     /// Additional physical occupancy without treating material nodes as

@@ -4,12 +4,13 @@ use std::error::Error;
 use std::fs::{File, create_dir_all};
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
 use simrep_core::{MirrorFlags, PotentialArray};
 use simrep_fly::{
     Field, FieldSample, FlightOptions, GridField, InstanceField, Particle, Reconstruction,
-    SplatReason, fly_many,
+    SplatReason, fly_many, surface::SurfaceModel,
 };
 use simrep_geom::{Electrode, SampledSdf, Sdf, SignedDistance};
 use simrep_io::{PaFile, read_fast_adjust, read_pa, read_particles, write_pa};
@@ -296,6 +297,7 @@ fn main() -> Result<()> {
     let trajectories = args.iter().any(|s| s == "--clearance");
     let timing = args.iter().any(|s| s == "--timing");
     let nearest_node = args.iter().any(|s| s == "--nearest-node-collisions");
+    let ghost_fill = args.iter().any(|s| s == "--ghost-fill");
     create_dir_all(OUTPUT)?;
     let original = read_fast_adjust(
         PathBuf::from(INPUT).join("quadrupole.pa0"),
@@ -351,6 +353,9 @@ fn main() -> Result<()> {
     }
     if timing {
         label.push_str("-timing");
+    }
+    if ghost_fill {
+        label.push_str("-ghost");
     }
     let mut output = BufWriter::new(File::create(
         PathBuf::from(OUTPUT).join(format!("{mode}-{factor}-{label}.csv")),
@@ -503,8 +508,25 @@ fn main() -> Result<()> {
             write_pa(&path, &PaFile::new(a.clone()))?;
             a
         };
+        let mut grid = grid_field(array)?;
+        if ghost_fill {
+            let surface = SurfaceModel::from_sdfs(
+                electrodes
+                    .iter()
+                    .enumerate()
+                    .map(|(i, e)| (i + 1, Arc::clone(&e.shape)))
+                    .collect(),
+                1e-11,
+            )?
+            .with_pa_domain(grid.array(), [0.0; 3])?;
+            grid = grid.with_surface(&surface)?;
+            println!(
+                "ghost_fill: {}",
+                serde_json::to_string(grid.ghost_fill_report().unwrap())?
+            );
+        }
         Box::new(ReferenceField {
-            grid: grid_field(array)?,
+            grid,
             electrodes,
             collision: GridField::with_reconstruction(original, Reconstruction::GlobalCubic)?
                 .with_nearest_node_collisions(),

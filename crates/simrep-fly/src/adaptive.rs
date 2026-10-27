@@ -47,6 +47,29 @@ pub struct AdaptiveField {
 }
 
 impl AdaptiveField {
+    pub(crate) fn with_surface(
+        mut self,
+        base: GridField,
+        surface: &crate::surface::SurfaceModel,
+    ) -> Result<Self, FlyError> {
+        self.base = base;
+        for patch in &mut self.patches {
+            let domain = surface.reconstruction_domain(patch.field.array(), patch.offset)?;
+            patch.field = patch.field.clone().with_surface(&domain)?;
+        }
+        Ok(self)
+    }
+
+    pub(crate) fn ghost_fill_report(&self) -> Option<crate::GhostFillReport> {
+        let mut report = self.base.ghost_fill_report()?.clone();
+        for patch in &self.patches {
+            if let Some(patch_report) = patch.field.ghost_fill_report() {
+                report.merge(patch_report);
+            }
+        }
+        Some(report)
+    }
+
     pub fn new(
         base: GridField,
         manifest: &AdaptiveManifest,

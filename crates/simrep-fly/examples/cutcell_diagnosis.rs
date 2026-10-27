@@ -1,5 +1,6 @@
-//! Investigation-only measurements; does not change solver or reconstruction.
+//! Diagnostic solver, reconstruction and spherical-analyzer measurements.
 use simrep_core::PotentialArray;
+use simrep_fly::surface::SurfaceModel;
 use simrep_fly::{
     AnalyticField, Field, FieldSample, FlightOptions, GridField, Particle, SplatReason, StopPlane,
     fly,
@@ -9,6 +10,7 @@ use simrep_solve::{
     cutcell::{CutCells, surface_fraction},
     mg::{Geometry, Grid, Options},
 };
+use std::sync::Arc;
 
 const A: f64 = 0.31;
 const B: f64 = 0.83;
@@ -201,6 +203,8 @@ fn nodal(cuts: &CutCells, values: &[f64], sphere: bool, phase: f64, variant: &st
 }
 
 fn slice(cuts: &CutCells, values: &[f64], sphere: bool, phase: f64, data: &str) -> GridField {
+    let filled = data.starts_with("filled-");
+    let data = data.strip_prefix("filled-").unwrap_or(data);
     let n = cuts.grid.dims[0];
     let h = cuts.grid.spacing[0];
     let mut pa = PotentialArray::new(n, n, 1);
@@ -302,7 +306,38 @@ fn slice(cuts: &CutCells, values: &[f64], sphere: bool, phase: f64, data: &str) 
             }
         }
     }
-    GridField::new_compact(pa).unwrap()
+    let field = GridField::new_compact(pa).unwrap();
+    if !filled {
+        return field;
+    }
+    let center = [phase * h, 0.0, 0.0];
+    let shape = |radius| {
+        if sphere {
+            Sdf::Sphere { center, radius }
+        } else {
+            Sdf::Cylinder {
+                center,
+                radius,
+                axis: 2,
+            }
+        }
+    };
+    let outer = Sdf::Box {
+        center: [0.0; 3],
+        half_extent: [4.0; 3],
+    }
+    .difference(shape(B));
+    let surface =
+        SurfaceModel::from_sdfs(vec![(1, Arc::new(shape(A))), (2, Arc::new(outer))], 1e-13)
+            .unwrap()
+            .with_pa_domain(field.array(), [-1.0, -1.0, 0.0])
+            .unwrap();
+    let field = field.with_surface(&surface).unwrap();
+    println!(
+        "GHOST sphere={sphere} n={n} data={data} {}",
+        serde_json::to_string(field.ghost_fill_report().unwrap()).unwrap()
+    );
+    field
 }
 
 fn offnode(field: &GridField, n: usize, sphere: bool, phase: f64, data: &str) {
@@ -415,25 +450,39 @@ fn main() {
                 ..Default::default()
             };
             for phase in [0.0, 0.25, 0.5, 0.75] {
+                if phase != 0.0 && std::env::var_os("DIAG_PHASE0").is_some() {
+                    continue;
+                }
                 let cuts = prepare(n, sphere, phase, variant);
                 let mut values = cuts.values.clone();
-                let report = cuts.solve(&mut values, options).unwrap();
-                assert!(
-                    report.converged,
-                    "n={n} phase={phase} {:?}",
-                    report.residual_history
-                );
-                nodal(&cuts, &values, sphere, phase, variant);
+                if std::env::var_os("DIAG_NO_SOLVE").is_none() {
+                    let report = cuts.solve(&mut values, options).unwrap();
+                    assert!(
+                        report.converged,
+                        "n={n} phase={phase} {:?}",
+                        report.residual_history
+                    );
+                    nodal(&cuts, &values, sphere, phase, variant);
+                }
                 if variant != "default" || phase != 0.0 {
                     continue;
                 }
-                for data in ["solved", "clamped", "continuation", "ghost"] {
-                    if std::env::var("DIAG_DATA").is_ok_and(|selected| selected != data) {
+                for data in [
+                    "solved",
+                    "clamped",
+                    "continuation",
+                    "ghost",
+                    "filled-solved",
+                    "filled-clamped",
+                ] {
+                    if std::env::var("DIAG_DATA")
+                        .is_ok_and(|selected| !selected.split(',').any(|name| name == data))
+                    {
                         continue;
                     }
                     let field = slice(&cuts, &values, sphere, phase, data);
                     offnode(&field, n, sphere, phase, data);
-                    if sphere && n >= 33 {
+                    if sphere && n >= 33 && std::env::var_os("DIAG_NO_FLIGHT").is_none() {
                         for radius in [0.57, 0.34] {
                             let center =
                                 centroid(&Shifted(&field, phase * cuts.grid.spacing[0]), radius);

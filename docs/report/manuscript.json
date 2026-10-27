@@ -612,13 +612,17 @@
      "0.0658"
     ],
     [
-     "SimRep 정확한 표면 경로, CPU",
+     "SimRep 정확한 표면 경로, CPU (이전 재구성)",
      "0.0034",
      "0",
      "0.1308"
     ]
    ],
-   "source": "bench/fly-real.md의 Compute time at achieved precision 절과 docs/geometry-pipeline.md의 V3 compute overhead and verification 절"
+   "source": "pre-2026-10-28 reconstruction의 보존 측정. bench/fly-real.md의 Compute time at achieved precision 절과 docs/geometry-pipeline.md의 V3 compute overhead and verification 절"
+  },
+  {
+   "type": "p",
+   "text": "표 6의 정확한 표면 경로 수치는 pre-2026-10-28 reconstruction의 보존 측정이다. 현재 재구성은 유지한 이전 8x 기준해에 대해 RMS 0.00386 mm, 다시 계산한 8x 기준해에 대해 0.00388 mm이며, 새 4x/8x 기준해의 정련 차이는 0.00055 mm다. 이 내부 4중극 지표의 이동은 기준해 불확실성 범위 안이므로 독립적으로 확정한 물리 오차 악화로 해석하지 않는다. 반면 표면 가까운 구형 분석기의 중심 에너지 편향은 +4.88%에서 -0.43%/-0.059%/-0.026%로 줄었다. 새 비교와 기준해 유래는 bench/fly-real.md의 Vacuum-continuation reconstruction comparison 절과 docs/validation/CUT_GHOST_FILL.md에 구분했다."
   },
   {
    "type": "p",
@@ -1387,7 +1391,7 @@
     ],
     [
      "비행",
-     "3D 4중극, 정확한 표면",
+     "3D 4중극, 정확한 표면 (이전 재구성)",
      "RMS 0.0034 대 2.38 mm",
      "71"
     ],

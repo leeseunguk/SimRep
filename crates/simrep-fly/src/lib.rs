@@ -16,7 +16,8 @@ pub mod surface;
 pub use adaptive::AdaptiveField;
 pub use expression::VoltageExpression;
 pub use field::{
-    AnalyticField, BasisPotential, Field, FieldSample, GridField, Reconstruction, Superposition,
+    AnalyticField, BasisPotential, Field, FieldSample, GhostFillReport, GridField, Reconstruction,
+    Superposition,
 };
 pub use flight::{
     FlightOptions, FlightResult, Integrator, Particle, ParticleState, StepLimits, StopPlane, fly,

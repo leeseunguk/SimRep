@@ -21,6 +21,8 @@ use simrep_solve::mg::{Geometry, Grid, Options};
 
 use crate::{Backend, Device, parse_tolerance};
 
+#[path = "auto_refine.rs"]
+mod auto;
 #[path = "geometry_gap.rs"]
 mod gap;
 
@@ -93,9 +95,20 @@ pub struct GeometryOptions {
     /// Cartesian base-node box xmin,ymin,zmin,xmax,ymax,zmax:factor (2 or 4).
     #[arg(long, value_parser = refine_region, allow_hyphen_values = true)]
     refine_region: Vec<Region>,
+    /// Select surface/gap boxes automatically: auto[:factor], maximum factor 2 or 4.
+    #[arg(long, value_parser = automatic_refinement, conflicts_with = "refine_region")]
+    refine: Option<usize>,
     /// Inter-electrode gap resolution policy (2.5 cells minimum, 10 recommended).
     #[arg(long, value_enum, default_value = "warn")]
     gap_check: gap::Mode,
+}
+
+fn automatic_refinement(text: &str) -> Result<usize, String> {
+    match text {
+        "auto" | "auto:2" => Ok(2),
+        "auto:4" => Ok(4),
+        _ => Err("expected auto, auto:2 or auto:4".into()),
+    }
 }
 
 fn refine_region(text: &str) -> Result<Region, String> {
@@ -609,7 +622,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let dims = [a.nx, a.ny, a.nz];
     let spacing = [a.dx_mm, a.dy_mm, a.dz_mm];
     let cylindrical = a.symmetry == Symmetry::Cylindrical;
-    if !args.refine_region.is_empty() && (cylindrical || args.device == Device::Gpu) {
+    if (!args.refine_region.is_empty() || args.refine.is_some())
+        && (cylindrical || args.device == Device::Gpu)
+    {
         return Err(
             "adaptive refinement requires Cartesian geometry and --device cpu or auto".into(),
         );
@@ -664,6 +679,45 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         .fold(f64::INFINITY, f64::min);
     let tolerance = 1e-9 * h_min;
     let gap_check = gap::check(&args, &parts, dims, spacing)?;
+    let auto_refinement = args
+        .refine
+        .map(|factor| {
+            auto::select(
+                Grid {
+                    dims,
+                    spacing,
+                    geometry: Geometry::Planar,
+                },
+                args.origin,
+                &parts
+                    .iter()
+                    .map(|p| Arc::clone(&p.shape))
+                    .collect::<Vec<_>>(),
+                &gap_check.hints(),
+                factor,
+            )
+        })
+        .transpose()?;
+    if let Some(selection) = &auto_refinement {
+        println!("auto_refinement: {}", serde_json::to_string(selection)?);
+        if selection.balance_limited_boxes > 0 {
+            println!(
+                "auto_refinement: {} partial boxes capped at factor 2 for 2:1 balance; nested transition halos are not supported",
+                selection.balance_limited_boxes
+            );
+        }
+        if args.gap_check == gap::Mode::Error
+            && selection.gaps.iter().any(|g| {
+                g.status == "unresolved_bracket"
+                    || g.minimum_cells_across.is_none_or(|n| n < auto::MIN_CELLS)
+            })
+        {
+            return Err("gap check failed: automatic refinement cannot certify 2.5 cells across every gap; use a finer base --spacing or --gap-check warn/off".into());
+        }
+    }
+    let refine_regions = auto_refinement
+        .as_ref()
+        .map_or_else(|| args.refine_region.clone(), auto::Selection::regions);
     let source_time = total.elapsed();
     let phase = Instant::now();
     let mut owners = vec![None; a.potentials.len()];
@@ -909,8 +963,8 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         sample_time.as_secs_f64() * 1000.0,
         sidecar_time.as_secs_f64() * 1000.0,
     );
-    if !args.refine_region.is_empty() {
-        let adaptive = AdaptiveGrid::new(cuts, &args.refine_region, &electrodes)?;
+    if !refine_regions.is_empty() {
+        let adaptive = AdaptiveGrid::new(cuts, &refine_regions, &electrodes)?;
         pa.pa0 = Some(Pa0Metadata {
             reference_voltage: REFERENCE,
             electrode_indices: indices,
@@ -923,7 +977,12 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
             &voltages,
             &electrodes,
             output_paths,
-            (total.elapsed(), total),
+            AdaptiveDiagnostics {
+                preparation: total.elapsed(),
+                total,
+                gap_check: &gap_check,
+                auto_refinement: auto_refinement.as_ref(),
+            },
         );
     }
     let gpu = if args.device == Device::Gpu {
@@ -1032,7 +1091,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         preparation.as_secs_f64() * 1000.0,
         total.elapsed().as_secs_f64() * 1000.0
     );
-    crate::json::set_summary(serde_json::json!({
+    let mut summary = serde_json::json!({
         "requested": {
             "device": args.device.to_possible_value().unwrap().get_name(),
             "backend": args.backend.to_possible_value().unwrap().get_name(),
@@ -1054,8 +1113,19 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         "prep_ms": preparation.as_secs_f64() * 1000.0,
         "output_paths": output_paths,
         "gap_check": gap_check,
-    }));
+    });
+    if let Some(selection) = auto_refinement {
+        summary["auto_refinement"] = serde_json::to_value(selection)?;
+    }
+    crate::json::set_summary(summary);
     Ok(())
+}
+
+struct AdaptiveDiagnostics<'a> {
+    preparation: Duration,
+    total: Instant,
+    gap_check: &'a gap::Report,
+    auto_refinement: Option<&'a auto::Selection>,
 }
 
 fn adaptive_export(
@@ -1065,7 +1135,7 @@ fn adaptive_export(
     voltages: &BTreeMap<usize, f64>,
     electrodes: &[Electrode],
     mut paths: Vec<PathBuf>,
-    timing: (Duration, Instant),
+    diagnostics: AdaptiveDiagnostics<'_>,
 ) -> GpuResult<()> {
     use simrep_fly::adaptive::{AdaptiveManifest, AdaptivePatchManifest};
     let metadata = pa.pa0.take().unwrap();
@@ -1142,11 +1212,12 @@ fn adaptive_export(
         .map(|(p, _)| vec![0.0; p.array.potentials.len()])
         .collect();
     let mut compute = Duration::ZERO;
-    let mut prep = timing.0;
+    let mut prep = diagnostics.preparation;
     let mut cycles = 0;
     let mut residual = 0.0_f64;
     let mut unknowns = 0;
     let mut matrix_bytes = 0;
+    let mut profiles = Vec::new();
     for (&number, &voltage) in voltages {
         let grid = adaptive.with_voltages(|n| if n == number as f64 { REFERENCE } else { 0.0 })?;
         let solution = grid.solve(Options {
@@ -1168,6 +1239,14 @@ fn adaptive_export(
         residual = residual.max(report.residual_history.last().unwrap().relative);
         unknowns = solution.unknowns;
         matrix_bytes = solution.matrix_bytes;
+        println!(
+            "adaptive basis {number}: iterations={}, profile={}",
+            report.iterations,
+            serde_json::to_string(&solution.profile)?
+        );
+        profiles.push(serde_json::json!({
+            "electrode": number, "iterations": report.iterations, "phases": solution.profile,
+        }));
         pa.array.potentials = solution.base;
         for (v, basis) in combined.iter_mut().zip(&pa.array.potentials) {
             *v += basis * voltage / REFERENCE;
@@ -1240,15 +1319,20 @@ fn adaptive_export(
         "adaptive: unknowns={unknowns}, matrix_bytes={matrix_bytes}, compute_ms={:.6}",
         compute.as_secs_f64() * 1000.0
     );
-    crate::json::set_summary(serde_json::json!({
+    let mut summary = serde_json::json!({
         "requested": {"device":"cpu","backend":null,"precision":"f64"},
         "executed": {"device":"cpu","backend":null,"precision":"f64"},
         "reason":"adaptive variational Cartesian CPU", "fallback_reason":null,
         "cycles":cycles,"final_residual":residual,"tolerance":args.tolerance,"converged":true,
         "compute_ms":compute.as_secs_f64()*1000.0,"prep_ms":prep.as_secs_f64()*1000.0,
-        "end_to_end_ms":timing.1.elapsed().as_secs_f64()*1000.0,
-        "unknowns":unknowns,"matrix_bytes":matrix_bytes,"output_paths":paths
-    }));
+        "end_to_end_ms":diagnostics.total.elapsed().as_secs_f64()*1000.0,
+        "unknowns":unknowns,"matrix_bytes":matrix_bytes,"output_paths":paths,
+        "gap_check":diagnostics.gap_check,"adaptive_profiles":profiles,
+    });
+    if let Some(selection) = diagnostics.auto_refinement {
+        summary["auto_refinement"] = serde_json::to_value(selection)?;
+    }
+    crate::json::set_summary(summary);
     Ok(())
 }
 

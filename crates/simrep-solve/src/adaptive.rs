@@ -40,10 +40,25 @@ pub struct Solution {
     pub unknowns: usize,
     /// CSR matrix and load only, not total process RSS.
     pub matrix_bytes: usize,
+    pub profile: Profile,
     #[cfg(test)]
     matrix: Matrix,
     #[cfg(test)]
     locations: Vec<[f64; 3]>,
+}
+
+/// Phase measurements for the correctness-first composite solver. Assembly,
+/// transfer construction and hierarchy setup are excluded from compute time.
+#[derive(Default, Debug, serde::Serialize)]
+pub struct Profile {
+    pub assembly_ms: f64,
+    pub transfer_ms: f64,
+    pub hierarchy_ms: f64,
+    pub precondition_ms: f64,
+    pub matvec_ms: f64,
+    pub reconstruction_ms: f64,
+    pub mg_cycles: usize,
+    pub matvecs: usize,
 }
 
 #[derive(Clone, Default)]
@@ -335,6 +350,11 @@ impl AdaptiveGrid {
                 "adaptive operator has an unconstrained degree of freedom",
             ));
         }
+        let mut profile = Profile {
+            assembly_ms: start.elapsed().as_secs_f64() * 1000.0,
+            ..Default::default()
+        };
+        let phase = Instant::now();
         let transfer: Vec<_> = locations
             .iter()
             .map(|&p| {
@@ -344,7 +364,10 @@ impl AdaptiveGrid {
                     .collect::<Vec<_>>()
             })
             .collect();
+        profile.transfer_ms = phase.elapsed().as_secs_f64() * 1000.0;
+        let phase = Instant::now();
         let mut cycle = mg::CorrectionCycle::new(&self.base);
+        profile.hierarchy_ms = phase.elapsed().as_secs_f64() * 1000.0;
         let setup = start.elapsed();
         let mut x = vec![0.0; count];
         let mut r = matrix.rhs.clone();
@@ -360,6 +383,7 @@ impl AdaptiveGrid {
             .map(|a| self.base.grid.spacing[a])
             .product();
         let mut precondition = |r: &[f64], z: &mut [f64]| {
+            let phase = Instant::now();
             coarse_rhs.fill(0.0);
             for (row, &v) in transfer.iter().zip(r) {
                 for &(j, w) in row {
@@ -374,6 +398,8 @@ impl AdaptiveGrid {
                         .map(|&(j, w)| w * correction[j] / volume)
                         .sum::<f64>();
             }
+            profile.precondition_ms += phase.elapsed().as_secs_f64() * 1000.0;
+            profile.mg_cycles += 1;
         };
         precondition(&r, &mut z);
         let mut direction = z.clone();
@@ -383,8 +409,12 @@ impl AdaptiveGrid {
             .absolute_tolerance
             .max(initial * options.relative_tolerance);
         let mut iterations = 0;
-        while norm(&r) > threshold && iterations < options.max_cycles {
+        let mut residual_norm = initial;
+        while residual_norm > threshold && iterations < options.max_cycles {
+            let phase = Instant::now();
             matrix.apply(&direction, &mut product);
+            profile.matvec_ms += phase.elapsed().as_secs_f64() * 1000.0;
+            profile.matvecs += 1;
             let curvature = dot(&direction, &product);
             if curvature <= 0.0 || !curvature.is_finite() || rz <= 0.0 {
                 return Err(mg::invalid("adaptive CG lost positive definiteness"));
@@ -394,16 +424,20 @@ impl AdaptiveGrid {
                 x[i] += alpha * direction[i];
             }
             // Recompute the true residual; recurrence drift must not certify convergence.
+            let phase = Instant::now();
             matrix.apply(&x, &mut product);
+            profile.matvec_ms += phase.elapsed().as_secs_f64() * 1000.0;
+            profile.matvecs += 1;
             for i in 0..count {
                 r[i] = matrix.rhs[i] - product[i];
             }
             iterations += 1;
+            residual_norm = norm(&r);
             history.push(Residual {
-                absolute: norm(&r),
-                relative: norm(&r) / initial,
+                absolute: residual_norm,
+                relative: residual_norm / initial,
             });
-            if norm(&r) <= threshold {
+            if residual_norm <= threshold {
                 break;
             }
             precondition(&r, &mut z);
@@ -414,6 +448,7 @@ impl AdaptiveGrid {
             }
             rz = next;
         }
+        let phase = Instant::now();
         let patch_values: Vec<Vec<f64>> = fine
             .iter()
             .map(|nodes| nodes.iter().map(|n| n.sample(&x)).collect())
@@ -430,6 +465,7 @@ impl AdaptiveGrid {
                 *value = interpolate(values, p.cuts.grid, p.cuts.origin, point(&self.base, i));
             }
         }
+        profile.reconstruction_ms = phase.elapsed().as_secs_f64() * 1000.0;
         Ok(Solution {
             base,
             patches: patch_values,
@@ -437,8 +473,9 @@ impl AdaptiveGrid {
             matrix_bytes: matrix.entries.len() * std::mem::size_of::<(usize, f64)>()
                 + (matrix.offsets.len() + count) * std::mem::size_of::<usize>()
                 + count * 8,
+            profile,
             report: Report {
-                converged: norm(&r) <= threshold,
+                converged: residual_norm <= threshold,
                 iterations,
                 residual_history: history,
                 elapsed: start.elapsed(),
@@ -652,6 +689,8 @@ mod tests {
                 })
                 .unwrap();
             assert!(solution.report.converged);
+            assert_eq!(solution.profile.matvecs, 2 * solution.report.iterations);
+            assert_eq!(solution.profile.mg_cycles, solution.report.iterations);
             let matrix = &solution.matrix;
             let n = matrix.rhs.len();
             let mut dense = vec![vec![0.0_f64; n]; n];

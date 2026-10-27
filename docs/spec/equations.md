@@ -200,17 +200,37 @@ V(ξ) = Σ_{k=0}^{5} c_k ξ^k   (셀 내부 좌표 ξ, 축별 6계수 텐서 곱
   공유 노드 제트(jet)로 추정한 뒤, 셀 안을 축별 5차 에르미트 다항식
   (계수 6개)의 텐서 곱으로 채운다. 전기장은 `E = −∇V`(V/mm)다.
 - 범위와 가정: 전위는 C2 연속이고 전기장은 셀 경계에서 C1 연속이며, 노드의
-  원래 전위를 정확히 지난다(보간, 평활 아님). 전극이 있는 배열에서는 축 방향
+  진공 노드의 원래 전위를 정확히 지난다(보간, 평활 아님). 전극이 있는 배열에서는 축 방향
   선을 진공 구간으로 나누고, 경계 기울기는 진공 쪽 한쪽 3차 적합으로 추정해
   금속 안쪽 값이 섞이지 않게 한다. 전극이 없는 배열은 텐서 3차 B-스플라인
   (global cubic)을 쓰고 `--global-cubic`으로 강제할 수 있다. GPU는 같은
   다항식 계수를 받아 셰이더에서 직접 평가한다.
+- Exact-surface CPU preparation first replaces nearby metal knots by a
+  vacuum-side continuation, without changing the stored PA or the Hermite
+  assembly:
+
+  ```text
+  p = argmin_{p in P_d} sum_i w_i (p(x_i) - V_i)^2
+  V_ghost(x_m) = p(x_m),   w_i = 1/(|x_i-x_m|^2 + (0.1 h_min)^2)
+  ```
+
+  `P_d` contains total-degree polynomials, trying `d=3,2,1` in that order.
+  Data are original vacuum nodes plus exact cut intersections at constant
+  electrode voltage. Pivoted Householder QR requires `m >= 1.5 dim(P_d)`
+  and `||R||_inf ||R^-1||_inf <= 1e8`; a failed degree-1 fit keeps the PA
+  value. Eight metal layers cover the measured nonlocal spline tail.
+  Missing/nonconstant electrode voltages skip filling and are reported,
+  not inferred. Geometry-only fit choices make each background/unit-basis
+  continuation a fixed linear map, so fast-adjust superposition commutes
+  with filling to roundoff. No cut-fraction division is used. Non-cut and
+  GPU staircase reconstruction retain the existing path.
 - 출처: 프로젝트 재구성 방식. `crates/simrep-fly/README.md`의 Fields 절,
   `docs/geometry-pipeline.md`의 Outputs and flying 절,
   `docs/PLAN.md`의 현재 상태 메모.
 - 구현: `crates/simrep-fly/src/field/boundary.rs`(`build`, `cell_powers`,
   `sample`, `differentiate`, `line_derivatives`), `field.rs`의
-  `GridField`/`Reconstruction`.
+  `GridField`/`Reconstruction`, `field/ghost.rs` (`fill`, `fit`),
+  `instance.rs` (`with_surface`, `with_voltage_expressions`).
 - 테스트: `crates/simrep-fly/tests/accuracy.rs`의
   `vacuum_boundary_derivatives_exclude_flat_metal_interior`,
   `vacuum_boundary_reconstruction_preserves_axis_and_reflection_conditions`,
@@ -221,6 +241,11 @@ V(ξ) = Σ_{k=0}^{5} c_k ξ^k   (셀 내부 좌표 ξ, 축별 6계수 텐서 곱
   interior baseline is potential order 4 and gradient order 3 (not order 5
   just because there are six coefficients). This does not claim that a
   second-order solved potential produces a fourth-order physical field.
+  `tests/surface_reconstruction.rs` adds curved two-cell-band max/RMS order
+  gates and non-cut bit identity; `field/ghost.rs` tests linearity, rank
+  fallback, tiny cuts, 3D polynomials and cylindrical mapping.
+  Measured exact-data/solved-data distinctions are recorded in
+  `docs/validation/CUT_GHOST_FILL.md`.
 
 ### 식 (8). 도착 위치 RMS 판정 규약 (보고서 식 (5))
 

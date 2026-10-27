@@ -135,6 +135,87 @@ fn gem_refine_geometry_and_pa_info_have_structured_summaries() {
 }
 
 #[test]
+fn cuts_fill_fly2_source_and_dynamic_bases_and_report_unavailable_voltages() {
+    use simrep_fly::{Field, GridField, surface::SurfaceModel};
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("cuts.gem"),
+        "pa_define(17,9,1,planar)\ne(1){fill{within{box(-1,-1,2.3,9)}}}\ne(2){fill{within{box(13.7,-1,17,9)}}}").unwrap();
+    run(
+        dir.path(),
+        &[
+            "refine-geometry",
+            "cuts.gem",
+            "--device=cpu",
+            "--electrode=1=1:0",
+            "--electrode=2=2:17",
+            "--out=cuts",
+        ],
+    );
+    let surface =
+        SurfaceModel::from_reader(fs::File::open(dir.path().join("cuts.cuts.json")).unwrap())
+            .unwrap();
+    let array = simrep_io::read_fast_adjust(dir.path().join("cuts.pa0"), &[(2, 17.0)]).unwrap();
+    let raw = GridField::new(array.clone()).unwrap();
+    let field = raw.clone().with_surface(&surface).unwrap();
+    let point = [2.31, 4.0, 0.0];
+    let expected = field.sample(point, 0.0).potential_v;
+    assert!((raw.sample(point, 0.0).potential_v - expected).abs() > 1e-5);
+    fs::write(dir.path().join("source.fly2"), format!(
+        "assert(math.abs(simion.wb:epotential(2.31,4,0)-({expected:.17e}))<1e-10)\nparticles{{standard_beam{{n=1,mass=40,charge=1,x=7,y=4,z=0,ke=100,az=0,el=0}}}}"
+    )).unwrap();
+    let flight = run(
+        dir.path(),
+        &[
+            "fly",
+            "--device=cpu",
+            "--pa=cuts.pa0",
+            "--particles=source.fly2",
+            "--voltage-expr=2=17",
+            "--plane=1,0,0,9",
+        ],
+    );
+    assert_eq!(flight["executed"]["surface_mode"], "source-geometry");
+    assert_eq!(flight["ghost_fill"]["skipped_electrodes"], json!([]));
+    assert_eq!(flight["ghost_fill"]["kept_nodes"], 0);
+    for degree in 0..3 {
+        assert_eq!(
+            flight["ghost_fill"]["degree_counts"][degree],
+            2 * field.ghost_fill_report().unwrap().degree_counts[degree]
+        );
+    }
+    fs::write(dir.path().join("ions.ion"), "0,40,1,7,4,0,0,0,100\n").unwrap();
+    for missing in [false, true] {
+        let mut unavailable = array.clone();
+        for (i, value) in unavailable.potentials.iter_mut().enumerate() {
+            if unavailable.electrodes[i] {
+                *value += (i / unavailable.nx) as f64 * 0.001;
+            }
+        }
+        if missing {
+            unavailable.electrodes.fill(false);
+        }
+        simrep_io::write_pa(
+            dir.path().join("unavailable.pa"),
+            &simrep_io::PaFile::new(unavailable),
+        )
+        .unwrap();
+        let flight = run(
+            dir.path(),
+            &[
+                "fly",
+                "--device=cpu",
+                "--pa=unavailable.pa",
+                "--cuts=cuts.cuts.json",
+                "--particles=ions.ion",
+                "--plane=1,0,0,9",
+            ],
+        );
+        assert_eq!(flight["ghost_fill"]["skipped_electrodes"], json!([1, 2]));
+        assert_eq!(flight["ghost_fill"]["degree_counts"], json!([0, 0, 0]));
+    }
+}
+
+#[test]
 fn fly_summarizes_arrivals_and_never_mixes_csv_with_json() {
     let dir = tempfile::tempdir().unwrap();
     fs::write(dir.path().join("ions.ion"), "0,1,1,0,0,0,0,0,1,1\n").unwrap();

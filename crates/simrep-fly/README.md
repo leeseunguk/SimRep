@@ -23,7 +23,15 @@ Electrode-free arrays retain the original **interpolating tensor cubic
 B-spline**, including its high-order smooth-field behavior. Select
 `GridField::with_reconstruction(array, Reconstruction::GlobalCubic)` to use that
 method through metal as well, or `simrep fly --global-cubic` for comparisons.
-Both methods interpolate the input node potentials, rather than smoothing them.
+Without a surface, both methods interpolate the input node potentials.
+With an exact surface, `GridField::with_surface` or
+`InstanceField::with_surface` first fills eight near-surface metal layers by
+a conditioned cubic/quadratic/linear vacuum continuation, then uses the same
+jets and Hermite assembly. Vacuum nodes and the original PA remain unchanged.
+Constant electrode voltages come from flagged PA metal nodes; unavailable
+voltages skip filling and are reported. Backgrounds and unit-voltage bases
+are filled separately, preserving linearity. See
+`docs/validation/CUT_GHOST_FILL.md` for band orders and flight measurements.
 
 The global cubic needs four coefficients per active axis. Separable tridiagonal
 prefiltering costs O(points) and stores `(nx+2)*(ny+2)*(nz+2)` coefficients
@@ -168,7 +176,7 @@ instead supply their own geometry; see `docs/pa-flight-geometry.md`.
 cuts sidecar using `SurfaceModel::from_reader`, or pass numbered in-memory
 `SignedDistance` sources to `SurfaceModel::from_sdfs`; attach it using
 `InstanceField::with_surface(Arc::new(model))`. Membership and first-segment hits
-then replace PA conductor tests without changing the field.
+then replace PA conductor tests and prepare the surface-aware field and bases.
 For in-memory sources, `.with_pa_domain(&array, source_origin_mm)` supplies
 the PA clipping, mirror/revolution and source-origin rules without resampling.
 V2 is **surface-accurate to the SDF sampling**, with conservative first-entry
