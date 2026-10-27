@@ -18,6 +18,7 @@ macro_rules! println {
     };
 }
 
+mod cad_measure;
 mod fly_bench;
 mod fly_cmd;
 mod json;
@@ -26,6 +27,8 @@ mod physics_cmd;
 mod refine_cmd;
 mod refine_geometry;
 mod refine_sdf;
+#[cfg(test)]
+mod repeatability;
 
 #[derive(Parser)]
 #[command(name = "simrep", version, about = "Native ion optics simulator")]
@@ -67,6 +70,8 @@ enum Command {
     RefineSdf(refine_sdf::SdfOptions),
     /// Refine GEM or mesh electrodes at their continuous surfaces.
     RefineGeometry(Box<refine_geometry::GeometryOptions>),
+    /// Measure complete CAD face sets with an independent tessellation cross-check.
+    CadMeasure(cad_measure::MeasureOptions),
     /// Import a 3D mesh as grouped electrodes in a SIMION PA#.
     MeshImport(Box<mesh_cmd::MeshImportOptions>),
     /// Export electrode surfaces, fields, isopotentials or trajectory samples.
@@ -335,6 +340,7 @@ fn run(cli: Cli) -> GpuResult<()> {
         Command::Refine(options) => return refine_cmd::run(options),
         Command::RefineSdf(options) => return refine_sdf::run(options),
         Command::RefineGeometry(options) => return refine_geometry::run(*options),
+        Command::CadMeasure(options) => return cad_measure::run(options),
         Command::FlyBench(options) => return fly_bench::run(options),
         Command::Fly(options) => return fly_cmd::run(*options),
         Command::MeshImport(options) => return mesh_cmd::import(*options),

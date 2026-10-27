@@ -1,5 +1,31 @@
 # Third-party notices
 
+## CAD face-set measurement reference (October 27, 2026)
+
+The complete-face measurement contract in `crates/simrep-cad/native/bridge.cpp`
+and `crates/simrep-cad/src/occt.rs` was independently implemented from the description of
+`wall_min_tagged` and its coverage, touch and cross-check guards in
+[Iteration-CFD docs/16a-amagine-borrow.md](https://github.com/using76/Iteration-CFD/blob/1475bbf781e08f33f681661ec40e00727f1e7021/docs/16a-amagine-borrow.md).
+No implementation code or prose was copied or adapted from Iteration-CFD or
+Amagine3D for the CAD measurement feature. The triangle minimum and BVH in
+`crates/simrep-cad/src/measure_mesh.rs` are original. The existing MCP transport
+adaptation described below retains its existing licence.
+
+Primary source licences and notices read for this work:
+
+- Iteration-CFD [LICENSE](https://github.com/using76/Iteration-CFD/blob/1475bbf781e08f33f681661ec40e00727f1e7021/LICENSE)
+  and [NOTICE](https://github.com/using76/Iteration-CFD/blob/1475bbf781e08f33f681661ec40e00727f1e7021/NOTICE):
+  Prosperity Public License 3.0.0; Iterations Co., Ltd., with contributions
+  from Meteo Simulation Co., Ltd. The licence is reproduced below.
+- Amagine3D at `e608dc61d5ac70238d96d9c4f3fba00b6cc9dc21`
+  [LICENSE](https://github.com/amagine-ai/Amagine3D/blob/e608dc61d5ac70238d96d9c4f3fba00b6cc9dc21/LICENSE)
+  and [NOTICE](https://github.com/amagine-ai/Amagine3D/blob/e608dc61d5ac70238d96d9c4f3fba00b6cc9dc21/NOTICE):
+  Apache License 2.0; Copyright 2026 amagine-ai. Its NOTICE separately
+  identifies the build123d contributors and CadQuery ancestry. None of those
+  components is copied into or newly linked by this feature.
+
+## Existing MCP transport adaptation
+
 The files listed below adapt code from
 [using76/Iteration-CFD](https://github.com/using76/Iteration-CFD)
 `mcp/` at commit `1475bbf781e08f33f681661ec40e00727f1e7021`

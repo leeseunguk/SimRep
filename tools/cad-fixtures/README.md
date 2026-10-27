@@ -1,9 +1,21 @@
 # cad-fixtures (dev tool, not shipped)
 
-Writes the `simrep_cad::write_fixture` shapes (sphere, cylinder, ring, two-sphere `pair`) as
+Writes the `simrep_cad::write_fixture` shapes (sphere, cylinder, ring, two-sphere `pair`
+and `touching`) as
 STEP **and IGES**, then reads every file back with `read_cad` and prints its parts, so a broken
 writer or reader shows immediately. The IGES files are what the app's import wizard is tested
 with (`.igs`, B-rep mode, millimetres).
+
+`pair.step` in this directory is the original generated AP242 fixture retained
+for the dependency-free MCP smoke check. Only its header timestamp and trailing
+whitespace are normalized; the generator's sphere geometry and placements are
+unchanged.
+
+The two radius-0.31 mm spheres in `pair.step` are centered at x=-0.6/+0.6 mm:
+their analytic surface gap is 1.2 - 2*0.31 = **0.58 mm**, not 0.6 mm.
+`touching.step` uses x=-0.31/+0.31 mm and has zero gap. The generator verifies
+both exact distances and touch classifications, including the IGES round trips,
+with `MeasurementModel` and its independent tessellation cross-check.
 
 Standalone cargo project (`[workspace]`), never built by the root `cargo build`. It needs the
 OCCT SDK at build time and its DLLs at run time (`docs/dev/windows-occt.md`). On Windows, run it

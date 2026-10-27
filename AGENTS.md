@@ -46,6 +46,7 @@ live in `examples/`.
 | GEM file to PA# | `simrep gem2pa lens.gem [lens.pa#]` | `simrep.gem2pa("lens.gem")` |
 | Triangle mesh to PA# | `simrep mesh-import in.stl out.pa# --grid nx,ny,nz` | `simrep.mesh_import(...)` |
 | STEP/IGES to PA# | `simrep refine-geometry part.step ...` (feature `cad`) | `simrep.refine_geometry("part.step", ...)` |
+| Measure STEP/IGES gaps | `simrep cad-measure part.step --gap 0 1` / `--all-pairs` (feature `cad`) | Rust `MeasurementModel::gap` / MCP `cad_measure`; see `docs/step-import.md` |
 | Solve PA/PA# | `simrep refine file.pa#` | `field = simrep.refine("file.pa#")` |
 | Solve exact surfaces | `simrep refine-geometry geo.gem --electrode SRC=N:V --out stem` | `simrep.refine_geometry("geo.gem", electrodes={src: (n, v)}, out="stem")` |
 | Fly particles | `simrep fly --pa f.pa0 --particles ions.ion --voltage 1=0,2=110` | `simrep.fly(field, ions)` |

@@ -17,12 +17,41 @@ unsafe extern "C" {
         error: *mut c_char,
         size: usize,
     ) -> *mut c_void;
+    fn simrep_cad_read_measurement(
+        path: *const c_char,
+        iges: bool,
+        error: *mut c_char,
+        size: usize,
+    ) -> *mut c_void;
     fn simrep_cad_free(model: *mut c_void);
     fn simrep_cad_count(model: *mut c_void) -> usize;
     fn simrep_cad_name(model: *mut c_void, index: usize) -> *const c_char;
     fn simrep_cad_valid(model: *mut c_void, index: usize) -> bool;
     fn simrep_cad_tshape(model: *mut c_void, index: usize) -> usize;
     fn simrep_cad_bounds(model: *mut c_void, index: usize, bounds: *mut f64);
+    fn simrep_cad_face_count(model: *mut c_void, index: usize) -> usize;
+    fn simrep_cad_measure(
+        model: *mut c_void,
+        a: usize,
+        faces_a: *const usize,
+        count_a: usize,
+        b: usize,
+        faces_b: *const usize,
+        count_b: usize,
+        values: *mut f64,
+        closest_faces: *mut usize,
+        error: *mut c_char,
+        size: usize,
+    ) -> bool;
+    fn simrep_cad_tessellate_faces(
+        model: *mut c_void,
+        index: usize,
+        faces: *const usize,
+        count: usize,
+        tolerance: f64,
+        error: *mut c_char,
+        size: usize,
+    ) -> *mut c_void;
     fn simrep_cad_distance(model: *mut c_void, index: usize, point: *const f64) -> f64;
     fn simrep_cad_tessellate(
         model: *mut c_void,
@@ -81,6 +110,319 @@ impl Drop for Native {
 
 /// OCCT exchange settings are process-global, including fixture writers.
 static EXCHANGE: Mutex<()> = Mutex::new(());
+
+// Original implementation of Iteration-CFD's documented complete-face contract,
+// not copied/adapted code. Reference licences: Prosperity-3.0.0 / Apache-2.0;
+// see licenses/THIRD_PARTY.md for primary source and NOTICE references.
+/// Face numbering is zero-based OCCT face-map order within this imported file.
+#[derive(Clone, Debug)]
+pub struct MeasurementPart {
+    pub index: usize,
+    pub name: String,
+    pub face_count: usize,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct MeasureOptions {
+    /// Absolute allowed discrepancy between exact and tessellated minima (mm).
+    pub cad_tolerance_mm: f64,
+    /// Distance threshold only; not proof of electrical contact.
+    pub touch_tolerance_mm: f64,
+}
+
+impl Default for MeasureOptions {
+    fn default() -> Self {
+        Self {
+            cad_tolerance_mm: 0.01,
+            touch_tolerance_mm: 1e-7,
+        }
+    }
+}
+
+impl MeasureOptions {
+    fn validate(self) -> io::Result<()> {
+        if !self.cad_tolerance_mm.is_finite()
+            || self.cad_tolerance_mm <= 0.0
+            || !self.touch_tolerance_mm.is_finite()
+            || self.touch_tolerance_mm < 0.0
+        {
+            return Err(invalid(
+                "CAD tolerance must be positive and touch tolerance nonnegative; both must be finite",
+            ));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct GapMeasurement {
+    pub part_a: usize,
+    pub part_b: usize,
+    pub faces_a: Vec<usize>,
+    pub faces_b: Vec<usize>,
+    pub min_distance_mm: f64,
+    pub closest_points_mm: [Point; 2],
+    pub closest_faces: [usize; 2],
+    pub touching: bool,
+    pub tessellated_distance_mm: f64,
+    pub cross_check_error_mm: f64,
+}
+
+/// An owned placed B-rep model for guarded face-set measurements, without SDF
+/// import, saturation, or an electrode grid. Access to OCCT is serialized.
+pub struct MeasurementModel {
+    native: Mutex<Native>,
+    parts: Vec<MeasurementPart>,
+}
+
+impl MeasurementModel {
+    pub fn parts(&self) -> &[MeasurementPart] {
+        &self.parts
+    }
+
+    pub fn read(path: impl AsRef<Path>) -> io::Result<Self> {
+        let path = path.as_ref();
+        let iges = match path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "step" | "stp" => false,
+            "iges" | "igs" => true,
+            _ => return Err(invalid("CAD input must be .step, .stp, .iges, or .igs")),
+        };
+        let path = c_path(path)?;
+        let mut error = [0; 1024];
+        let pointer = {
+            let _exchange = EXCHANGE.lock().unwrap();
+            unsafe {
+                simrep_cad_read_measurement(path.as_ptr(), iges, error.as_mut_ptr(), error.len())
+            }
+        };
+        let native = Native(NonNull::new(pointer).ok_or_else(|| native_error(&error))?);
+        let parts = (0..unsafe { simrep_cad_count(pointer) })
+            .map(|index| MeasurementPart {
+                index,
+                name: unsafe { CStr::from_ptr(simrep_cad_name(pointer, index)) }
+                    .to_string_lossy()
+                    .into_owned(),
+                face_count: unsafe { simrep_cad_face_count(pointer, index) },
+            })
+            .collect();
+        Ok(Self {
+            native: Mutex::new(native),
+            parts,
+        })
+    }
+
+    fn select(&self, selector: &str) -> io::Result<(usize, Vec<usize>)> {
+        let (name, subset) = selector
+            .rsplit_once(":faces=")
+            .map_or((selector, None), |(n, f)| (n, Some(f)));
+        let matches: Vec<_> = self
+            .parts
+            .iter()
+            .filter(|p| p.name == name || p.index.to_string() == name)
+            .collect();
+        if matches.len() != 1 {
+            return Err(invalid(format!(
+                "CAD selector {name:?} must match exactly one part"
+            )));
+        }
+        let part = matches[0];
+        let mut faces = match subset {
+            None => (0..part.face_count).collect(),
+            Some(value) => value
+                .split(',')
+                .map(|s| {
+                    if s.is_empty() || !s.bytes().all(|c| c.is_ascii_digit()) {
+                        return Err(invalid(
+                            "CAD face subset must be a nonempty list of zero-based indices",
+                        ));
+                    }
+                    s.parse::<usize>()
+                        .map_err(|_| invalid("CAD face index is out of range"))
+                })
+                .collect::<io::Result<Vec<_>>>()?,
+        };
+        faces.sort_unstable();
+        if faces.is_empty() || faces.iter().any(|&i| i >= part.face_count) {
+            return Err(invalid(format!(
+                "CAD face subset is empty or out of range for part {}",
+                part.index
+            )));
+        }
+        if faces.windows(2).any(|pair| pair[0] == pair[1]) {
+            return Err(invalid("duplicate CAD face index"));
+        }
+        Ok((part.index, faces))
+    }
+
+    /// Minimum over every selected trimmed face, including its edges/vertices.
+    /// Omitting `:faces=...` selects the COMPLETE face set of the placed body.
+    /// An independent triangle minimum must agree within cad_tolerance_mm.
+    pub fn gap(&self, a: &str, b: &str, options: MeasureOptions) -> io::Result<GapMeasurement> {
+        options.validate()?;
+        let (part_a, faces_a) = self.select(a)?;
+        let (part_b, faces_b) = self.select(b)?;
+        self.measure(part_a, faces_a, part_b, faces_b, options)
+    }
+
+    fn measure(
+        &self,
+        part_a: usize,
+        faces_a: Vec<usize>,
+        part_b: usize,
+        faces_b: Vec<usize>,
+        options: MeasureOptions,
+    ) -> io::Result<GapMeasurement> {
+        let native = self.native.lock().unwrap();
+        let pointer = native.0.as_ptr();
+        let mut values = [0.0; 7];
+        let mut closest_faces = [0; 2];
+        let mut error = [0; 1024];
+        if !unsafe {
+            simrep_cad_measure(
+                pointer,
+                part_a,
+                faces_a.as_ptr(),
+                faces_a.len(),
+                part_b,
+                faces_b.as_ptr(),
+                faces_b.len(),
+                values.as_mut_ptr(),
+                closest_faces.as_mut_ptr(),
+                error.as_mut_ptr(),
+                error.len(),
+            )
+        } {
+            return Err(native_error(&error));
+        }
+        if values.iter().any(|x| !x.is_finite()) || values[0] < 0.0 {
+            return Err(invalid(
+                "CAD minimum or closest points are nonfinite or invalid",
+            ));
+        }
+        // Each surface gets one quarter of the discrepancy budget. Do not
+        // infer success from the requested deflection: measure the mesh itself.
+        let mesh_a = measurement_mesh(pointer, part_a, &faces_a, options.cad_tolerance_mm / 4.0)?;
+        let mesh_b = measurement_mesh(pointer, part_b, &faces_b, options.cad_tolerance_mm / 4.0)?;
+        let tessellated_distance_mm = crate::measure_mesh::minimum(mesh_a, mesh_b);
+        let cross_check_error_mm =
+            check_discrepancy(values[0], tessellated_distance_mm, options.cad_tolerance_mm)?;
+        Ok(GapMeasurement {
+            part_a,
+            part_b,
+            faces_a,
+            faces_b,
+            min_distance_mm: values[0],
+            closest_points_mm: [
+                [values[1], values[2], values[3]],
+                [values[4], values[5], values[6]],
+            ],
+            closest_faces,
+            touching: values[0] <= options.touch_tolerance_mm,
+            tessellated_distance_mm,
+            cross_check_error_mm,
+        })
+    }
+
+    /// Unique off-diagonal pairs, in body-index order.
+    pub fn all_pairs(&self, options: MeasureOptions) -> io::Result<Vec<GapMeasurement>> {
+        options.validate()?;
+        let mut measurements = Vec::new();
+        for a in 0..self.parts.len() {
+            for b in a + 1..self.parts.len() {
+                measurements.push(self.measure(
+                    a,
+                    (0..self.parts[a].face_count).collect(),
+                    b,
+                    (0..self.parts[b].face_count).collect(),
+                    options,
+                )?);
+            }
+        }
+        Ok(measurements)
+    }
+}
+
+fn check_discrepancy(exact: f64, tessellated: f64, tolerance: f64) -> io::Result<f64> {
+    let error = (exact - tessellated).abs();
+    if !error.is_finite() || error > tolerance {
+        return Err(invalid(format!(
+            "CAD tessellation cross-check disagrees: exact={exact} mm, tessellated={tessellated} mm, error={error} mm exceeds CAD tolerance={tolerance} mm"
+        )));
+    }
+    Ok(error)
+}
+
+fn measurement_mesh(
+    model: *mut c_void,
+    part: usize,
+    faces: &[usize],
+    tolerance: f64,
+) -> io::Result<Vec<[Point; 3]>> {
+    let mut error = [0; 1024];
+    let mesh = unsafe {
+        simrep_cad_tessellate_faces(
+            model,
+            part,
+            faces.as_ptr(),
+            faces.len(),
+            tolerance,
+            error.as_mut_ptr(),
+            error.len(),
+        )
+    };
+    let mesh = NonNull::new(mesh).ok_or_else(|| native_error(&error))?;
+    let data = unsafe {
+        std::slice::from_raw_parts(
+            simrep_cad_triangle_data(mesh.as_ptr()),
+            simrep_cad_triangle_values(mesh.as_ptr()),
+        )
+    };
+    let triangles: Vec<_> = data
+        .as_chunks::<9>()
+        .0
+        .iter()
+        .map(|t| [[t[0], t[1], t[2]], [t[3], t[4], t[5]], [t[6], t[7], t[8]]])
+        .collect();
+    unsafe { simrep_cad_triangles_free(mesh.as_ptr()) };
+    if triangles.is_empty() || triangles.iter().flatten().flatten().any(|x| !x.is_finite()) {
+        return Err(invalid(
+            "CAD cross-check triangulation is empty or nonfinite",
+        ));
+    }
+    Ok(triangles)
+}
+
+#[cfg(test)]
+mod measurement_guards {
+    use super::*;
+
+    #[test]
+    fn cross_check_rejects_disagreement_and_nonfinite_results() {
+        assert!(check_discrepancy(0.58, 0.9, 0.01).is_err());
+        assert!(check_discrepancy(0.58, f64::NAN, 0.01).is_err());
+        assert!(check_discrepancy(0.58, f64::INFINITY, 0.01).is_err());
+        assert!(check_discrepancy(0.58, 0.581, 0.01).unwrap() < 0.01);
+    }
+
+    #[test]
+    fn all_pairs_uses_indices_even_when_a_name_is_numeric() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("pair.step");
+        write_fixture(&path, 3, "AP242DIS", "MM").unwrap();
+        let mut model = MeasurementModel::read(&path).unwrap();
+        model.parts[0].name = "1".into();
+        assert!(model.gap("0", "1", MeasureOptions::default()).is_err());
+        let pairs = model.all_pairs(MeasureOptions::default()).unwrap();
+        assert_eq!(pairs.len(), 1);
+        assert!((pairs[0].min_distance_mm - 0.58).abs() < 1e-9);
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Mode {
@@ -479,13 +821,14 @@ pub fn parallel_mesh_matches(path: impl AsRef<Path>, tolerance_mm: f64) -> io::R
 /// Shape 0 = radius-0.31 sphere, 1 = radius-0.31 capped z-cylinder (z=-2..2),
 /// 2 = torus (major radius 0.55, minor radius 0.19),
 /// 3 = assembly of two sphere instances centered at x=-0.6/+0.6 mm.
+/// 4 = touching radius-0.31 spheres centered at x=-0.31/+0.31 mm.
 pub fn write_fixture(
     path: impl AsRef<Path>,
     shape: u8,
     schema: &str,
     units: &str,
 ) -> io::Result<()> {
-    if shape > 3
+    if shape > 4
         || !["AP203", "AP214IS", "AP242DIS"].contains(&schema)
         || !["MM", "M", "INCH"].contains(&units)
     {

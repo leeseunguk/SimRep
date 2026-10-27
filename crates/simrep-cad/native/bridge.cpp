@@ -28,6 +28,8 @@
 #include <TDataStd_Name.hxx>
 #include <TDocStd_Document.hxx>
 #include <TopExp_Explorer.hxx>
+#include <TopExp.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
 #include <TopoDS_Shell.hxx>
@@ -42,6 +44,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -164,6 +167,44 @@ double unit_mm(std::string name) {
     if (name == "micrometre" || name == "micron") return 0.001;
     throw std::runtime_error("Unit override requires one recognized source length unit");
 }
+
+// Original implementation of the complete-face measurement contract described in
+// Iteration-CFD docs/16a-amagine-borrow.md, wall_min_tagged (Prosperity-3.0.0;
+// its Amagine3D reference is Apache-2.0). No upstream code was copied or adapted.
+// Provenance and upstream licence/NOTICE references: licenses/THIRD_PARTY.md.
+TopoDS_Compound selected_faces(const Body& body, const size_t* ids, size_t count) {
+    TopTools_IndexedMapOfShape faces;
+    TopExp::MapShapes(body.solid, TopAbs_FACE, faces);
+    if (!count) throw std::runtime_error("CAD face selection is empty");
+    TopoDS_Compound selected;
+    BRep_Builder builder;
+    builder.MakeCompound(selected);
+    std::vector<bool> seen(faces.Extent(), false);
+    for (size_t n = 0; n < count; ++n) {
+        if (ids[n] >= static_cast<size_t>(faces.Extent()))
+            throw std::runtime_error("CAD face index is out of range");
+        if (seen[ids[n]]) throw std::runtime_error("duplicate CAD face index");
+        seen[ids[n]] = true;
+        builder.Add(selected, faces(ids[n] + 1));
+    }
+    TopTools_IndexedMapOfShape covered;
+    TopExp::MapShapes(selected, TopAbs_FACE, covered);
+    if (static_cast<size_t>(covered.Extent()) != count)
+        throw std::runtime_error("CAD face coverage mismatch");
+    return selected;
+}
+
+size_t support_face(const Body& body, const size_t* ids, size_t count,
+                    const TopoDS_Shape& support) {
+    TopTools_IndexedMapOfShape faces;
+    TopExp::MapShapes(body.solid, TopAbs_FACE, faces);
+    for (size_t n = 0; n < count; ++n) {
+        TopTools_IndexedMapOfShape members;
+        TopExp::MapShapes(faces(ids[n] + 1), members);
+        if (members.Contains(support)) return ids[n];
+    }
+    throw std::runtime_error("CAD closest-point support is outside selected faces");
+}
 } // namespace
 
 extern "C" {
@@ -219,6 +260,15 @@ void* simrep_cad_read(const char* path, bool iges, double override_mm,
       catch (const std::exception& e) { error(err, size, e.what()); }
     return nullptr;
 }
+void* simrep_cad_read_measurement(const char* path, bool iges, char* err, size_t size) {
+    // OCCT's exchange diagnostics use cout independently of Rust's CLI output.
+    // EXCHANGE serializes readers/writers while this scoped routing is active.
+    struct DiagnosticStream {
+        std::streambuf* previous = std::cout.rdbuf(std::cerr.rdbuf());
+        ~DiagnosticStream() { std::cout.flush(); std::cout.rdbuf(previous); }
+    } diagnostics;
+    return simrep_cad_read(path, iges, 0.0, err, size);
+}
 void simrep_cad_free(void* model) { delete static_cast<Model*>(model); }
 size_t simrep_cad_count(void* model) { return static_cast<Model*>(model)->bodies.size(); }
 const char* simrep_cad_name(void* model, size_t i) {
@@ -234,6 +284,69 @@ uintptr_t simrep_cad_tshape(void* model, size_t i) {
 void simrep_cad_bounds(void* model, size_t i, double* bounds) {
     auto& body = *static_cast<Model*>(model)->bodies.at(i);
     std::copy(body.bounds, body.bounds + 6, bounds);
+}
+size_t simrep_cad_face_count(void* model, size_t i) {
+    TopTools_IndexedMapOfShape faces;
+    TopExp::MapShapes(static_cast<Model*>(model)->bodies.at(i)->solid, TopAbs_FACE, faces);
+    return faces.Extent();
+}
+bool simrep_cad_measure(void* model, size_t a, const size_t* faces_a, size_t count_a,
+                        size_t b, const size_t* faces_b, size_t count_b,
+                        double* values, size_t* closest_faces, char* err, size_t size) {
+    try {
+        auto& left = *static_cast<Model*>(model)->bodies.at(a);
+        auto& right = *static_cast<Model*>(model)->bodies.at(b);
+        if (!left.valid || !right.valid)
+            throw std::runtime_error("CAD measurement requires valid B-reps");
+        auto selected_a = selected_faces(left, faces_a, count_a);
+        auto selected_b = selected_faces(right, faces_b, count_b);
+        BRepExtrema_DistShapeShape distance;
+        distance.LoadS1(selected_a);
+        distance.LoadS2(selected_b);
+        distance.SetDeflection(1e-10);
+        distance.Perform();
+        if (!distance.IsDone() || distance.NbSolution() == 0 ||
+            !std::isfinite(distance.Value()))
+            throw std::runtime_error("CAD face-set minimum distance failed");
+        const auto p = distance.PointOnShape1(1);
+        const auto q = distance.PointOnShape2(1);
+        const double result[] = {distance.Value(), p.X(), p.Y(), p.Z(), q.X(), q.Y(), q.Z()};
+        std::copy(result, result + 7, values);
+        closest_faces[0] = support_face(left, faces_a, count_a, distance.SupportOnShape1(1));
+        closest_faces[1] = support_face(right, faces_b, count_b, distance.SupportOnShape2(1));
+        return true;
+    } catch (const Standard_Failure& e) { error(err, size, e.GetMessageString()); }
+      catch (const std::exception& e) { error(err, size, e.what()); }
+    return false;
+}
+void* simrep_cad_tessellate_faces(void* model, size_t i, const size_t* ids, size_t count,
+                                 double tolerance, char* err, size_t size) {
+    try {
+        auto& body = *static_cast<Model*>(model)->bodies.at(i);
+        auto selected = selected_faces(body, ids, count);
+        // New measurement-only path: never reuse a coarser cached triangulation.
+        BRepTools::Clean(selected);
+        BRepMesh_IncrementalMesh mesher(selected, tolerance, false, 0.35, false);
+        if (!mesher.IsDone()) throw std::runtime_error("CAD cross-check tessellation failed");
+        auto result = std::make_unique<Triangles>();
+        for (TopExp_Explorer it(selected, TopAbs_FACE); it.More(); it.Next()) {
+            TopLoc_Location location;
+            auto mesh = BRep_Tool::Triangulation(TopoDS::Face(it.Current()), location);
+            if (mesh.IsNull() || mesh->NbTriangles() == 0)
+                throw std::runtime_error("CAD cross-check does not cover every selected face");
+            for (int n = 1; n <= mesh->NbTriangles(); ++n) {
+                int a, b, c;
+                mesh->Triangle(n).Get(a, b, c);
+                for (int vertex : {a, b, c}) {
+                    auto p = mesh->Node(vertex).Transformed(location.Transformation());
+                    result->coordinates.insert(result->coordinates.end(), {p.X(), p.Y(), p.Z()});
+                }
+            }
+        }
+        return result.release();
+    } catch (const Standard_Failure& e) { error(err, size, e.GetMessageString()); }
+      catch (const std::exception& e) { error(err, size, e.what()); }
+    return nullptr;
 }
 double simrep_cad_distance(void* model, size_t i, const double* p) {
     try {
@@ -359,17 +472,18 @@ bool simrep_cad_fixture(const char* path, int kind, const char* schema,
             TopoDS_Compound pair;
             builder.MakeCompound(pair);
             auto sphere = BRepPrimAPI_MakeSphere(0.31).Shape();
-            for (double x : {-0.6, 0.6}) {
+            const double offset = kind == 4 ? 0.31 : 0.6;
+            for (double x : {-offset, offset}) {
                 gp_Trsf transform;
                 transform.SetTranslation(gp_Vec(x, 0, 0));
                 builder.Add(pair, sphere.Moved(TopLoc_Location(transform)));
             }
             shape = pair;
-            name = "pair";
+            name = kind == 4 ? "touching" : "pair";
         }
-        auto label = tool->AddShape(shape, kind == 3);
+        auto label = tool->AddShape(shape, kind == 3 || kind == 4);
         TDataStd_Name::Set(label, TCollection_ExtendedString(name.c_str()));
-        if (kind == 3) {
+        if (kind == 3 || kind == 4) {
             TDF_LabelSequence children;
             tool->GetComponents(label, children);
             TDataStd_Name::Set(children.Value(1), TCollection_ExtendedString("left"));

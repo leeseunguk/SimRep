@@ -105,6 +105,64 @@ A mixed-unit STEP file is rejected when an override would be ambiguous.
 Millimeter, meter and inch exchange round trips and overrides are tested.
 Translations in the imported assembly are scaled together with the bodies.
 
+### Guarded face-set gap measurement
+
+The `cad` feature also provides a grid-independent measurement command:
+
+```sh
+simrep cad-measure pair.step --gap pair/left pair/right --json
+simrep cad-measure pair.step --gap '0:faces=0' '1:faces=0' \
+  --touch-tolerance 1e-7 --cad-tolerance 0.01
+simrep cad-measure assembly.iges --all-pairs --json
+```
+
+Selectors follow `refine-geometry`: full XCAF part paths or zero-based body
+indices. Omitting `:faces=...` measures the **complete** trimmed-face set of
+each placed body, not a representative edge, section, or bounding box.
+An explicit face subset must be nonempty, duplicate-free, and in range.
+Face indices are zero-based OCCT face-map indices within that imported file;
+they are not persistent identifiers across CAD edits or re-exports.
+The API accepts valid B-reps only and preserves the declared source units and
+assembly locations through the same STEP/IGES reader as refinement.
+
+OCCT `BRepExtrema_DistShapeShape` measures the two face compounds in 3D,
+including their boundary edges and vertices. Coverage checks ensure that every
+selected face is present, tessellated, and that each closest-point support
+belongs to a selected face. An independent Euclidean triangle-to-triangle
+minimum includes face-interior crossings and edge-to-edge minima; a BVH prunes
+triangle pairs. Each side is tessellated at `cad_tolerance/4` mm absolute
+deflection. The actual discrepancy, not merely the requested deflection, must
+be finite and at most `--cad-tolerance` (default 0.01 mm), or the command fails
+without a success summary. Distances are boundary-to-boundary separations:
+intersecting boundaries have zero gap; one body wholly inside another can
+have a positive boundary gap. This is not a solid-overlap or penetration test.
+
+`touching` means `min_distance_mm <= --touch-tolerance` (default 1e-7 mm,
+nonnegative). It is a proximity classification, **not proof of electrical
+contact**. Closest points and distances use mm. `--all-pairs` measures each
+distinct pair once and returns symmetric matrices in the `parts` order, with
+zero/true diagonals.
+
+JSON uses the standard schema version 1 envelope. It includes `file`, `parts`
+(`index`, `name`, `face_count`), `measurements` (`part_a`, `part_b`, `name_a`,
+`name_b`, `faces_a`, `faces_b`, `min_distance_mm`, `closest_points_mm`,
+`closest_faces`, `touching`, `tessellated_distance_mm`, `cross_check_error_mm`),
+`touch_tolerance_mm`, and `cad_tolerance_mm`. `distance_matrix_mm` and
+`touching_matrix` are square for `--all-pairs`, null for `--gap`. Failures use
+the usual `error.message`/`error.kind` object and exit status 1.
+
+Rust callers use `simrep_cad::MeasurementModel::read(path)`, `parts()`,
+`gap(selector_a, selector_b, MeasureOptions::default())`, or `all_pairs`.
+The MCP equivalent is `cad_measure` with `file`, either a two-string `gap`
+array or `all_pairs: true`, and optional `cad_tolerance`/`touch_tolerance`.
+
+`tools/cad-fixtures` generates the original `pair.step` fixture: two spheres
+of radius 0.31 mm, with centers at x=-0.6 and +0.6 mm, so the analytic gap is
+`1.2 - 2*0.31 = 0.58 mm`. Its `touching.step` uses centers at +/-0.31 mm and
+has zero analytic gap. Both STEP and IGES round trips are checked against
+these values. The complete-face guards are also tested on a three-face
+cylinder and explicit end-cap subsets.
+
 ### Windows / MSVC
 
 Use a complete OCCT 7.6/7.7 **MSVC x64 development SDK** matching the Rust

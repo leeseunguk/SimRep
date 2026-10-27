@@ -615,6 +615,50 @@ const TOOLS = [
     },
   },
   {
+    name: 'cad_measure',
+    title: 'Measure CAD face-set gaps',
+    description:
+      'Measure complete placed STEP/IGES body face sets, or explicit :faces=0,1 subsets, in mm. Select parts by full XCAF path or zero-based body index. Choose gap (two selectors) or all_pairs. Returns exact minimum distances, closest points and face indices, touching, and an independent tessellation cross-check; disagreement beyond cad_tolerance fails. touching means distance <= touch_tolerance, not proof of electrical contact. Requires simrep built with --features cad.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', description: 'Workspace-relative STEP or IGES file.' },
+        gap: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2, description: 'Two part selectors, optionally with :faces=0,1.' },
+        all_pairs: { type: 'boolean', description: 'Return all unique pairs and symmetric distance/touch matrices.' },
+        cad_tolerance: { type: 'number', exclusiveMinimum: 0, description: 'Absolute allowed cross-check discrepancy in mm; default 0.01.' },
+        touch_tolerance: { type: 'number', minimum: 0, description: 'Touch threshold in mm; default 1e-7.' },
+      },
+      required: ['file'],
+      oneOf: [
+        { required: ['gap'], properties: { all_pairs: { const: false } } },
+        { required: ['all_pairs'], properties: { all_pairs: { const: true } }, not: { required: ['gap'] } },
+      ],
+      additionalProperties: false,
+    },
+    readOnly: true,
+    async run(args) {
+      only(args, ['file', 'gap', 'all_pairs', 'cad_tolerance', 'touch_tolerance'])
+      const allPairs = optBool(args, 'all_pairs') ?? false
+      if (allPairs === (args.gap !== undefined)) throw new ToolError('provide gap or all_pairs, not both')
+      const argv = ['cad-measure', inputFile(reqString(args, 'file'), 'file')]
+      if (allPairs) {
+        argv.push('--all-pairs')
+      } else {
+        if (!Array.isArray(args.gap) || args.gap.length !== 2 || args.gap.some((s) => typeof s !== 'string' || s.length === 0)) {
+          throw new ToolError('gap must contain exactly two nonempty selectors')
+        }
+        argv.push('--gap', ...args.gap)
+      }
+      for (const key of ['cad_tolerance', 'touch_tolerance']) {
+        if (args[key] === undefined) continue
+        const value = finite(args[key], key)
+        if (value < 0 || (key === 'cad_tolerance' && value === 0)) throw new ToolError(`${key} is out of range`)
+        flag(argv, '--' + key.replaceAll('_', '-'), value)
+      }
+      return simrep(argv)
+    },
+  },
+  {
     name: 'fly',
     title: 'Fly ions through a field',
     description:

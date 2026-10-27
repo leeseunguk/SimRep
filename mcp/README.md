@@ -112,6 +112,7 @@ stdio로 JSON-RPC를 주고받는 표준 MCP 서버입니다. 실행 명령은
 | `mesh_import` | STL/OBJ/PLY/3MF/glTF → `.pa#` |
 | `refine` | `.pa` / `.pa#` 솔브. `.pa#` 는 `.pa0` + `.paN` 패밀리를 씁니다 |
 | `refine_geometry` | GEM/메시/CAD 연속 표면 솔브 (`part=number:voltage`) |
+| `cad_measure` | STEP/IGES complete-face gap and touch matrices (`--features cad`) |
 | `fly` | 이온 비행. 입자 파일 또는 생성된 빔, 전압, 검출면, bounds, device, bfield, collision, CSV |
 | `export_geometry` | 전극 표면 메시 |
 | `export_grid` | 전위 격자 VTI/VTS |
@@ -127,6 +128,14 @@ GPU로 계단 충돌만 쓰려면 `no_cuts: true` 와 `device: "gpu"`. SDS 충�
 성공하면 텍스트 내용이 CLI JSON입니다 (`schema_version`, `simrep_version`,
 명령별 키). 실패하면 `error.message`, `error.kind`, 그리고 `error.stderr`
 (프로세스 stderr)가 들어 있습니다.
+
+`cad_measure` takes `file` and either `gap: ["pair/left", "pair/right"]` or
+`all_pairs: true`. Selectors also accept zero-based body indices and explicit
+face subsets, for example `"0:faces=0,1"`. `cad_tolerance` (default 0.01 mm)
+limits exact/tessellation disagreement; `touch_tolerance` (default 1e-7 mm)
+classifies near-touching surfaces. Touching is not proof of electrical contact.
+The result includes closest points and face indices; all-pairs results include
+`distance_matrix_mm` and `touching_matrix` in the reported `parts` order.
 
 ---
 

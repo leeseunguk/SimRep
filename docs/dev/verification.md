@@ -138,6 +138,72 @@ cargo clippy -p simrep-py --features python -- -D warnings
 cargo test --workspace --release
 ```
 
+### Numerical repeatability
+
+`crates/simrep-cli/src/repeatability.rs` runs identical generated workloads
+inside local Rayon pools requesting 1, 2, 8 and 32 threads, in one process.
+The first run supplies the reference bytes; every other run must match.
+Floating-point values use their complete little-endian binary64 encoding,
+so even a signed-zero or one-bit difference fails. Complete PA families,
+cuts sidecars and flight CSV files are compared byte for byte as well.
+Only wall-clock measurements are excluded from JSON/report comparisons;
+iteration counts, every recorded residual and terminal reasons are retained.
+
+| Workload | Compared output |
+| --- | --- |
+| CPU multigrid refinement | Full potentials, absolute/relative residual histories, cycle and level counts |
+| GEM and triangle-source `refine-geometry` | PA#, PA0, both unit-voltage bases, dense cuts-v3 sidecar and stable JSON summary |
+| Mesh/CAD triangle preparation | Parallel BVH construction above its 32,768-triangle threshold, narrow-band SDF, voxel masks/assignments, exact segment roots, cut-node count and cut-aware gradients |
+| Independent RK45 and Boris flight | Ordered final states, TOFs, termination reasons, accepted/rejected steps and saved trajectories |
+| CLI flight statistics | Production population TOF mean/std/min/max, arrival/splat counts and complete CSV |
+| Direct Coulomb and CIC PIC | Fields, PIC potentials/residual/cycles and coupled ensemble trajectories; populations exceed the direct parallel threshold |
+| Line/ring beams | Coupled trajectories, global/rejected step counts and beam terminations |
+| Seeded HS1 and SDS collisions | Full flight results and trajectories; another seed must change results; SDS uses generated monotone ICDFs, not external SIMION data |
+| GPU versus the same GPU | Mixed and supported native-f64 multigrid/cut-cell solves, resident magnetic/HS1 flight and sampled trajectories, supported f64 PIC fields/potentials/coupled flight |
+
+Small multigrid problems deliberately cap their internal pool at four
+workers. The CPU solver test verifies that policy and also solves a grid
+above the cap's size threshold using all 1, 2, 8 and 32 requested workers.
+The triangle test exercises the native mesh preparation path also used by
+tessellated CAD; optional OCCT tessellation and exact B-rep queries are not
+covered by the default workspace.
+
+The guarantee tested here is repeatability for unchanged ordered inputs,
+settings and random seeds on the same build and machine, independent of
+requested Rayon worker count. It is not equality between CPU and GPU,
+different GPU adapters/drivers, CPU instruction sets or compiler versions.
+GPU checks reuse one selected Vulkan device and accept software adapters.
+No adapter is an explicit `SKIP`; missing `SHADER_F64` skips only native-f64
+solve/PIC checks, leaving mixed solve and flight checks active. Device,
+shader and execution failures are errors, not skips.
+
+Run this matrix directly with adapter/skip diagnostics visible:
+
+```sh
+GALLIUM_OVERRIDE_CPU_CAPS=avx LP_NATIVE_VECTOR_WIDTH=256 \
+  cargo test -p simrep-cli --release repeatability_ -- --nocapture
+```
+
+The CPU audit found no variation requiring a new summation algorithm.
+GPU multigrid, cut-cell and resident HS1 flight also repeated exactly on
+llvmpipe. The new coupled GPU PIC regression did expose variation: atomic
+cell-list insertion made floating-point charge sums depend on dispatch
+scheduling. Cell lists now use atomic ordered insertion in descending source
+index, with links cleared before every binning pass. Deposition therefore
+uses the same addition order for unchanged ordered inputs. This needs no
+exact-sum dependency and leaves the CPU arithmetic unchanged.
+
+On October 27, 2026, all seven regressions passed on the Ryzen 9 5950X with
+llvmpipe (LLVM 20.1.2, 256 bits, native f64), using the Mesa caps above.
+The existing `SIMREP_PIC_BENCH=1 cargo test -p simrep-fly --release --test
+gpu_pic -- --nocapture` workload measures `EnsembleReport.compute_time`:
+100,000 particles, a 33-cubed PIC grid, three global steps and three trials,
+excluding mesh/device/shader preparation. Median GPU-path compute time was
+1,386.083 ms before ordered insertion and 1,226.212 ms after it. No slowdown
+was observed in this software-adapter run. The CPU control also changed from
+220.921 to 200.947 ms, so the observed 11.5% GPU-path decrease is not an
+isolated speedup claim or a hardware-GPU performance result.
+
 `crates/simrep-cli/tests/json_cli.rs` runs tiny generated GEM, PA, ION and OBJ
 fixtures through `--json`: `gem2pa`, `refine`, `refine-geometry`, `fly`,
 `mesh-import`, `pa-info`, every `export` subcommand and CPU benchmarks.

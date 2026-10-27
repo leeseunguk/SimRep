@@ -1,6 +1,7 @@
 //! f64 GPU CIC, Poisson field gathering and synchronized Boris pushes.
 //! Integer atomics build cell lists; one invocation per node sums its eight
-//! neighboring lists in f64. No floating-point atomics or f32 charge rounding.
+//! neighboring lists in descending source-index order in f64. No floating-point
+//! atomics or f32 charge rounding.
 use std::{borrow::Cow, sync::mpsc, time::Duration};
 
 use simrep_solve::gpu::{Gpu, Poisson};
@@ -311,6 +312,7 @@ impl GpuPic {
             .device()
             .create_command_encoder(&Default::default());
         encoder.clear_buffer(&self.heads, 0, None);
+        encoder.clear_buffer(&self.links, 0, None);
         self.dispatch(
             &mut encoder,
             &self.cell,

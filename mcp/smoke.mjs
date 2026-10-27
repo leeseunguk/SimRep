@@ -25,6 +25,7 @@ const server = path.join(here, 'server.mjs')
 const bin = path.resolve(process.env.SIMREP_BIN || path.join(repo, 'target/release/simrep'))
 const fixtureGem = path.join(repo, 'examples/data/einzel.gem')
 const fixtureIon = path.join(repo, 'examples/data/ions.ion')
+const fixtureCad = path.join(repo, 'tools/cad-fixtures/pair.step')
 
 if (!existsSync(bin)) {
   console.error(`simrep binary not found at ${bin}`)
@@ -40,6 +41,7 @@ const workspace = mkdtempSync(path.join(tmpdir(), 'simrep-mcp-smoke-'))
 mkdirSync(path.join(workspace, 'examples/data'), { recursive: true })
 copyFileSync(fixtureGem, path.join(workspace, 'examples/data/einzel.gem'))
 copyFileSync(fixtureIon, path.join(workspace, 'examples/data/ions.ion'))
+copyFileSync(fixtureCad, path.join(workspace, 'pair.step'))
 console.log(`fixture: ${fixtureGem}`)
 console.log(`workspace: ${workspace}`)
 console.log(`bin: ${bin}`)
@@ -122,11 +124,39 @@ try {
   const list = await call('tools/list', {})
   const names = (list.result?.tools ?? []).map((tool) => tool.name)
   const expected = [
-    'gpu_info', 'pa_info', 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'fly',
+    'gpu_info', 'pa_info', 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'cad_measure', 'fly',
     'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories', 'read_csv_summary',
   ]
   check('tools/list', expected.every((name) => names.includes(name)) && names.length === expected.length, names.join(', '))
   check('every tool has a schema', (list.result?.tools ?? []).every((tool) => tool.inputSchema?.type === 'object'))
+
+  const invalidCad = await call('tools/call', {
+    name: 'cad_measure', arguments: { file: 'pair.step', gap: ['0', '1'], all_pairs: true },
+  })
+  check('cad_measure refuses conflicting modes', invalidCad.result?.isError === true)
+  const cad = await call('tools/call', {
+    name: 'cad_measure', arguments: { file: 'pair.step', gap: ['pair/left:faces=0', 'pair/right'] },
+  })
+  const cadBody = jsonOf(cad)
+  if (cad.result?.isError) {
+    check('cad_measure reports optional CAD feature', cadBody?.error?.message?.includes('--features cad') === true, textOf(cad).slice(0, 200))
+  } else {
+    const gap = cadBody?.measurements?.[0]
+    check('cad_measure schema_version', cadBody?.schema_version === 1)
+    check('cad_measure analytic 0.58 mm gap', Math.abs(gap?.min_distance_mm - 0.58) < 1e-9, String(gap?.min_distance_mm))
+    check('cad_measure gap is not touching', gap?.touching === false)
+    check('cad_measure complete faces and witnesses', gap?.faces_a?.length === 1 && gap?.faces_b?.length === 1 && gap?.closest_points_mm?.length === 2 && gap?.closest_faces?.length === 2)
+    check('cad_measure independent cross-check', gap?.cross_check_error_mm <= cadBody.cad_tolerance_mm)
+    const matrix = jsonOf(await call('tools/call', {
+      name: 'cad_measure', arguments: { file: 'pair.step', all_pairs: true, touch_tolerance: 0.59, cad_tolerance: 0.001 },
+    }))
+    check('cad_measure symmetric distance matrix', Math.abs(matrix?.distance_matrix_mm?.[0]?.[1] - 0.58) < 1e-9 && matrix.distance_matrix_mm[0][1] === matrix.distance_matrix_mm[1][0])
+    check('cad_measure touch threshold matrix', matrix?.touching_matrix?.[0]?.[1] === true && matrix?.touching_matrix?.[1]?.[0] === true)
+    const subset = await call('tools/call', {
+      name: 'cad_measure', arguments: { file: 'pair.step', gap: ['0:faces=0,0', '1'] },
+    })
+    check('cad_measure rejects duplicate face coverage', subset.result?.isError === true)
+  }
 
   const badLine = await new Promise((resolve) => {
     const id = null
