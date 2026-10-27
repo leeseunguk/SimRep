@@ -152,6 +152,7 @@ pub fn run(args: SdfOptions) -> GpuResult<()> {
             } else {
                 gpu.solve_sdf(&mut values, &cuts, options)?
             };
+            report.check_converged()?;
             println!(
                 "{} GPU upload: {:.3} ms, readback: {:.3} ms",
                 if staircase { "Staircase" } else { "SDF" },

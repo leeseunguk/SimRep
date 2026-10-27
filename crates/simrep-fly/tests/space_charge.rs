@@ -55,6 +55,19 @@ fn represented_charge_weights_and_coulomb_units() {
         .unwrap();
     assert!((fields[0][0] + COULOMB_V_MM_PER_C * 1e-15 / 4.0).abs() < 1e-16);
     assert_eq!(fields[0][0], -fields[1][0]);
+    simrep_core::validation::Gate {
+        name: "exact-coulomb-point-charge",
+        reference: "exact_solutions.json; Coulomb inverse-square field",
+        metric: "electric field at 2 mm (V/mm)",
+        value: fields[1][0],
+        datum: COULOMB_V_MM_PER_C * 1e-15 / 4.0,
+        u_num: None,
+        u_input: 0.0,
+        u_datum: 0.0,
+        band: "existing absolute tolerance 1e-16 V/mm; direct algebra at roundoff; no GCI",
+    }
+    .record()
+    .unwrap();
     assert!(
         DirectCharge::default()
             .field(&[[0.0; 3]; 2], &[1e-15; 2])
@@ -122,6 +135,7 @@ fn direct_second_order_against_exact_two_body_expansion() {
         0.7,
     );
     let mut errors = Vec::new();
+    let mut values = Vec::new();
     for dt in [0.04, 0.02, 0.01] {
         let report = fly_ensemble(
             &zero(),
@@ -131,6 +145,7 @@ fn direct_second_order_against_exact_two_body_expansion() {
         )
         .unwrap();
         errors.push((report.results[1].final_state.position_mm[0] - expected).abs());
+        values.push(report.results[1].final_state.position_mm[0]);
         assert_eq!(
             report.results[0].final_state.position_mm[0],
             -report.results[1].final_state.position_mm[0]
@@ -138,6 +153,25 @@ fn direct_second_order_against_exact_two_body_expansion() {
     }
     eprintln!("two-body dt halving errors: {errors:?}");
     assert!(errors[0] / errors[1] > 3.7 && errors[1] / errors[2] > 3.7);
+    let levels = std::array::from_fn(|i| simrep_core::uncertainty::Level {
+        h: 0.01 * 2.0_f64.powi(i as i32),
+        value: values[2 - i],
+    });
+    let triplet = simrep_core::uncertainty::observed_order(&levels).unwrap();
+    println!("two-body radius: S={:.12e}, D={expected:.12e}", values[2]);
+    simrep_core::validation::Gate {
+        name: "exact-coulomb-two-body",
+        reference: "exact_solutions.json; implicit two-body expansion",
+        metric: "half separation (mm)",
+        value: values[2],
+        datum: expected,
+        u_num: triplet.gci_fine.map(|g| g * values[2].abs()),
+        u_input: 0.0,
+        u_datum: 0.0,
+        band: "existing dt=0.04,0.02,0.01 us; three-step Celik GCI; adjacent order > log2(3.7)",
+    }
+    .record()
+    .unwrap();
 }
 
 #[test]

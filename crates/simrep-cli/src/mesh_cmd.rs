@@ -4,7 +4,7 @@ use simrep_mesh::{
     GridSpec, ImportOptions, SurfaceOptions, Trajectory, TrajectoryPoint, Transform, Unit,
     electrode_surface_with_options, inspect, pa_isosurface, read_mesh, repair, sample_sdf,
     voxelize, voxelize_with_defects, write_mesh, write_revolved_vts, write_scalar_vti,
-    write_trajectories_csv, write_vti, write_vtp,
+    write_trajectories_csv, write_usda, write_vti, write_vtp,
 };
 use simrep_solve::gpu::GpuResult;
 use std::collections::BTreeMap;
@@ -55,7 +55,7 @@ pub struct MeshImportOptions {
 pub struct PaExport {
     /// Input SIMION potential array.
     input: PathBuf,
-    /// Output STL, OBJ, glTF, GLB, VTI or VTS file, as required by the subcommand.
+    /// Output STL, OBJ, glTF, GLB, USDA, VTI or VTS, as required by the subcommand.
     output: PathBuf,
     /// Position of grid node (0,0,0) in mm.
     #[arg(long, default_value = "0,0,0", value_parser = numbers::<3>, allow_hyphen_values = true)]
@@ -93,13 +93,16 @@ impl From<SurfaceExportOptions> for SurfaceOptions {
 
 #[derive(Subcommand)]
 pub enum ExportCommand {
-    /// Exposed electrode voxel faces to STL, OBJ, glTF or GLB.
+    /// Exposed electrode voxel faces to STL, OBJ, glTF, GLB or USDA.
     Geometry {
         #[command(flatten)]
         files: PaExport,
         /// Select one electrode potential/number; otherwise export all.
         #[arg(long, allow_hyphen_values = true)]
         electrode: Option<f64>,
+        /// Include trajectory-sample CSV curves in a USDA scene (same mm frame).
+        #[arg(long)]
+        trajectories: Option<PathBuf>,
         #[command(flatten)]
         surface: SurfaceExportOptions,
     },
@@ -126,11 +129,11 @@ pub enum ExportCommand {
         #[command(flatten)]
         surface: SurfaceExportOptions,
     },
-    /// Numeric trajectory sample CSV to VTP polylines or normalized CSV.
+    /// Numeric trajectory sample CSV to VTP polylines, USDA curves or CSV.
     Trajectories {
         /// Input trajectory sample CSV.
         input: PathBuf,
-        /// Output VTP polylines or normalized CSV.
+        /// Output VTP polylines, USDA curves or normalized CSV.
         output: PathBuf,
     },
 }
@@ -265,12 +268,20 @@ pub fn export(command: ExportCommand) -> GpuResult<()> {
         ExportCommand::Geometry {
             files,
             electrode,
+            trajectories,
             surface,
         } => {
+            if trajectories.is_some() && !has_extension(&files.output, "usda") {
+                return Err("--trajectories requires .usda geometry output".into());
+            }
             let pa = read_pa(&files.input)?;
             let mesh =
                 electrode_surface_with_options(&pa.array, files.origin, electrode, surface.into())?;
-            write_mesh(&files.output, &mesh)?;
+            if let Some(input) = trajectories {
+                write_usda(&files.output, Some(&mesh), &read_trajectories(&input)?)?;
+            } else {
+                write_mesh(&files.output, &mesh)?;
+            }
             println!(
                 "exported {} triangles in {} parts",
                 mesh.triangle_count(),
@@ -325,8 +336,10 @@ pub fn export(command: ExportCommand) -> GpuResult<()> {
                 write_vtp(&output, &trajectories)?;
             } else if has_extension(&output, "csv") {
                 write_trajectories_csv(&output, &trajectories)?;
+            } else if has_extension(&output, "usda") {
+                write_usda(&output, None, &trajectories)?;
             } else {
-                return Err("trajectory output must have .vtp or .csv extension".into());
+                return Err("trajectory output must have .vtp, .usda or .csv extension".into());
             }
             output
         }

@@ -8,7 +8,7 @@ use std::{borrow::Cow, error::Error, sync::mpsc, time::Duration};
 use wgpu::util::DeviceExt;
 
 mod solve;
-pub use solve::{Poisson, SolveReport, Timings};
+pub use solve::{Poisson, RefinementFailure, SolveReport, Timings};
 
 pub use wgpu::{AdapterInfo, Backends, Device, DeviceType, Features, Queue};
 

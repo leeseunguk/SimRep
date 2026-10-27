@@ -114,10 +114,10 @@ stdio로 JSON-RPC를 주고받는 표준 MCP 서버입니다. 실행 명령은
 | `refine_geometry` | GEM/메시/CAD 연속 표면 솔브 (`part=number:voltage`) |
 | `cad_measure` | STEP/IGES complete-face gap and touch matrices (`--features cad`) |
 | `fly` | 이온 비행. 입자 파일 또는 생성된 빔, 전압, 검출면, bounds, device, bfield, collision, CSV |
-| `export_geometry` | 전극 표면 메시 |
+| `export_geometry` | 전극 표면 메시; USDA에는 궤적 CSV를 곡선으로 함께 저장 가능 |
 | `export_grid` | 전위 격자 VTI/VTS |
 | `export_isosurface` | 등전위면 |
-| `export_trajectories` | 궤적 샘플 CSV → VTP (비행 결과 CSV가 아닙니다) |
+| `export_trajectories` | 궤적 샘플 CSV → VTP/USDA/CSV (비행 결과 CSV가 아닙니다) |
 | `read_csv_summary` | 비행 결과 CSV 요약 (CLI를 부르지 않습니다) |
 
 `fly` 의 `device` 는 `auto`, `cpu`, `gpu` 입니다. 자기장이 있거나 빔이 작으면

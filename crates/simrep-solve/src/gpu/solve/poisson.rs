@@ -393,6 +393,8 @@ impl Poisson {
         }
         potential.copy_from_slice(&host_x);
         Ok(SolveReport {
+            outer_iterations: iterations,
+            failure_reason: None,
             converged: absolute
                 <= self.options.absolute_tolerance / self.fine.normalization
                     + self.options.relative_tolerance * scale,

@@ -139,6 +139,7 @@ impl Layout {
             (report.converged, report.iterations, report.residual)
         } else if let Some(gpu) = gpu {
             let report = gpu.solve(&mut values, &self.fixed, self.grid, options)?;
+            report.check_converged()?;
             timings.setup += report.timings.setup;
             timings.solve += report.timings.upload + report.timings.solve + report.timings.readback;
             timings.transfers += report.timings.upload + report.timings.readback;

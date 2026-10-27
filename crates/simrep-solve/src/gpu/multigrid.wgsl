@@ -190,6 +190,41 @@ fn product(i:u32,c:vec3<u32>) -> vec2<f32> {
     }
     return vec2(ax,bound);
 }
+
+// Physical (unweighted) correction residual; only a scalar leaves the GPU.
+var<workgroup> norm_block: array<f32,128>;
+fn store_norm(i: u32, lane: u32, value: f32) {
+    norm_block[lane]=value;
+    workgroupBarrier();
+    for(var stride=64u;stride>0u;stride/=2u) {
+        if lane<stride { norm_block[lane]=max(norm_block[lane],norm_block[lane+stride]); }
+        workgroupBarrier();
+    }
+    if lane==0u && i/128u<arrayLength(&out) { out[i/128u]=norm_block[0]; }
+}
+@compute @workgroup_size(128)
+fn correction_norm(@builtin(global_invocation_id) g: vec3<u32>,
+                   @builtin(local_invocation_index) lane: u32,
+                   @builtin(num_workgroups) groups: vec3<u32>) {
+    let i=invocation(g,groups);
+    var r=0.0;
+    if i<count(p.dims.xyz) && is_free(i) {
+        let c=coord(i,p.dims.xyz);
+        r=abs(rhs[i]-product(i,c).x)/weight(c);
+        // A NaN must not be hidden by max's NaN behavior.
+        if !(r<=bitcast<f32>(0x7f7fffffu)) { r=bitcast<f32>(0x7f800000u); }
+    }
+    store_norm(i,lane,r);
+}
+@compute @workgroup_size(128)
+fn reduce_norm(@builtin(global_invocation_id) g: vec3<u32>,
+               @builtin(local_invocation_index) lane: u32,
+               @builtin(num_workgroups) groups: vec3<u32>) {
+    let i=invocation(g,groups);
+    var r=0.0;
+    if i<arrayLength(&x) { r=x[i]; }
+    store_norm(i,lane,r);
+}
 @compute @workgroup_size(128)
 fn jacobi_sweep(@builtin(global_invocation_id) g:vec3<u32>,@builtin(num_workgroups) groups:vec3<u32>) {
     let i=invocation(g,groups);

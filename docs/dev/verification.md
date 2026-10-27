@@ -4,6 +4,82 @@ Run commands from the repository root unless a command changes directory.
 The root Cargo workspace contains `crates/*`; it does not include the Tauri
 app, Python extension behavior, or optional CAD features.
 
+## Comparing results before and after a change
+
+`tools/result_identity.py` compares two files or two run directories using only
+Python's standard library. Exit status is **0** for equal results within the
+selected tolerances, **1** for different results or missing artifacts, and **2**
+for invalid inputs or an I/O error. Defaults use zero numeric tolerances.
+
+```sh
+python3 tools/result_identity.py before/lens.pa0 after/lens.pa0
+python3 tools/result_identity.py before/ after/ --json
+python3 tools/result_identity.py before/ after/ --require-byte-identity
+python3 tools/result_identity.py before/lens.cuts.json after/lens.cuts.json --ulps 4 --tolerance 1e-12
+python3 tools/result_identity.py before/flight.csv after/flight.csv \
+  --tof-tolerance 1e-9 --position-tolerance 1e-8 --energy-tolerance 1e-8
+python3 tools/result_identity.py before/summary.json after/summary.json --ignore-key output_paths
+python3 tools/result_identity.py --selftest
+```
+
+Directory mode matches relative filenames recursively and checks PA, PA#, PA0,
+PA1..N, PA_, `.cuts.json`, flight CSV, and JSON artifacts. Use the same output
+stem in each directory. Other extensions, such as GEM source and log files,
+are excluded. Compare whole directories to include every fast-adjust basis and
+adaptive patch; comparing a manifest alone checks its contents, not referenced
+files. CSV files must use the flight-output schema, not trajectory-export CSV.
+
+PA reports include byte identity, header fields and PA0 trailer differences,
+electrode-mask changes, the number of changed potentials and nodes outside
+tolerance, maximum and RMS dV in volts, and the worst flat node index and
+x/y/z grid coordinates. Physical offsets use the PA spacing: PA files do not
+store `origin_mm`. The numeric report is still produced when bytes differ.
+`--require-byte-identity` makes any byte difference fail, including signed zero
+or JSON formatting differences that structural comparison would accept.
+
+Cuts sidecars are compared structurally, including v2 sampled data and v3
+source geometry. Run-encoded node electrodes and solver-fixed masks are
+expanded; dense and sparse intersections are normalized to node/direction
+records. JSON key order and sparse intersection order do not matter.
+Fractions, normals and other floating fields use the selected tolerances;
+electrode numbers, masks, array order and version remain significant. Source
+geometry payloads are compared exactly rather than decoded. Adaptive manifests
+are structural JSON comparisons: patch order, levels, factors, filenames,
+bounds, origins, spacings and electrode voltages remain significant.
+
+Flight CSV rows stay in order, with exact ion IDs, termination reasons and
+electrode numbers. TOF, position, kinetic energy and velocity are numeric.
+`--tolerance` (alias `--abs-tolerance`) applies in each field's stored units;
+the three flight-specific options override its absolute tolerance for those
+columns. `--relative-tolerance` and binary64 `--ulps` apply alongside absolute
+tolerance: satisfying any one is sufficient. Integer-valued JSON counts and
+indices always compare exactly. Non-finite values and malformed PA, CSV, JSON
+or cuts encodings are errors, even if both inputs contain the same invalid data.
+
+Summary JSON ignores only `compute_ms`, `prep_ms`, `setup_ms`, `total_ms`,
+`elapsed_ms`, `end_to_end_ms`, `kernel_ms` and `submit_readback_ms`, at any
+depth. Physics time fields such as `arrival_tof_us` are retained. Output paths
+remain significant unless explicitly excluded with `--ignore-key output_paths`;
+this repeatable option omits the named JSON key at every depth.
+`--json` emits one report, with `identical`, `byte_identical`, per-file metrics
+and bounded difference details; `--max-diffs` controls the detail limit.
+
+The Rust CI job runs the synthetic self-tests and refines
+`examples/data/einzel.gem` on CPU with one Rayon worker and with the default
+worker count, requiring byte-identical PA# and fast-adjust families. Reproduce
+the check with a built CLI:
+
+```sh
+work="$(mktemp -d)"
+for run in single default; do
+  mkdir "$work/$run"
+  target/release/simrep gem2pa examples/data/einzel.gem "$work/$run/einzel.pa#"
+done
+RAYON_NUM_THREADS=1 target/release/simrep refine "$work/single/einzel.pa#" --device cpu
+target/release/simrep refine "$work/default/einzel.pa#" --device cpu
+python3 tools/result_identity.py "$work/single" "$work/default" --require-byte-identity
+```
+
 ## GitHub Actions
 
 `.github/workflows/ci.yml` runs on pushes to `main` and the validation branch
@@ -505,7 +581,11 @@ page count is counted from its uncompressed `/Type /Page` dictionaries.
 
 The checker prints one PASS or FAIL per claim, with the derived value and
 source, and exits nonzero on a mismatch, missing fragment/source, or
-unregistered quantity. README prose is scanned for numbers with quantity
+unregistered quantity. The evidence files those claims read (and every other
+committed reference/fixture/answer-key file) are pinned by sha256 in
+[`../validation/PROVENANCE.md`](../validation/PROVENANCE.md); run
+`python3 tools/provenance_check.py` to verify them and
+`python3 tools/provenance_check.py --add PATH` to register a new one. README prose is scanned for numbers with quantity
 units (including both range endpoints); table 13 is scanned for every
 numeric token. Code examples, links, scientific/product identifiers such as
 `3D`, `4중극`, and `HS1`, list ordinals, and chapter/figure cross-references

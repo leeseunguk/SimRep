@@ -969,6 +969,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         };
         let (converged, cycles, residual, elapsed) = if let Some(gpu) = &gpu {
             let r = gpu.solve_sdf(&mut values, &cuts, options)?;
+            r.check_converged()?;
             preparation += r.timings.setup + r.timings.upload + r.timings.readback;
             (
                 r.converged,

@@ -26,6 +26,10 @@ pub struct Timings {
 #[derive(Debug)]
 pub struct SolveReport {
     pub converged: bool,
+    /// Completed f64 updates; each may contain several f32 V-cycles.
+    pub outer_iterations: usize,
+    /// Present only when the requested f64 residual target was not reached.
+    pub failure_reason: Option<String>,
     pub iterations: usize,
     pub levels: usize,
     pub residual_history: Vec<Residual>,
@@ -33,6 +37,83 @@ pub struct SolveReport {
     pub timings: Timings,
     /// False means each iteration transfers a full correction and residual.
     pub gpu_f64: bool,
+}
+
+/// Structured nonconvergence, retained by CLI JSON error reporting.
+#[derive(Debug)]
+pub struct RefinementFailure {
+    pub reason: String,
+    pub fallback_reason: Option<&'static str>,
+    pub iterations: usize,
+    pub residual: Residual,
+}
+
+impl std::fmt::Display for RefinementFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.reason)
+    }
+}
+
+impl std::error::Error for RefinementFailure {}
+
+impl SolveReport {
+    pub fn check_converged(&self) -> GpuResult<()> {
+        if self.converged {
+            return Ok(());
+        }
+        Err(Box::new(RefinementFailure {
+            reason: self.failure_reason.clone().unwrap_or_else(|| {
+                format!("GPU refinement exhausted {} V-cycles", self.iterations)
+            }),
+            fallback_reason: (!self.gpu_f64).then_some(
+                "native f64 residual disabled or unavailable; CPU f64 residual with GPU f32 corrections",
+            ),
+            iterations: self.iterations,
+            residual: *self.residual_history.last().unwrap(),
+        }))
+    }
+}
+
+const INNER_RELATIVE_FLOOR: f64 = 1e-4;
+const MAX_OUTER_ITERATIONS: usize = 12;
+
+#[derive(Debug, PartialEq)]
+enum Stop {
+    Continue,
+    Converged,
+    Stagnated,
+    Diverged,
+    CycleLimit,
+    OuterLimit,
+}
+
+fn stop(
+    residual: f64,
+    previous: Option<f64>,
+    target: f64,
+    cycles: usize,
+    max_cycles: usize,
+    outer: usize,
+) -> Stop {
+    if !residual.is_finite() {
+        Stop::Diverged
+    } else if residual <= target {
+        Stop::Converged
+    } else if cycles >= max_cycles {
+        Stop::CycleLimit
+    } else if previous.is_some_and(|last| residual > last) {
+        Stop::Diverged
+    } else if previous.is_some_and(|last| residual > 0.5 * last) {
+        Stop::Stagnated
+    } else if outer >= MAX_OUTER_ITERATIONS {
+        Stop::OuterLimit
+    } else {
+        Stop::Continue
+    }
+}
+
+fn inner_target(target: f64, residual: f64) -> f64 {
+    (INNER_RELATIVE_FLOOR * residual).max(target)
 }
 
 struct HostFine {
@@ -218,6 +299,8 @@ struct Kernels {
     restrict: wgpu::ComputePipeline,
     prolong: wgpu::ComputePipeline,
     galerkin: wgpu::ComputePipeline,
+    correction_norm: wgpu::ComputePipeline,
+    reduce_norm: wgpu::ComputePipeline,
     dummy: wgpu::Buffer,
 }
 
@@ -304,7 +387,7 @@ impl Gpu {
     }
 
     /// Solve the same discrete Laplace problem and residual criterion as `mg::solve`.
-    /// A single f32 V-cycle approximates each f64 residual correction. If native
+    /// Bounded f32 V-cycles approximate each f64 residual correction. If native
     /// shader f64 is absent, the outer iterate/residual stay on the CPU instead.
     pub fn solve(
         &self,
@@ -528,31 +611,75 @@ impl Gpu {
         };
         let mut history = Vec::new();
         let mut iterations = 0;
-        loop {
-            if !absolute.is_finite() {
-                return Err("GPU refinement produced non-finite residual".into());
-            }
+        let mut outer_iterations = 0;
+        let target =
+            options.absolute_tolerance / fine.normalization + options.relative_tolerance * scale;
+        let mut norm_count = count.div_ceil(128);
+        let mut norms = vec![self.storage((norm_count * 4) as u64, "f32 norm blocks")?];
+        while norm_count > 1 {
+            norm_count = norm_count.div_ceil(128);
+            norms.push(self.storage((norm_count * 4) as u64, "f32 norm reduction")?);
+        }
+        let mut previous = None;
+        let failure_reason = loop {
             history.push(Residual {
                 absolute: absolute * fine.normalization,
                 relative: absolute / scale,
             });
-            if absolute
-                <= options.absolute_tolerance / fine.normalization
-                    + options.relative_tolerance * scale
-                || iterations == options.max_cycles
-            {
-                break;
+            let verdict = stop(
+                absolute,
+                previous,
+                target,
+                iterations,
+                options.max_cycles,
+                outer_iterations,
+            );
+            if verdict == Stop::Converged {
+                break None;
             }
+            if verdict != Stop::Continue {
+                let detail = match verdict {
+                    Stop::Stagnated => "stagnated".to_owned(),
+                    Stop::Diverged => "diverged".to_owned(),
+                    Stop::CycleLimit => format!("exhausted {} V-cycles", options.max_cycles),
+                    Stop::OuterLimit => format!("reached {MAX_OUTER_ITERATIONS} outer iterations"),
+                    Stop::Continue | Stop::Converged => unreachable!(),
+                };
+                break Some(format!(
+                    "f32 corrections {detail} at residual {:.9e} V/mm^2 (relative {:.9e}); switch to f64/CPU or loosen tolerance",
+                    absolute * fine.normalization,
+                    absolute / scale
+                ));
+            }
+            previous = Some(absolute);
+            let inner_target = inner_target(target, absolute);
             let mut encoder = self.device.create_command_encoder(&Default::default());
             levels[0].current = 0;
             encoder.clear_buffer(&levels[0].x[0], 0, None);
-            cycle(self, &kernels, &mut levels, &mut encoder, options);
+            let mut inner_previous = absolute;
+            loop {
+                cycle(self, &kernels, &mut levels, &mut encoder, options);
+                self.queue.submit([encoder.finish()]);
+                iterations += 1;
+                let inner = kernels.norm(self, &levels[0], &norms)?;
+                // Stop an oscillating inner solve and judge its correction
+                // with the true f64 residual, never with the f32 norm.
+                if inner <= inner_target
+                    || inner >= inner_previous
+                    || !inner.is_finite()
+                    || iterations >= options.max_cycles
+                {
+                    break;
+                }
+                inner_previous = inner;
+                encoder = self.device.create_command_encoder(&Default::default());
+            }
+            let mut encoder = self.device.create_command_encoder(&Default::default());
             if let Some(native) = &native {
                 native.update(self, &levels[0], &mut encoder);
                 self.queue.submit([encoder.finish()]);
                 absolute = native.residual(self, &levels[0])?;
             } else {
-                self.queue.submit([encoder.finish()]);
                 let correction = self.download::<f32>(&levels[0].x[levels[0].current], count)?;
                 host_x
                     .par_iter_mut()
@@ -567,8 +694,8 @@ impl Gpu {
                 self.queue
                     .write_buffer(&levels[0].rhs, 0, bytemuck::cast_slice(&cpu_rhs));
             }
-            iterations += 1;
-        }
+            outer_iterations += 1;
+        };
         timings.solve = solving.elapsed();
         let readback = Instant::now();
         if let Some(native) = &native {
@@ -585,9 +712,9 @@ impl Gpu {
             });
         timings.readback = readback.elapsed();
         Ok(SolveReport {
-            converged: absolute
-                <= options.absolute_tolerance / fine.normalization
-                    + options.relative_tolerance * scale,
+            converged: failure_reason.is_none(),
+            outer_iterations,
+            failure_reason,
             iterations,
             levels: levels.len(),
             residual_history: history,
@@ -676,12 +803,42 @@ impl Kernels {
             restrict: pipeline("restrict_rhs"),
             prolong: pipeline("prolong"),
             galerkin: pipeline("galerkin"),
+            correction_norm: pipeline("correction_norm"),
+            reduce_norm: pipeline("reduce_norm"),
             dummy: gpu.storage(4, "dummy read buffer")?,
         };
         if let Some(error) = pollster::block_on(scope.pop()) {
             return Err(error.into());
         }
         Ok(result)
+    }
+    fn norm(&self, gpu: &Gpu, level: &Level, norms: &[wgpu::Buffer]) -> GpuResult<f64> {
+        let mut encoder = gpu.device.create_command_encoder(&Default::default());
+        let bindings = self.bind(
+            gpu,
+            level,
+            &level.x[level.current],
+            &level.rhs,
+            &norms[0],
+            &self.dummy,
+        );
+        dispatch(
+            &mut encoder,
+            &self.correction_norm,
+            &bindings,
+            level.dims.iter().product(),
+        );
+        for pair in norms.windows(2) {
+            let bindings = self.bind(gpu, level, &pair[0], &self.dummy, &pair[1], &self.dummy);
+            dispatch(
+                &mut encoder,
+                &self.reduce_norm,
+                &bindings,
+                (pair[0].size() / 4) as usize,
+            );
+        }
+        gpu.queue.submit([encoder.finish()]);
+        Ok(f64::from(gpu.download::<f32>(norms.last().unwrap(), 1)?[0]))
     }
     fn bind(
         &self,
@@ -970,4 +1127,32 @@ fn validate(x: &[f64], mask: &[bool], grid: Grid, options: Options) -> GpuResult
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inner_correction_stops_at_the_floor_or_remaining_target() {
+        assert_eq!(inner_target(1e-12, 2.0), 2e-4);
+        assert_eq!(inner_target(0.1, 2.0), 0.1);
+    }
+
+    #[test]
+    fn convergence_requires_the_true_target_before_any_limit() {
+        assert_eq!(
+            stop(1e-12, Some(1e-12), 1e-12, 200, 200, 12),
+            Stop::Converged
+        );
+        assert_eq!(stop(0.6, Some(1.0), 1e-12, 1, 200, 1), Stop::Stagnated);
+        assert_eq!(stop(0.5, Some(1.0), 1e-12, 1, 200, 1), Stop::Continue);
+        assert_eq!(stop(1.1, Some(1.0), 1e-12, 1, 200, 1), Stop::Diverged);
+        assert_eq!(stop(f64::NAN, None, 1e-12, 0, 200, 0), Stop::Diverged);
+        assert_eq!(stop(f64::INFINITY, None, 1e-12, 0, 200, 0), Stop::Diverged);
+        assert_eq!(stop(1.0, None, 1e-12, 0, 0, 0), Stop::CycleLimit);
+        assert_eq!(stop(0.6, Some(1.0), 1e-12, 200, 200, 12), Stop::CycleLimit);
+        assert_eq!(stop(0.1, Some(1.0), 1e-12, 200, 200, 1), Stop::CycleLimit);
+        assert_eq!(stop(0.1, Some(1.0), 1e-12, 10, 200, 12), Stop::OuterLimit);
+    }
 }

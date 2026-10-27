@@ -208,13 +208,17 @@ cargo test --workspace --release
 . /tmp/simrep-python/bin/activate  # or your venv
 python -m pytest crates/simrep-py/tests -q
 SIMREP_BIN=./target/release/simrep node mcp/smoke.mjs
+python3 tools/result_identity.py --selftest  # compare before/after run directories; see docs/dev/verification.md
 ```
 
 Oracle/fixture-gated tests are ignored by default and need env vars plus
 `--ignored` (see `docs/dev/verification.md`, which is the authoritative
 verification guide). `tools/check_claims.py` validates quantitative claims
 in docs and the report against `docs/claims.json`; run it after changing
-documented numbers.
+documented numbers. `tools/provenance_check.py` pins every committed
+reference/fixture/answer-key file listed in `docs/validation/PROVENANCE.md`
+by sha256; run it after adding or editing any such file (`--add PATH`
+registers a new row).
 
 ## Repository layout
 
@@ -229,7 +233,7 @@ documented numbers.
   rasterizer
 - `crates/simrep-geom`: signed-distance electrode geometry
 - `crates/simrep-mesh`: native triangle mesh import, voxelization, SDF and
-  scientific export
+  scientific export (VTI/VTS fields, VTP trajectories, USDA mesh/curve scenes)
 - `crates/simrep-cad`: optional OpenCascade B-rep electrode import
 - `crates/simrep-lua`: bounded Lua 5.1 execution shared by SIMION input
   formats
@@ -239,6 +243,7 @@ documented numbers.
 - `docs/`: design and validation docs; start at `docs/PLAN.md`
 - `examples/`: runnable end-to-end Python/CLI examples
 - `mcp/`: stdio MCP server over the CLI (`node mcp/smoke.mjs`; see `mcp/README.md`)
+- `ai/`: subscription-authenticated AI sidecar; read `ai/PROTOCOL.md` before UI changes and run `cd ai && npm test && npm run typecheck`. Never log or move provider credentials into the WebView or repository.
 - `bench/`, `tools/`: benchmark records and dev/oracle utilities
 
 ## Dev pitfalls

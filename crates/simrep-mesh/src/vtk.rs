@@ -242,7 +242,7 @@ pub struct Trajectory {
     pub points: Vec<TrajectoryPoint>,
 }
 
-fn validate_trajectories(trajectories: &[Trajectory]) -> io::Result<usize> {
+pub(crate) fn validate_trajectories(trajectories: &[Trajectory]) -> io::Result<usize> {
     let mut ids = std::collections::HashSet::new();
     let mut count = 0usize;
     for trajectory in trajectories {

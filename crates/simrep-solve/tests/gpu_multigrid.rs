@@ -13,6 +13,61 @@ fn main() -> GpuResult<()> {
         };
         check(&gpu)?;
         check_sdf(&gpu)?;
+        check_stagnation(&gpu)?;
+    }
+    Ok(())
+}
+
+fn check_stagnation(gpu: &Gpu) -> GpuResult<()> {
+    let dims = [33, 31, 1];
+    let count = dims.iter().product();
+    let grid = Grid {
+        dims,
+        spacing: [1.0; 3],
+        geometry: Geometry::Planar,
+    };
+    let fixed: Vec<_> = (0..count)
+        .map(|i| i % dims[0] == 0 || i % dims[0] == dims[0] - 1)
+        .collect();
+    let initial: Vec<_> = (0..count)
+        .map(|i| {
+            if i % dims[0] == dims[0] - 1 {
+                // Below f32's representable range, but with a nonzero f64
+                // residual and target: every correction is exactly zero.
+                1e-50
+            } else {
+                0.0
+            }
+        })
+        .collect();
+    let options = Options {
+        relative_tolerance: 1e-12,
+        max_cycles: 200,
+        ..Default::default()
+    };
+    for native in [false, true] {
+        if native && !gpu.has_f64() {
+            continue;
+        }
+        let mut values = initial.clone();
+        let report = gpu.solve_with_precision(&mut values, &fixed, grid, options, native)?;
+        assert!(!report.converged);
+        assert!(report.failure_reason.is_some());
+        assert_eq!(report.iterations, 1);
+        assert_eq!(report.outer_iterations, 1);
+        let residual = report.residual_history.last().unwrap();
+        assert!(residual.relative > options.relative_tolerance);
+        let error = report.check_converged().unwrap_err();
+        assert!(error.is::<simrep_solve::gpu::RefinementFailure>());
+        for (i, &is_fixed) in fixed.iter().enumerate() {
+            if is_fixed {
+                assert_eq!(values[i].to_bits(), initial[i].to_bits());
+            }
+        }
+        println!(
+            "PASS forced stagnation native={native}: {} V-cycles, {} outer steps, {}",
+            report.iterations, report.outer_iterations, error
+        );
     }
     Ok(())
 }
@@ -174,6 +229,8 @@ fn check(gpu: &Gpu) -> GpuResult<()> {
             let report = gpu.solve_with_precision(&mut actual, &fixed, grid, options, native)?;
             let residual = report.residual_history.last().unwrap();
             assert!(report.converged, "{dims:?} native={native}: {residual:?}");
+            assert!(report.failure_reason.is_none());
+            report.check_converged()?;
             assert!(residual.relative <= options.relative_tolerance);
             let scale = reference.iter().copied().map(f64::abs).fold(1.0, f64::max);
             let error = actual
@@ -207,6 +264,7 @@ fn check(gpu: &Gpu) -> GpuResult<()> {
                 native,
             )?;
             assert!(!report.converged);
+            assert!(report.failure_reason.is_some());
             assert_eq!(report.iterations, 0);
             assert_eq!(values, initial);
         }

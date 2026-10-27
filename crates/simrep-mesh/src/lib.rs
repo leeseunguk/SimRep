@@ -9,6 +9,7 @@ mod repair;
 mod spatial;
 mod surface;
 mod sweep;
+mod usda;
 mod vtk;
 
 pub use formats::{ImportOptions, read_mesh, write_mesh};
@@ -20,6 +21,7 @@ pub use spatial::{Solid, SurfaceGap};
 pub use surface::{
     SurfaceOptions, electrode_surface, electrode_surface_with_options, isosurface, pa_isosurface,
 };
+pub use usda::write_usda;
 pub use vtk::{
     Trajectory, TrajectoryPoint, write_revolved_vts, write_scalar_vti, write_trajectories_csv,
     write_vti, write_vtp,

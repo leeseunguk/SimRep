@@ -64,6 +64,18 @@ jobs:
         run: cargo test --workspace --release
       - name: Check computed validation gates
         run: python3 tools/validation_gates.py --check
+      - name: Check result identity and CPU determinism
+        run: |
+          python3 tools/result_identity.py --selftest
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          for run in single default; do
+            mkdir "$work/$run"
+            target/release/simrep gem2pa examples/data/einzel.gem "$work/$run/einzel.pa#"
+          done
+          RAYON_NUM_THREADS=1 target/release/simrep refine "$work/single/einzel.pa#" --device cpu
+          target/release/simrep refine "$work/default/einzel.pa#" --device cpu
+          python3 tools/result_identity.py "$work/single" "$work/default" --require-byte-identity
 
   python:
     runs-on: ubuntu-latest
@@ -135,6 +147,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
+      - name: Check reference-file provenance
+        run: python3 tools/provenance_check.py
       - name: Check published claims against committed evidence
         run: python3 tools/check_claims.py
 

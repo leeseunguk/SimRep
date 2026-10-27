@@ -200,7 +200,7 @@ fn main() -> ExitCode {
                 } else {
                     "command_failed"
                 };
-                ::std::println!("{}", json::error(&error.to_string(), kind));
+                ::std::println!("{}", json::execution_error(error.as_ref(), kind));
             }
             ExitCode::FAILURE
         }
@@ -481,6 +481,7 @@ fn run_refine_bench(options: RefineBenchOptions) -> GpuResult<()> {
                 start.elapsed().as_secs_f64() * 1000.0
             );
             let report = gpu.solve(&mut values, &fixed, grid, solver_options)?;
+            report.check_converged()?;
             println!(
                 "Residual path: {}",
                 if report.gpu_f64 {

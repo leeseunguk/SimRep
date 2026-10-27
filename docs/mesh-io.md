@@ -100,6 +100,18 @@ distance function (a conservative gradient bound is sqrt(3)).
 
 ## Export surfaces and fields
 
+| Export command | Output formats | Intended consumers |
+| --- | --- | --- |
+| `geometry` | STL, OBJ, glTF/GLB, USDA | Blender; Omniverse/OpenUSD via USDA |
+| `grid` | VTI (ImageData); VTS (revolved cylindrical StructuredGrid) | ParaView/VTK |
+| `isosurface` | STL, OBJ, glTF/GLB, USDA | Blender; Omniverse/OpenUSD via USDA |
+| `trajectories` | VTP (PolyData polylines), numeric CSV, USDA (BasisCurves) | ParaView/VTK via VTP; Blender/Omniverse via USDA; analysis via CSV |
+
+VTI already carries the potential, electrode mask and optional field vectors;
+a separate regular-grid VTU would repeat the same samples with extra explicit
+point coordinates and cell connectivity. No unstructured grid is produced by
+these PA export commands, so VTU is not added.
+
 ```sh
 simrep export geometry 'lens.pa#' lens.stl
 simrep export geometry 'lens.pa#' lens.obj --electrode 7
@@ -112,6 +124,8 @@ simrep export geometry planar.pa planar.stl --extrusion-depth 5
 simrep export grid einzel.pa0 meridional.vti
 simrep export grid einzel.pa0 revolved.vts --revolve --angular-segments 64
 simrep export isosurface einzel.pa0 equipotential.glb --potential 50
+simrep export geometry einzel.pa0 scene.usda --trajectories samples.csv
+simrep export isosurface solved.pa equipotential.usda --potential 50
 ```
 
 Geometry extraction emits outward exposed voxel faces, each voxel extending
@@ -179,6 +193,7 @@ formats. The library equivalent is `write_revolved_vts`.
 ```sh
 simrep export trajectories samples.csv trajectories.vtp
 simrep export trajectories samples.csv normalized.csv
+simrep export trajectories samples.csv trajectories.usda
 ```
 
 The numeric sample CSV schema is:
@@ -194,6 +209,56 @@ one polyline per trajectory and retains its id, times, and velocities. This
 expects full sample histories, not the current `simrep fly` termination-only
 CSV. The library export functions accept trajectory vectors directly and do
 not depend on `simrep-fly`.
+
+## USD scenes
+
+`.usda` is a self-contained, deterministic ASCII USD stage for OpenUSD,
+Omniverse and Blender's USD importer. `geometry` and `isosurface` write one
+UsdGeom `Mesh` per source part, with `subdivisionScheme = "none"` and
+right-handed triangle winding. Indexed prim names avoid duplicate or invalid
+source identifiers; `displayName` retains the original part name. This is
+export only: `read_mesh` does not accept USD.
+
+`geometry --trajectories samples.csv` adds trajectory curves to the same
+stage and requires `.usda` output. The CSV uses the sample schema above.
+Surface origin/symmetry options affect electrodes; sample positions are
+already world positions in mm and are not translated or mirrored. Use the
+same coordinate frame for both. Trajectories are static, linear, nonperiodic
+UsdGeom `BasisCurves`, with one curve per trajectory, constant 0.1 mm width
+and an orange display color. The trajectory-only command uses the same
+representation.
+
+The stage declares `metersPerUnit = 0.001` and `upAxis = "Z"`; numeric
+coordinates remain in mm. USD points and bounds are Float32, as required by
+UsdGeom, and inputs outside Float32 range are rejected before creating the
+file. Use VTI/VTS/VTP for Float64 scientific coordinates/fields. Curves retain
+`primvars:trajectory_id` as UInt64 with uniform interpolation, and
+`primvars:time_us` / `primvars:velocity_mm_per_us` as Float64 per-vertex
+data. These are static scientific attributes, not animated time samples or
+USD's per-second motion velocities. DCC importers may not expose every custom
+primvar even though it remains in the USD stage.
+
+Blender's USD importer supports meshes and linear BasisCurves; Omniverse
+opens the USD stage directly. In Blender, enable **Apply Unit Conversion
+Scale** to honor the stage's millimeter units. No materials, lights, cameras,
+USDZ packaging or OpenVDB volumes are required for these surface/trajectory
+scenes.
+
+## Sparse-volume decision
+
+OpenVDB/NanoVDB export is not implemented. The reference writers contain
+substantial tree layout, indexing, transforms and binary-format machinery;
+they are not a small grid serialization helper. A useful ion-optics volume
+would additionally need a defined inactive/background potential, electrode
+mask and vector-field treatment, and validation with a real VDB reader.
+Keeping a second, independently maintained sparse-volume implementation
+would add more scope than these dense PA exports justify. VTI/VTS already
+retain the complete scientific grid without a native VDB dependency.
+
+The Iteration-CFD VTK, USD and VDB writers and its I/O redesign document were
+reviewed for format scope. This USD writer is an independent implementation
+of the public UsdGeom schemas; no reference code was copied and no new
+third-party license entry is needed.
 
 ## Dependency decisions
 
@@ -232,6 +297,15 @@ cargo run --release -p simrep-mesh --example simion_compare -- \
 Tests compare cube, sphere and torus membership and SDF to analytic formulas,
 exercise repairs and round trips, check affine transforms and format grouping,
 and decode VTK block headers, array ordering and field values.
+USD tests decode mesh indices, coordinates, bounds and curve sample
+attributes, preserve all 64 trajectory-id bits and escaped part names, compare
+repeated output byte-for-byte, and reject invalid data before file creation.
+CLI tests exercise geometry, isosurface, trajectory and combined-scene USDA
+exports; MCP smoke also exercises combined scenes.
+If Python `pxr` is installed, an additional test opens the combined scene
+through OpenUSD, checks typed schema attributes and re-exports/reopens it.
+Set `SIMREP_USD_PYTHON` to select that Python interpreter; otherwise
+`python3` is probed and the dependency-free structural tests remain active.
 The benchmark constructs a closed torus with exactly 1,000,000 triangles
 and samples 256^3 nodes; its printed elapsed time includes topology checks,
 BVH construction and voxelization, not mesh generation or file I/O.

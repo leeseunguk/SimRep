@@ -770,13 +770,14 @@ const TOOLS = [
     name: 'export_geometry',
     title: 'Export electrode surfaces',
     description:
-      'Export exposed electrode voxel faces of a PA to STL, OBJ, glTF, or GLB. electrode selects one electrode number or potential in volts; omit to export all. origin is the millimetre position of grid node (0,0,0). angular_segments and sweep_degrees revolve a cylindrical PA (sweep is from +Y toward +Z, degrees, default 360). extrusion_depth is the planar 2D extrusion depth in millimetres. Returns output_paths.',
+      'Export exposed electrode voxel faces of a PA to STL, OBJ, glTF, GLB, or USDA. trajectories optionally adds a trajectory-sample CSV as curves in a USDA scene, in the same millimetre frame. electrode selects one electrode number or potential in volts; omit to export all. origin is the millimetre position of grid node (0,0,0). angular_segments and sweep_degrees revolve a cylindrical PA (sweep is from +Y toward +Z, degrees, default 360). extrusion_depth is the planar 2D extrusion depth in millimetres. Returns output_paths.',
     inputSchema: {
       type: 'object',
       properties: {
         input: { type: 'string' },
         output: { type: 'string' },
         electrode: { type: 'number', description: 'Electrode number or potential. Omit for all.' },
+        trajectories: { type: 'string', description: 'Trajectory-sample CSV; requires .usda output.' },
         origin: { type: 'array', items: { type: 'number' }, minItems: 3, maxItems: 3 },
         angular_segments: { type: 'integer', minimum: 1 },
         sweep_degrees: { type: 'number' },
@@ -786,9 +787,10 @@ const TOOLS = [
       additionalProperties: false,
     },
     async run(args) {
-      only(args, ['input', 'output', 'electrode', 'origin', 'angular_segments', 'sweep_degrees', 'extrusion_depth'])
+      only(args, ['input', 'output', 'electrode', 'trajectories', 'origin', 'angular_segments', 'sweep_degrees', 'extrusion_depth'])
       const argv = ['export', 'geometry', inputFile(reqString(args, 'input'), 'input'), prepareOutput(reqString(args, 'output'), 'output')]
       if (args.electrode !== undefined) flag(argv, '--electrode', finite(args.electrode, 'electrode'))
+      if (args.trajectories !== undefined) flag(argv, '--trajectories', inputFile(reqString(args, 'trajectories'), 'trajectories'))
       pushSurface(argv, args)
       return simrep(argv)
     },
@@ -826,7 +828,7 @@ const TOOLS = [
     name: 'export_isosurface',
     title: 'Export a potential isosurface',
     description:
-      'Export a potential isosurface (marching cubes, or a swept 2D contour) to a mesh. potential is volts. The output extension selects STL, OBJ, glTF, or GLB. origin is millimetres. Returns output_paths.',
+      'Export a potential isosurface (marching cubes, or a swept 2D contour) to a mesh. potential is volts. The output extension selects STL, OBJ, glTF, GLB, or USDA. origin is millimetres. Returns output_paths.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -857,7 +859,7 @@ const TOOLS = [
     name: 'export_trajectories',
     title: 'Export trajectory samples',
     description:
-      'Convert a trajectory-sample CSV to VTP polylines or a normalized CSV. The input header must be trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us. This is not a fly result CSV; use read_csv_summary for fly --output files. Output extension must be .vtp or .csv. Returns output_paths.',
+      'Convert a trajectory-sample CSV to VTP polylines, USDA BasisCurves, or a normalized CSV. The input header must be trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us. This is not a fly result CSV; use read_csv_summary for fly --output files. Output extension must be .vtp, .usda, or .csv. Returns output_paths.',
     inputSchema: {
       type: 'object',
       properties: {

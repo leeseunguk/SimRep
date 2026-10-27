@@ -322,6 +322,24 @@ try {
   const gridBody = jsonOf(grid)
   check('export_grid output_paths', grid.result?.isError !== true && gridBody?.schema_version === 1 && existsSync(gridBody?.output_paths?.[0]), JSON.stringify(gridBody?.output_paths))
 
+  writeFileSync(path.join(workspace, 'samples.csv'), 'trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us\n1,0,0,0,0,1,0,0\n1,1,1,0,0,1,0,0\n')
+  const curves = await call('tools/call', {
+    name: 'export_trajectories',
+    arguments: { input: 'samples.csv', output: 'out/curves.usda' },
+  })
+  const curvesBody = jsonOf(curves)
+  check('export_trajectories USDA output_paths', curves.result?.isError !== true && existsSync(curvesBody?.output_paths?.[0]), JSON.stringify(curvesBody?.output_paths))
+  const scene = await call('tools/call', {
+    name: 'export_geometry',
+    arguments: { input: pa0, output: 'out/scene.usda', trajectories: 'samples.csv' },
+  })
+  const sceneBody = jsonOf(scene)
+  check('export_geometry combined USDA output_paths', scene.result?.isError !== true && existsSync(sceneBody?.output_paths?.[0]), JSON.stringify(sceneBody?.output_paths))
+  if (scene.result?.isError !== true && existsSync(sceneBody?.output_paths?.[0])) {
+    const usda = readFileSync(sceneBody.output_paths[0], 'utf8')
+    check('USDA contains electrode meshes and trajectory curves', usda.startsWith('#usda 1.0\n') && usda.includes('def Mesh "part_0"') && usda.includes('def BasisCurves "Trajectories"'))
+  }
+
   const wrong = await call('tools/call', {
     name: 'export_trajectories',
     arguments: { input: csv, output: 'out/wrong.vtp' },

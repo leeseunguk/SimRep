@@ -41,21 +41,63 @@ four; dimensions need not be cubic, odd, or powers of two.
 
 The outer iterate is f64 and gauge shifted by the first fixed voltage.
 Each outer iteration computes a difference-form f64 physical residual,
-solves its weighted correction approximately with one f32 V-cycle, and adds
-the f32 correction to the f64 iterate. Native GLSL through Naga implements
+solves its weighted correction approximately with bounded f32 V-cycles, and
+adds the f32 correction to the f64 iterate. Native GLSL through Naga implements
 the f64 kernels on Vulkan; the infinity norm is reduced in f64 on the GPU.
-Only the eight-byte convergence scalar is downloaded each iteration.
+Only convergence scalars are downloaded during native-f64 solving: a
+four-byte f32 inner norm per V-cycle and an eight-byte true f64 residual
+per outer update.
 The report uses the same gauge-shifted Dirichlet RHS scale, absolute
 tolerance, and relative tolerance as the CPU solver. Stencil coefficients
 are divided by the largest inverse squared spacing internally and physical
 residual units are restored in the report. The default relative tolerance
-is `1e-10`; exhaustion of `max_cycles` reports nonconvergence.
+is `1e-10`.
+
+### Mixed-precision stop rules
+
+For Laplace, SDF, and static dielectric refinement, the outer target remains
+the CPU-compatible `T = absolute_tolerance + relative_tolerance * RHS_scale`,
+in physical residual units. The inner f32 correction targets
+`max(1e-4 * r_outer, T)`: it never tries to reduce its own residual by
+more than four decades. Its unweighted infinity norm is reduced on the GPU.
+An inner norm that stops decreasing ends that correction, so an oscillating
+f32 solve cannot run indefinitely. The f32 norm never declares convergence;
+the recomputed f64 physical residual must meet `T`.
+
+After an outer correction, a residual greater than half the preceding
+outer residual reports stagnation; growth or a non-finite residual reports
+divergence. Convergence is checked first for finite residuals. There are at
+most 12 outer corrections, and `max_cycles` remains a total V-cycle budget
+across all corrections, including incomplete ones. A zero-cycle budget
+does not change the supplied potential. `iterations` counts V-cycles,
+`outer_iterations` counts f64 updates, and `residual_history` contains the
+initial and each post-update f64 residual.
+
+Nonconvergence leaves `SolveReport.converged=false` and supplies
+`failure_reason`, including the measured residual and the advice to switch
+to f64/CPU or loosen the tolerance. Native shader f64 still uses f32
+corrections; selecting CPU is the fully f64 solver. No automatic CPU re-solve
+is performed. CLI refinement exits unsuccessfully, preserves that diagnostic
+in `error.message` and JSON `reason`, sets `converged=false`, and reports
+`cycles` and `final_residual`. `fallback_reason` independently identifies
+the CPU-f64 residual path when native f64 was unavailable or disabled; it
+does not claim that an unsuccessful solve fell back and converged.
+Successful JSON summaries retain the existing device-selection `reason`
+and precision `mixed-f32-f64`. The separate GPU Poisson/PIC solver retains
+its existing stopping policy.
+
+These rules independently implement the correction floor and outer
+contraction/budget criteria described in Iteration-CFD's
+`rust/src/precision.rs`, SPEC-LIT equations 118.4.4-118.4.8. No source code
+was copied. SimRep retains its existing RHS-scaled additive absolute/relative
+target rather than adopting that solver's different norm convention.
 
 Without `SHADER_F64`, the full f64 iterate and residual stay on the CPU.
-Every cycle downloads one f32 correction (4 bytes/node), updates the host
+Every outer update downloads one f32 correction (4 bytes/node), updates the host
 f64 iterate, computes its residual using Rayon, and uploads a weighted f32
-RHS (4 bytes/node). This costs at least 8 bytes/node/cycle of PCIe traffic
-plus CPU stencil evaluation and synchronization. It is a correctness
+RHS (4 bytes/node). This costs at least 8 bytes/node/outer update of PCIe
+traffic plus CPU stencil evaluation and synchronization. Inner V-cycles
+stay on the GPU. It is a correctness
 fallback, not the hardware performance path. `solve_with_precision(...,
 false)` explicitly exercises it on an f64-capable adapter.
 
@@ -96,6 +138,45 @@ and skinny grids. Mirror faces, off-coarse-grid point/wire electrodes,
 fixed-value preservation, and a zero-cycle budget are exercised. Comparison
 tolerance is `1e-9` times the maximum reference voltage; solve tolerance in
 these small tests is `1e-12`.
+The forced-stagnation regression uses a `1e-50 V` boundary voltage: its f64
+residual is nonzero, but its f32 correction RHS underflows to exactly zero.
+Both native and CPU-residual paths must report nonconvergence after exactly
+one V-cycle, rather than exhausting 200 V-cycles. Unit tests
+cover the inner floor, contraction boundary, divergence, both iteration
+caps, convergence precedence, and structured JSON failure fields.
+
+## WSL mixed-precision check (2026-10-27)
+
+Vulkan llvmpipe (LLVM 20.1.2, 256 bits), release build, eight Rayon threads,
+`GALLIUM_OVERRIDE_CPU_CAPS=avx`, `LP_NATIVE_VECTOR_WIDTH=256`. Before/after
+used identical inputs and a 200-V-cycle budget. Both CPU-f64-residual and
+native-f64-residual modes produced the results below.
+
+| Case | Relative target | Before | After |
+|---|---:|---|---|
+| 64^3 planar, 262,144 nodes | `1e-12` | Converged, 17 cycles, `3.354e-13` | Converged, 17 cycles, `3.358e-13` |
+| 65x63 planar, permittivity ratio `1e8` | `1e-12` | Converged, 11 cycles, `8.389e-13` | Converged, 11 cycles, `8.362e-13` |
+| 33x31, non-binary boundary voltages | `1e-30` | 200 cycles, plateau at `3.640e-16`, generic nonconvergence | 19 cycles / 5 outer updates, `3.640e-16`, explicit stagnation |
+| 65x63, spacing ratio `1e5` | `1e-12` | 200 cycles, `5.056e-12`, nonconvergence | 200 cycles, `1.283e-11`, explicit V-cycle exhaustion |
+
+Maximum changes in the converged potentials were `2.110e-15 V` for the
+64^3 case and `8.949e-14 V` for the high-contrast dielectric, not bitwise
+identity: inner corrections now accumulate in f32 before the f64 update.
+Fixed boundary potentials remain bit-for-bit unchanged. This check does
+not promise convergence on every anisotropic or high-contrast grid.
+
+Reproduce and optionally save the potentials for direct comparison:
+
+```sh
+GALLIUM_OVERRIDE_CPU_CAPS=avx LP_NATIVE_VECTOR_WIDTH=256 RAYON_NUM_THREADS=8 \
+  cargo run --release -p simrep-solve --example mixed_precision -- /tmp/mixed-potentials
+```
+
+These software-adapter runs are correctness and stopping checks, not GPU
+performance measurements. The additional inner-norm reductions change
+dispatch/synchronization costs. RTX 3070 timings must be remeasured on
+Windows; the historical numbers below predate these rules and must not
+be presented as current performance.
 
 ## Measured Windows Vulkan results (2026-10-23)
 

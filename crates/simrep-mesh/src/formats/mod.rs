@@ -42,7 +42,7 @@ pub fn read_mesh(path: impl AsRef<Path>, options: ImportOptions) -> io::Result<M
     Ok(mesh)
 }
 
-/// Write STL (binary), OBJ, glTF (embedded buffer) or GLB. STL has no part
+/// Write STL (binary), OBJ, glTF (embedded buffer), GLB or USDA. STL has no part
 /// names; reimport reconstructs its edge-connected components.
 pub fn write_mesh(path: impl AsRef<Path>, mesh: &Mesh) -> io::Result<()> {
     mesh.validate()?;
@@ -90,8 +90,9 @@ pub fn write_mesh(path: impl AsRef<Path>, mesh: &Mesh) -> io::Result<()> {
             writer.flush()
         }
         "gltf" | "glb" => gltf_io::write(path, mesh),
+        "usda" => crate::write_usda(path, Some(mesh), &[]),
         other => Err(invalid(format!(
-            "unsupported mesh export {other:?}; expected stl, obj, gltf or glb"
+            "unsupported mesh export {other:?}; expected stl, obj, gltf, glb or usda"
         ))),
     }
 }
@@ -100,7 +101,7 @@ fn extension(path: &Path) -> io::Result<String> {
     path.extension()
         .and_then(|s| s.to_str())
         .map(str::to_ascii_lowercase)
-        .ok_or_else(|| invalid("file has no extension; import accepts stl, obj, ply, 3mf, gltf or glb; export accepts stl, obj, gltf or glb"))
+        .ok_or_else(|| invalid("file has no extension; import accepts stl, obj, ply, 3mf, gltf or glb; export accepts stl, obj, gltf, glb or usda"))
 }
 
 fn read_obj(path: &Path) -> io::Result<Mesh> {

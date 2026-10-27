@@ -71,5 +71,43 @@ fn mesh_import_and_all_export_commands_run_end_to_end() {
     fs::write(dir.path().join("samples.csv"),"trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us\n1,0,0,0,0,1,0,0\n1,1,1,0,0,1,0,0\n").unwrap();
     run(&["export", "trajectories", "samples.csv", "paths.vtp"]);
     run(&["export", "trajectories", "samples.csv", "paths.csv"]);
+    run(&["export", "trajectories", "samples.csv", "paths.usda"]);
+    run(&["export", "geometry", "cube.pa#", "electrode.usda"]);
+    run(&[
+        "export",
+        "geometry",
+        "cube.pa#",
+        "scene.usda",
+        "--trajectories",
+        "samples.csv",
+    ]);
+    run(&[
+        "export",
+        "isosurface",
+        "cube.pa#",
+        "iso.usda",
+        "--potential",
+        "3.5",
+    ]);
+    let curves = fs::read_to_string(dir.path().join("paths.usda")).unwrap();
+    let scene = fs::read_to_string(dir.path().join("scene.usda")).unwrap();
+    assert!(curves.contains("def BasisCurves \"Trajectories\""));
+    assert!(!curves.contains("def Mesh "));
+    assert!(scene.contains("def Mesh \"part_0\""));
+    assert!(scene.contains("def BasisCurves \"Trajectories\""));
+    let invalid = Command::new(env!("CARGO_BIN_EXE_simrep"))
+        .args([
+            "export",
+            "geometry",
+            "cube.pa#",
+            "invalid.obj",
+            "--trajectories",
+            "samples.csv",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(!invalid.status.success());
+    assert!(!dir.path().join("invalid.obj").exists());
     assert!(fs::metadata(dir.path().join("paths.vtp")).unwrap().len() > 100);
 }

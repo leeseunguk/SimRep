@@ -298,6 +298,28 @@ fn curved_studies(sizes: [usize; 3]) {
             errors.map(|e| e.1),
             1.0,
         );
+        let levels = std::array::from_fn(|i| Level {
+            h: 2.0 / (sizes[2 - i] - 1) as f64,
+            value: errors[2 - i].0,
+        });
+        let triplet = observed_order(&levels).unwrap();
+        Gate {
+            name: if sphere {
+                "exact-laplace-spheres"
+            } else {
+                "exact-laplace-coax"
+            },
+            reference: "exact_solutions.json; concentric-conductor Laplace solution",
+            metric: "maximum potential error over four grid phases (V)",
+            value: levels[0].value,
+            datum: 0.0,
+            u_num: triplet.gci_fine.map(|g| g * levels[0].value.abs()),
+            u_input: 0.0,
+            u_datum: 0.0,
+            band: "existing potential envelope 6h^2 V; three-grid Celik GCI of error norm",
+        }
+        .record()
+        .unwrap();
         // No reduced-order acceptance threshold: any pre-asymptotic order is
         // published as a finding. Check the documented absolute envelopes.
         for (n, e) in sizes.into_iter().zip(errors) {

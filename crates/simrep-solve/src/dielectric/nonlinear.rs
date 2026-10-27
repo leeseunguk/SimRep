@@ -321,6 +321,10 @@ impl NonlinearPermittivity {
             };
             let (converged, cycles, inner_residual) = if let Some(gpu) = gpu {
                 let r = material.solve_gpu(gpu, potential, inner)?;
+                if let Err(error) = r.check_converged() {
+                    potential.copy_from_slice(&previous);
+                    return Err(error);
+                }
                 (
                     r.converged,
                     r.iterations,

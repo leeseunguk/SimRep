@@ -50,6 +50,7 @@ impl LoadedMaterial {
             Self::Linear(material) => {
                 if let Some(gpu) = gpu {
                     let r = material.solve_gpu(gpu, potential, options)?;
+                    r.check_converged()?;
                     (
                         r.converged,
                         r.iterations,
