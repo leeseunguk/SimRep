@@ -18,6 +18,7 @@ pub struct InstanceField {
     pub(crate) voltage_bases: Vec<(GridField, VoltageExpression)>,
     surface: Option<Arc<SurfaceModel>>,
     surface_domain: Option<GridField>,
+    adaptive: Option<Arc<crate::AdaptiveField>>,
 }
 
 /// Multiple non-overlapping PA instances with field-free drift between them.
@@ -146,6 +147,7 @@ impl InstanceField {
             voltage_bases: Vec::new(),
             surface: None,
             surface_domain: None,
+            adaptive: None,
         })
     }
 
@@ -174,6 +176,11 @@ impl InstanceField {
         Ok(self)
     }
 
+    pub fn with_adaptive(mut self, field: crate::AdaptiveField) -> Self {
+        self.adaptive = Some(Arc::new(field));
+        self
+    }
+
     pub(crate) fn local(&self, position: Vector) -> Vector {
         let p = std::array::from_fn(|a| (position[a] - self.origin_mm[a]) / self.scale);
         self.axes.map(|axis| dot(axis, p))
@@ -182,7 +189,13 @@ impl InstanceField {
 
 impl Field for InstanceField {
     fn spatial_scale_mm(&self) -> Option<f64> {
-        self.grid.spatial_scale_mm().map(|h| h * self.scale)
+        self.adaptive
+            .as_ref()
+            .map_or_else(
+                || self.grid.spatial_scale_mm(),
+                |field| field.spatial_scale_mm(),
+            )
+            .map(|h| h * self.scale)
     }
 
     fn time_scale_us(&self) -> Option<f64> {
@@ -197,7 +210,10 @@ impl Field for InstanceField {
         if self.bounds_mm.is_some() && !self.grid.contains(p) {
             return FieldSample::default();
         }
-        let mut sample = self.grid.sample(p, time_us);
+        let mut sample = self.adaptive.as_ref().map_or_else(
+            || self.grid.sample(p, time_us),
+            |field| field.sample(p, time_us),
+        );
         for (grid, expression) in &self.voltage_bases {
             let factor = expression.evaluate(time_us);
             let basis = grid.sample(p, time_us);

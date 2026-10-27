@@ -1138,6 +1138,48 @@ struct Level {
     coarse: Option<(Transfer, Box<Level>)>,
 }
 
+/// A fixed, symmetric V-cycle for additive composite-grid preconditioning.
+pub(crate) struct CorrectionCycle(Level);
+
+impl CorrectionCycle {
+    pub(crate) fn new(cuts: &crate::cutcell::CutCells) -> Self {
+        let mut fine = Fine::new(cuts.grid, cuts.fixed.clone());
+        let mut rows = cuts.rows.clone();
+        for row in &mut rows {
+            row.voltage.fill(0.0);
+        }
+        fine.cuts = Some((cuts.slots.clone(), rows, 0.0));
+        let count = cuts.values.len();
+        let mut level = Level {
+            operator: Operator::Fine(Box::new(fine)),
+            x: vec![0.0; count],
+            rhs: vec![0.0; count],
+            work: vec![0.0; count],
+            coarse: None,
+        };
+        level.build_hierarchy();
+        Self(level)
+    }
+
+    pub(crate) fn apply(&mut self, rhs: &[f64]) -> &[f64] {
+        self.0.x.fill(0.0);
+        let Operator::Fine(fine) = &self.0.operator else {
+            unreachable!()
+        };
+        // Fine smoothers take physical sources; transpose restriction and
+        // the composite CG use the symmetric, volume-weighted right hand side.
+        for (i, (out, &value)) in self.0.rhs.iter_mut().zip(rhs).enumerate() {
+            *out = if fine.fixed[i] {
+                0.0
+            } else {
+                value / fine.weight(coords(i, fine.dims))
+            };
+        }
+        self.0.cycle(Options::default(), &mut Timings::default());
+        &self.0.x
+    }
+}
+
 impl Level {
     fn depth(&self) -> usize {
         1 + self.coarse.as_ref().map_or(0, |(_, next)| next.depth())

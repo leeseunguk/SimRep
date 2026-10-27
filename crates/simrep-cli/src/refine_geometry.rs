@@ -14,6 +14,7 @@ use simrep_fly::surface::{SourceGeometry, SourceSurface};
 use simrep_geom::{Electrode, SignedDistance};
 use simrep_io::{Pa0Metadata, PaFile, write_pa};
 use simrep_mesh::{ImportOptions, Solid, Unit, read_mesh, repair};
+use simrep_solve::adaptive::{AdaptiveGrid, Region, interpolate};
 use simrep_solve::cutcell::{CutCells, surface_fraction};
 use simrep_solve::gpu::{Gpu, GpuResult};
 use simrep_solve::mg::{Geometry, Grid, Options};
@@ -79,6 +80,33 @@ pub struct GeometryOptions {
     /// Absolute CAD tessellation chordal deflection in mm (default h_min/100).
     #[arg(long)]
     cad_tolerance: Option<f64>,
+    /// Cartesian base-node box xmin,ymin,zmin,xmax,ymax,zmax:factor (2 or 4).
+    #[arg(long, value_parser = refine_region, allow_hyphen_values = true)]
+    refine_region: Vec<Region>,
+}
+
+fn refine_region(text: &str) -> Result<Region, String> {
+    let (bounds, factor) = text
+        .rsplit_once(':')
+        .ok_or("expected xmin,ymin,zmin,xmax,ymax,zmax:factor")?;
+    let bounds = bounds
+        .split(',')
+        .map(str::parse::<f64>)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| "expected six finite bounds")?;
+    let factor = factor
+        .parse::<usize>()
+        .map_err(|_| "factor must be 2 or 4")?;
+    if bounds.len() != 6 || bounds.iter().any(|v| !v.is_finite()) || ![2, 4].contains(&factor) {
+        return Err("expected six finite bounds and factor 2 or 4".into());
+    }
+    Ok(Region {
+        bounds_mm: [
+            [bounds[0], bounds[1], bounds[2]],
+            [bounds[3], bounds[4], bounds[5]],
+        ],
+        factor,
+    })
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -560,6 +588,11 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let dims = [a.nx, a.ny, a.nz];
     let spacing = [a.dx_mm, a.dy_mm, a.dz_mm];
     let cylindrical = a.symmetry == Symmetry::Cylindrical;
+    if !args.refine_region.is_empty() && (cylindrical || args.device == Device::Gpu) {
+        return Err(
+            "adaptive refinement requires Cartesian geometry and --device cpu or auto".into(),
+        );
+    }
     if cylindrical && (dims[2] != 1 || args.origin[1] != 0.0 || args.origin[2] != 0.0) {
         return Err("cylindrical PA requires nz=1 and radial/z origins zero; shift axial origin or spacing instead".into());
     }
@@ -831,7 +864,7 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
                 geometry: p.source.clone(),
             })
             .collect(),
-        assignments: args.electrode,
+        assignments: args.electrode.clone(),
         node_electrodes: owners,
         solver_fixed: fixed,
         cuts: physical_cuts,
@@ -853,6 +886,23 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         sample_time.as_secs_f64() * 1000.0,
         sidecar_time.as_secs_f64() * 1000.0,
     );
+    if !args.refine_region.is_empty() {
+        let adaptive = AdaptiveGrid::new(cuts, &args.refine_region, &electrodes)?;
+        pa.pa0 = Some(Pa0Metadata {
+            reference_voltage: REFERENCE,
+            electrode_indices: indices,
+            scalable: None,
+        });
+        return adaptive_export(
+            &args,
+            pa,
+            adaptive,
+            &voltages,
+            &electrodes,
+            output_paths,
+            (total.elapsed(), total),
+        );
+    }
     let gpu = if args.device == Device::Gpu {
         let gpu =
             pollster::block_on(Gpu::new(args.backend.backends()))?.ok_or("no GPU adapter found")?;
@@ -979,6 +1029,200 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         "compute_ms": compute.as_secs_f64() * 1000.0,
         "prep_ms": preparation.as_secs_f64() * 1000.0,
         "output_paths": output_paths,
+    }));
+    Ok(())
+}
+
+fn adaptive_export(
+    args: &GeometryOptions,
+    mut pa: PaFile,
+    adaptive: AdaptiveGrid,
+    voltages: &BTreeMap<usize, f64>,
+    electrodes: &[Electrode],
+    mut paths: Vec<PathBuf>,
+    timing: (Duration, Instant),
+) -> GpuResult<()> {
+    use simrep_fly::adaptive::{AdaptiveManifest, AdaptivePatchManifest};
+    let metadata = pa.pa0.take().unwrap();
+    let mut manifest = AdaptiveManifest {
+        schema_version: 1,
+        base: args
+            .out
+            .with_extension("pa0")
+            .file_name()
+            .unwrap()
+            .to_str()
+            .ok_or("output name must be UTF-8")?
+            .into(),
+        origin_mm: args.origin,
+        spacing_mm: adaptive.base.grid.spacing,
+        reference_voltage: REFERENCE,
+        electrode_voltages: voltages.clone(),
+        patches: Vec::new(),
+    };
+    let mut patch_files = Vec::new();
+    for (slot, patch) in adaptive.patches.iter().enumerate() {
+        let lower: [usize; 3] = std::array::from_fn(|a| (patch.lo[a] * patch.factor).min(2));
+        let upper: [usize; 3] = std::array::from_fn(|a| {
+            ((adaptive.base.grid.dims[a] - 1 - patch.hi[a]) * patch.factor).min(2)
+        });
+        let dims: [usize; 3] =
+            std::array::from_fn(|a| patch.cuts.grid.dims[a] + lower[a] + upper[a]);
+        let spacing = patch.cuts.grid.spacing;
+        let origin: [f64; 3] =
+            std::array::from_fn(|a| patch.cuts.origin[a] - lower[a] as f64 * spacing[a]);
+        let mut array = PotentialArray::new(dims[0], dims[1], dims[2]);
+        [array.dx_mm, array.dy_mm, array.dz_mm] = spacing;
+        let mut indices = vec![-1; metadata.electrode_indices.len()];
+        for i in 0..array.potentials.len() {
+            let p = point(i, dims, origin, spacing);
+            for electrode in electrodes {
+                if electrode.shape.distance(p) <= 0.0 {
+                    let number = electrode.voltage as usize;
+                    array.electrodes[i] = true;
+                    if indices[number] == -1 {
+                        indices[number] = i as i64;
+                    }
+                }
+            }
+        }
+        let mut file = PaFile::new(array);
+        file.ng = pa.ng;
+        patch_files.push((file, indices));
+        manifest.patches.push(AdaptivePatchManifest {
+            level: patch.factor.ilog2(),
+            factor: patch.factor,
+            bounds_mm: [
+                patch.cuts.origin,
+                std::array::from_fn(|a| {
+                    patch.cuts.origin[a] + (patch.cuts.grid.dims[a] - 1) as f64 * spacing[a]
+                }),
+            ],
+            origin_mm: origin,
+            spacing_mm: spacing,
+            file: args
+                .out
+                .with_extension(format!("patch{slot}.pa0"))
+                .file_name()
+                .unwrap()
+                .to_str()
+                .ok_or("output name must be UTF-8")?
+                .into(),
+            ghost_layers: 2,
+        });
+    }
+    let mut combined = vec![0.0; pa.array.potentials.len()];
+    let mut patch_combined: Vec<_> = patch_files
+        .iter()
+        .map(|(p, _)| vec![0.0; p.array.potentials.len()])
+        .collect();
+    let mut compute = Duration::ZERO;
+    let mut prep = timing.0;
+    let mut cycles = 0;
+    let mut residual = 0.0_f64;
+    let mut unknowns = 0;
+    let mut matrix_bytes = 0;
+    for (&number, &voltage) in voltages {
+        let grid = adaptive.with_voltages(|n| if n == number as f64 { REFERENCE } else { 0.0 })?;
+        let solution = grid.solve(Options {
+            relative_tolerance: args.tolerance,
+            max_cycles: args.max_cycles,
+            ..Default::default()
+        })?;
+        let report = &solution.report;
+        if !report.converged {
+            return Err(format!(
+                "adaptive electrode {number} did not converge after {} iterations",
+                report.iterations
+            )
+            .into());
+        }
+        compute += report.timings.solve;
+        prep += report.timings.setup;
+        cycles += report.iterations;
+        residual = residual.max(report.residual_history.last().unwrap().relative);
+        unknowns = solution.unknowns;
+        matrix_bytes = solution.matrix_bytes;
+        pa.array.potentials = solution.base;
+        for (v, basis) in combined.iter_mut().zip(&pa.array.potentials) {
+            *v += basis * voltage / REFERENCE;
+        }
+        let path = args.out.with_extension(format!("pa{number}"));
+        write_pa(&path, &pa)?;
+        paths.push(path);
+        for (slot, ((file, _), values)) in
+            patch_files.iter_mut().zip(&mut patch_combined).enumerate()
+        {
+            let description = &manifest.patches[slot];
+            let patch = &adaptive.patches[slot];
+            let dims = [file.array.nx, file.array.ny, file.array.nz];
+            for (i, v) in file.array.potentials.iter_mut().enumerate() {
+                let p = point(i, dims, description.origin_mm, description.spacing_mm);
+                *v = if (0..3).all(|a| {
+                    p[a] >= description.bounds_mm[0][a] - 1e-10
+                        && p[a] <= description.bounds_mm[1][a] + 1e-10
+                }) {
+                    interpolate(
+                        &solution.patches[slot],
+                        patch.cuts.grid,
+                        patch.cuts.origin,
+                        p,
+                    )
+                } else {
+                    interpolate(
+                        &pa.array.potentials,
+                        adaptive.base.grid,
+                        adaptive.base.origin,
+                        p,
+                    )
+                };
+                values[i] += *v * voltage / REFERENCE;
+            }
+            let path = args.out.with_extension(format!("patch{slot}.pa{number}"));
+            write_pa(&path, file)?;
+            paths.push(path);
+        }
+    }
+    pa.array.potentials = combined;
+    pa.pa0 = Some(metadata);
+    let path = args.out.with_extension("pa0");
+    write_pa(&path, &pa)?;
+    paths.push(path);
+    for (slot, ((mut file, mut indices), values)) in
+        patch_files.into_iter().zip(patch_combined).enumerate()
+    {
+        file.array.potentials = values;
+        // SIMION's ordinary PA0 trailer requires at least one local conductor.
+        // Cropped vacuum-only patches use the manifest voltage table instead.
+        if let Some(last) = indices.iter().rposition(|&i| i != -1) {
+            indices.truncate((last + 1).max(32));
+            file.pa0 = Some(Pa0Metadata {
+                reference_voltage: REFERENCE,
+                electrode_indices: indices,
+                scalable: None,
+            });
+        }
+        let path = args.out.with_extension(format!("patch{slot}.pa0"));
+        write_pa(&path, &file)?;
+        paths.push(path);
+    }
+    let path = args.out.with_extension("adaptive.json");
+    let mut writer = BufWriter::new(File::create(&path)?);
+    serde_json::to_writer_pretty(&mut writer, &manifest)?;
+    writer.flush()?;
+    paths.push(path);
+    println!(
+        "adaptive: unknowns={unknowns}, matrix_bytes={matrix_bytes}, compute_ms={:.6}",
+        compute.as_secs_f64() * 1000.0
+    );
+    crate::json::set_summary(serde_json::json!({
+        "requested": {"device":"cpu","backend":null,"precision":"f64"},
+        "executed": {"device":"cpu","backend":null,"precision":"f64"},
+        "reason":"adaptive variational Cartesian CPU", "fallback_reason":null,
+        "cycles":cycles,"final_residual":residual,"tolerance":args.tolerance,"converged":true,
+        "compute_ms":compute.as_secs_f64()*1000.0,"prep_ms":prep.as_secs_f64()*1000.0,
+        "end_to_end_ms":timing.1.elapsed().as_secs_f64()*1000.0,
+        "unknowns":unknowns,"matrix_bytes":matrix_bytes,"output_paths":paths
     }));
     Ok(())
 }

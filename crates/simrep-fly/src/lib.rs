@@ -4,6 +4,7 @@
 //! cubic B-splines on electrode-free grids. Both give a C1 electric field.
 //! See the crate README for boundary conditions and collision conventions.
 
+pub mod adaptive;
 mod expression;
 mod field;
 mod flight;
@@ -12,6 +13,7 @@ mod instance;
 pub mod physics;
 pub mod surface;
 
+pub use adaptive::AdaptiveField;
 pub use expression::VoltageExpression;
 pub use field::{
     AnalyticField, BasisPotential, Field, FieldSample, GridField, Reconstruction, Superposition,

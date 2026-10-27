@@ -77,6 +77,25 @@ impl CutCells {
         electrodes: &[Electrode],
         maximum_root_distance: f64,
     ) -> Result<Self, SolveError> {
+        Self::prepare(grid, origin, electrodes, maximum_root_distance, false)
+    }
+
+    /// Local adaptive subdomain; its Dirichlet anchor may be in the base grid.
+    pub fn new_patch(
+        grid: Grid,
+        origin: Point,
+        electrodes: &[Electrode],
+    ) -> Result<Self, SolveError> {
+        Self::prepare(grid, origin, electrodes, f64::INFINITY, true)
+    }
+
+    fn prepare(
+        grid: Grid,
+        origin: Point,
+        electrodes: &[Electrode],
+        maximum_root_distance: f64,
+        unanchored: bool,
+    ) -> Result<Self, SolveError> {
         let count = grid
             .dims
             .iter()
@@ -153,7 +172,7 @@ impl CutCells {
             .iter()
             .map(|e| e.map_or(0.0, |e| electrodes[e].voltage))
             .collect();
-        if !fixed.iter().any(|&f| f) {
+        if !unanchored && !fixed.iter().any(|&f| f) {
             return Err(mg::invalid("SDF grid must contain a conductor node"));
         }
         let axes: [Axis; 3] = std::array::from_fn(|a| {

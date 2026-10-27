@@ -412,8 +412,33 @@ struct VoltageRun {
     physics: crate::physics_cmd::PhysicsRun,
 }
 
-pub fn run(options: FlyOptions) -> GpuResult<()> {
+pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     let start = Instant::now();
+    let adaptive_manifest = if let Some(path) = options.pa.as_ref().filter(|p| {
+        p.extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("json"))
+    }) {
+        let manifest: simrep_fly::adaptive::AdaptiveManifest =
+            serde_json::from_reader(BufReader::new(File::open(path)?))?;
+        if manifest.schema_version != 1
+            || !manifest.reference_voltage.is_finite()
+            || manifest.reference_voltage <= 0.0
+            || manifest.electrode_voltages.values().any(|v| !v.is_finite())
+        {
+            return Err("unsupported or invalid adaptive manifest".into());
+        }
+        let parent = path
+            .parent()
+            .unwrap_or(std::path::Path::new("."))
+            .to_path_buf();
+        options.pa = Some(parent.join(&manifest.base));
+        Some((manifest, parent))
+    } else {
+        None
+    };
+    if adaptive_manifest.is_some() && options.device == FlyDevice::Gpu {
+        return Err("adaptive fields require --device cpu or auto".into());
+    }
     let mut run: VoltageRun = match &options.run_file {
         Some(path) => serde_json::from_reader(BufReader::new(File::open(path)?))?,
         None => VoltageRun::default(),
@@ -461,6 +486,9 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         .into_iter()
         .map(|(n, source)| VoltageExpression::parse(&source, &run.parameters).map(|e| (n, e)))
         .collect::<Result<BTreeMap<_, _>, _>>()?;
+    if adaptive_manifest.is_some() && !expressions.is_empty() {
+        return Err("adaptive fields do not yet support voltage expressions".into());
+    }
     if options.pa.is_none() && (!options.voltage.is_empty() || !expressions.is_empty()) {
         return Err("electrode voltages require --pa".into());
     }
@@ -468,6 +496,46 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         Some(path) if adjustments.is_empty() => simrep_io::read_pa(path).map(|file| file.array),
         Some(path) => read_fast_adjust(path, adjustments),
         None => Ok(simrep_core::PotentialArray::new(1, 1, 1)),
+    };
+    let adaptive_field = |base: &GridField,
+                          adjustments: &[(usize, f64)]|
+     -> GpuResult<Option<simrep_fly::AdaptiveField>> {
+        let Some((manifest, parent)) = &adaptive_manifest else {
+            return Ok(None);
+        };
+        let arrays = manifest
+            .patches
+            .iter()
+            .map(|patch| -> GpuResult<_> {
+                let path = parent.join(&patch.file);
+                let mut array = simrep_io::read_pa(&path)?.array;
+                for &(number, voltage) in adjustments {
+                    let current = manifest
+                        .electrode_voltages
+                        .get(&number)
+                        .ok_or("adaptive voltage has no basis")?;
+                    let basis =
+                        simrep_io::read_pa(path.with_extension(format!("pa{number}")))?.array;
+                    if [basis.nx, basis.ny, basis.nz] != [array.nx, array.ny, array.nz]
+                        || basis.electrodes != array.electrodes
+                        || [basis.dx_mm, basis.dy_mm, basis.dz_mm]
+                            != [array.dx_mm, array.dy_mm, array.dz_mm]
+                    {
+                        return Err("adaptive basis geometry differs from patch PA0".into());
+                    }
+                    let delta = (voltage - current) / manifest.reference_voltage;
+                    for (v, b) in array.potentials.iter_mut().zip(basis.potentials) {
+                        *v += delta * b;
+                    }
+                }
+                Ok(array)
+            })
+            .collect::<GpuResult<Vec<_>>>()?;
+        Ok(Some(simrep_fly::AdaptiveField::new(
+            base.clone(),
+            manifest,
+            arrays,
+        )?))
     };
     let beam_mode = matches!(options.charge_mode, ChargeModeName::Beam);
     if beam_mode && (options.beam_current_a.is_none() || options.space_charge.is_some()) {
@@ -634,14 +702,13 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         } else {
             Reconstruction::BoundaryAware
         };
-        let source = InstanceField::new(
-            GridField::with_reconstruction(array, reconstruction)?,
-            options.origin,
-            axes,
-            options.scale,
-            bounds,
-            plane,
-        )?;
+        let grid = GridField::with_reconstruction(array, reconstruction)?;
+        let adaptive = adaptive_field(&grid, &options.voltage)?;
+        let mut source =
+            InstanceField::new(grid, options.origin, axes, options.scale, bounds, plane)?;
+        if let Some(adaptive) = adaptive {
+            source = source.with_adaptive(adaptive);
+        }
         let provider = |_, point| {
             let sample = source.sample(point, 0.0);
             Ok(Fly2Field {
@@ -666,7 +733,11 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         || !magnetic.vector_potentials.is_empty()
         || !magnetic.coils.is_empty()
         || !magnetic.maps.is_empty();
-    let crossover = if beam_mode || cpu_only_magnetic || has_magnetic || magnetic.support.is_some()
+    let crossover = if adaptive_manifest.is_some()
+        || beam_mode
+        || cpu_only_magnetic
+        || has_magnetic
+        || magnetic.support.is_some()
     {
         None
     } else {
@@ -681,7 +752,9 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
     };
     let init = Instant::now();
     let request_gpu = !beam_mode && options.device.requests_gpu(particle_data.len(), crossover);
-    let mut reason = if beam_mode {
+    let mut reason = if adaptive_manifest.is_some() {
+        "adaptive fields require CPU".to_owned()
+    } else if beam_mode {
         "leader-plane beam integration requires CPU".to_owned()
     } else if surface.is_some() && !matches!(options.space_charge, Some(SpaceChargeMethod::Pic)) {
         "surface collisions require CPU".to_owned()
@@ -814,8 +887,12 @@ pub fn run(options: FlyOptions) -> GpuResult<()> {
         read_electric(&adjustments)?
     };
     let grid = grid_field(array)?;
+    let adaptive = adaptive_field(&grid, &adjustments)?;
     let mut field = InstanceField::new(grid, options.origin, axes, options.scale, bounds, plane)?
         .with_voltage_expressions(dynamic_bases)?;
+    if let Some(adaptive) = adaptive {
+        field = field.with_adaptive(adaptive);
+    }
     if let Some(surface) = surface {
         field = field.with_surface(std::sync::Arc::new(surface))?;
     }

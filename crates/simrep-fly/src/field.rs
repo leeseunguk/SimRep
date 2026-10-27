@@ -279,7 +279,7 @@ impl GridField {
         })
     }
 
-    fn coordinates(&self, position: Vector) -> (Vector, Vector, f64) {
+    pub(crate) fn coordinates(&self, position: Vector) -> (Vector, Vector, f64) {
         let mut q = position;
         if self.array.symmetry == Symmetry::Cylindrical {
             q[1] = position[1].hypot(position[2]);
