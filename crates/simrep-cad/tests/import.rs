@@ -197,3 +197,15 @@ fn exact_cylinder_cutcell_beats_tessellation_at_equal_grid() {
     }
     assert!(errors[0] < errors[1], "{errors:?}");
 }
+
+#[test]
+fn parallel_face_mesher_matches_serial_on_sphere_fixture() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("sphere.step");
+    simrep_cad::write_fixture(&path, 0, "AP242DIS", "MM").unwrap();
+    let matched = simrep_cad::parallel_mesh_matches(&path, 0.01).unwrap();
+    assert!(
+        matched,
+        "parallel OCCT tessellation changed the serial triangulation"
+    );
+}

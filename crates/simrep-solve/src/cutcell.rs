@@ -119,28 +119,35 @@ impl CutCells {
             let c = mg::coords(i, grid.dims);
             std::array::from_fn(|a| origin[a] + c[a] as f64 * grid.spacing[a])
         };
-        let owners: Result<Vec<Option<usize>>, _> = (0..count)
+        let masks = electrodes
+            .par_iter()
+            .map(|electrode| {
+                let mut mask = vec![false; count];
+                electrode
+                    .shape
+                    .conductor_mask(grid.dims, origin, grid.spacing, snap_distance, &mut mask)
+                    .map_err(mg::invalid)?;
+                Ok(mask)
+            })
+            .collect::<Result<Vec<_>, SolveError>>()?;
+        let owners = (0..count)
             .into_par_iter()
             .map(|i| {
                 let mut owner: Option<usize> = None;
-                for (e, electrode) in electrodes.iter().enumerate() {
-                    let d = electrode.shape.distance(at(i));
-                    if !d.is_finite() {
-                        return Err(mg::invalid("SDF returned a non-finite distance"));
+                for (e, mask) in masks.iter().enumerate() {
+                    if !mask[i] {
+                        continue;
                     }
-                    if d <= snap_distance {
-                        if let Some(previous) = owner
-                            && electrodes[previous].voltage != electrode.voltage
-                        {
-                            return Err(mg::invalid("electrodes at different voltages overlap"));
-                        }
-                        owner = Some(e);
+                    if let Some(previous) = owner
+                        && electrodes[previous].voltage != electrodes[e].voltage
+                    {
+                        return Err(mg::invalid("electrodes at different voltages overlap"));
                     }
+                    owner = Some(e);
                 }
                 Ok(owner)
             })
-            .collect();
-        let owners = owners?;
+            .collect::<Result<Vec<_>, _>>()?;
         let fixed: Vec<_> = owners.iter().map(Option::is_some).collect();
         let values: Vec<_> = owners
             .iter()
@@ -157,10 +164,22 @@ impl CutCells {
             Axis::new(grid.dims[a], grid.spacing[a], radial)
         });
         let strides = [1, grid.dims[0], grid.dims[0] * grid.dims[1]];
+        let edge = grid.spacing.into_iter().fold(0.0_f64, f64::max);
+        let root_tol = (snap_distance / 64.0).min(maximum_root_distance);
+        let mut near = vec![false; count];
+        for electrode in electrodes {
+            electrode.shape.mark_near_nodes(
+                grid.dims,
+                origin,
+                grid.spacing,
+                edge + root_tol,
+                &mut near,
+            );
+        }
         let rows: Vec<_> = (0..count)
             .into_par_iter()
             .filter_map(|i| {
-                if fixed[i] {
+                if fixed[i] || !near[i] {
                     return None;
                 }
                 let c = mg::coords(i, grid.dims);
@@ -186,13 +205,19 @@ impl CutCells {
                     let j = i.wrapping_add_signed(strides[a] as isize * if plus { 1 } else { -1 });
                     let end = at(j);
                     let mut hit: Option<(f64, f64)> = None;
+                    let root_tol = (snap_distance / 64.0).min(maximum_root_distance);
                     for electrode in electrodes {
+                        // Free starts are outside every electrode. A segment with
+                        // no triangle inside the root tolerance cannot be a hit.
+                        if electrode.shape.segment_clear(p, end, root_tol) {
+                            continue;
+                        }
                         if let Some(t) = intersection(
                             electrode.shape.as_ref(),
                             p,
                             end,
                             grid.spacing[a],
-                            (snap_distance / 64.0).min(maximum_root_distance),
+                            root_tol,
                         ) && hit.is_none_or(|(previous, _)| t < previous)
                         {
                             hit = Some((t, electrode.voltage));
@@ -318,6 +343,15 @@ pub fn surface_fraction(
     end: Point,
     tolerance: f64,
 ) -> Option<f64> {
+    if shape.segment_clear(start, end, tolerance) {
+        let start_distance = shape.distance(start);
+        if start_distance > 0.0 {
+            return None;
+        }
+        if start_distance <= 0.0 {
+            return Some(0.0);
+        }
+    }
     if shape.distance(start) <= 0.0 {
         return Some(0.0);
     }
@@ -343,10 +377,15 @@ fn intersection(
     let point = |t: f64| std::array::from_fn(|a| p[a] + t * (q[a] - p[a]));
     let mut lo = 0.0;
     let mut d = shape.distance(p);
-    if d > length
-        || shape
-            .segment_distance_bounds(p, q)
-            .is_some_and(|bounds| bounds[0] > tolerance)
+    // A positive start farther than the segment, or a segment that cannot
+    // reach the surface, has no root. An interior start (d <= 0) still
+    // returns the existing bracket below.
+    if d > 0.0
+        && (d > length
+            || shape.segment_clear(p, q, tolerance)
+            || shape
+                .segment_distance_bounds(p, q)
+                .is_some_and(|bounds| bounds[0] > tolerance))
     {
         return None;
     }

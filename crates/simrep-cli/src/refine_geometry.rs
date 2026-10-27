@@ -194,6 +194,58 @@ impl SignedDistance for SolverShape {
             },
         )
     }
+
+    fn segment_clear(&self, from: [f64; 3], to: [f64; 3], tolerance: f64) -> bool {
+        self.source
+            .segment_clear(self.point(from), self.point(to), tolerance)
+    }
+
+    fn conductor_mask(
+        &self,
+        dims: [usize; 3],
+        origin: [f64; 3],
+        spacing: [f64; 3],
+        threshold: f64,
+        mask: &mut [bool],
+    ) -> Result<(), &'static str> {
+        if self.cylindrical {
+            let bad = std::sync::atomic::AtomicBool::new(false);
+            mask.par_iter_mut().enumerate().for_each(|(i, flag)| {
+                let c = [i % dims[0], i / dims[0] % dims[1], i / (dims[0] * dims[1])];
+                let point = std::array::from_fn(|a| origin[a] + c[a] as f64 * spacing[a]);
+                let distance = self.distance(point);
+                if !distance.is_finite() {
+                    bad.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
+                *flag = distance <= threshold;
+            });
+            return if bad.load(std::sync::atomic::Ordering::Relaxed) {
+                Err("SDF returned a non-finite distance")
+            } else {
+                Ok(())
+            };
+        }
+        // Snap only zeros |d| <= tolerance, which is already inside the
+        // snap threshold used by CutCells, so the source comparison matches.
+        self.source
+            .conductor_mask(dims, origin, spacing, threshold.max(self.tolerance), mask)
+    }
+
+    fn mark_near_nodes(
+        &self,
+        dims: [usize; 3],
+        origin: [f64; 3],
+        spacing: [f64; 3],
+        band: f64,
+        near: &mut [bool],
+    ) {
+        if self.cylindrical {
+            near.fill(true);
+        } else {
+            self.source
+                .mark_near_nodes(dims, origin, spacing, band, near);
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -561,26 +613,32 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let mut owners = vec![None; a.potentials.len()];
     let mut indices =
         vec![-1; (*voltages.keys().max().ok_or("geometry has no electrodes")? + 1).max(32)];
-    owners
-        .par_iter_mut()
-        .enumerate()
-        .try_for_each(|(i, owner)| -> GpuResult<()> {
-            let p = point(i, dims, args.origin, spacing);
-            for part in &parts {
-                let distance = part.shape.distance(p);
-                if !distance.is_finite() {
-                    validate_cad_queries(&cad_failed)?;
-                    return Err(format!("part {:?} returned non-finite SDF", part.name).into());
-                }
-                if distance <= tolerance {
-                    if owner.is_some_and(|n| n != part.assignment.number) {
-                        return Err("different electrode numbers overlap at a PA node".into());
-                    }
-                    *owner = Some(part.assignment.number);
-                }
+    let masks = parts
+        .par_iter()
+        .map(|part| {
+            let mut mask = vec![false; owners.len()];
+            part.shape
+                .conductor_mask(dims, args.origin, spacing, tolerance, &mut mask)
+                .map_err(|error| -> Box<dyn std::error::Error + Send + Sync> { error.into() })?;
+            Ok(mask)
+        })
+        .collect::<GpuResult<Vec<_>>>()?;
+    validate_cad_queries(&cad_failed)?;
+    for (part, mask) in parts.iter().zip(&masks) {
+        for (owner, &hit) in owners.iter_mut().zip(mask) {
+            if !hit {
+                continue;
             }
-            Ok(())
-        })?;
+            if owner.is_some_and(|n| n != part.assignment.number) {
+                return Err(format!(
+                    "different electrode numbers overlap at a PA node ({})",
+                    part.name
+                )
+                .into());
+            }
+            *owner = Some(part.assignment.number);
+        }
+    }
     for (i, owner) in owners.iter().enumerate() {
         if let Some(number) = owner
             && indices[*number] == -1
@@ -642,11 +700,21 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     } else {
         cuts.fixed.clone()
     };
+    let link_band = spacing.into_iter().fold(0.0_f64, f64::max) + tolerance;
+    let near_parts: Vec<Vec<bool>> = parts
+        .par_iter()
+        .map(|part| {
+            let mut near = vec![false; owners.len()];
+            part.shape
+                .mark_near_nodes(dims, args.origin, spacing, link_band, &mut near);
+            near
+        })
+        .collect();
     let physical_cuts = owners
         .par_iter()
         .enumerate()
         .filter_map(|(i, owner)| {
-            if owner.is_some() {
+            if owner.is_some() || near_parts.iter().all(|near| !near[i]) {
                 return None;
             }
             let mut fractions = [None; 6];
@@ -664,7 +732,10 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
                 } else {
                     spacing[axis]
                 };
-                for part in &parts {
+                for (part, near) in parts.iter().zip(&near_parts) {
+                    if !near[i] || part.shape.segment_clear(p, q, tolerance) {
+                        continue;
+                    }
                     if let Some(t) = surface_fraction(part.shape.as_ref(), p, q, tolerance)
                         && fractions[s].is_none_or(|previous| t < previous)
                     {
@@ -913,6 +984,74 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
 }
 
 #[cfg(feature = "cad")]
+struct FlaggedPart {
+    part: simrep_cad::CadPart,
+    failed: Arc<AtomicBool>,
+}
+
+#[cfg(feature = "cad")]
+impl SignedDistance for FlaggedPart {
+    fn distance(&self, point: [f64; 3]) -> f64 {
+        let distance = self.part.distance(point);
+        if !distance.is_finite() {
+            self.failed.store(true, Ordering::Relaxed);
+        }
+        distance
+    }
+
+    fn segment_distance_bounds(&self, from: [f64; 3], to: [f64; 3]) -> Option<[f64; 2]> {
+        self.part.segment_distance_bounds(from, to)
+    }
+
+    fn segment_single_interval(&self, from: [f64; 3], to: [f64; 3], level: f64) -> bool {
+        self.part.segment_single_interval(from, to, level)
+    }
+
+    fn segment_clear(&self, from: [f64; 3], to: [f64; 3], tolerance: f64) -> bool {
+        self.part.segment_clear(from, to, tolerance)
+    }
+
+    fn conductor_mask(
+        &self,
+        dims: [usize; 3],
+        origin: [f64; 3],
+        spacing: [f64; 3],
+        threshold: f64,
+        mask: &mut [bool],
+    ) -> Result<(), &'static str> {
+        self.part
+            .conductor_mask(dims, origin, spacing, threshold, mask)
+            .inspect_err(|_| self.failed.store(true, Ordering::Relaxed))
+    }
+
+    fn mark_near_nodes(
+        &self,
+        dims: [usize; 3],
+        origin: [f64; 3],
+        spacing: [f64; 3],
+        band: f64,
+        near: &mut [bool],
+    ) {
+        self.part.mark_near_nodes(dims, origin, spacing, band, near);
+    }
+
+    fn sample_grid(
+        &self,
+        dims: [usize; 3],
+        origin: [f64; 3],
+        spacing: [f64; 3],
+        values: &mut [f64],
+    ) {
+        values.par_iter_mut().enumerate().for_each(|(i, value)| {
+            let c = [i % dims[0], i / dims[0] % dims[1], i / (dims[0] * dims[1])];
+            *value = self.distance(std::array::from_fn(|a| {
+                origin[a] + c[a] as f64 * spacing[a]
+            }));
+        });
+    }
+}
+
+#[cfg(feature = "cad")]
 fn cad_sources(
     args: &GeometryOptions,
     failed: Arc<AtomicBool>,
@@ -945,13 +1084,9 @@ fn cad_sources(
             let name = part.name.clone();
             let source =
                 SourceGeometry::mesh(&part.tessellation, Some(options.chordal_tolerance_mm))?;
-            let failed = Arc::clone(&failed);
-            let shape = move |point| {
-                let distance = part.distance(point);
-                if !distance.is_finite() {
-                    failed.store(true, Ordering::Relaxed);
-                }
-                distance
+            let shape = FlaggedPart {
+                part,
+                failed: Arc::clone(&failed),
             };
             Ok((name, Arc::new(shape) as Arc<dyn SignedDistance>, source))
         })

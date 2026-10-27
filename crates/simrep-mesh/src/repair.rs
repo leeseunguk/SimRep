@@ -1,6 +1,34 @@
 use crate::{Part, cross, dot, norm, sub};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::hash::{BuildHasher, Hasher};
 use std::io;
+
+#[derive(Clone, Default)]
+struct FxHasher(u64);
+impl Hasher for FxHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        for chunk in bytes.chunks(8) {
+            let mut buf = [0u8; 8];
+            buf[..chunk.len()].copy_from_slice(chunk);
+            self.write_u64(u64::from_le_bytes(buf));
+        }
+    }
+    fn write_u64(&mut self, value: u64) {
+        self.0 = self.0.wrapping_mul(0x517cc1b727220a95) ^ value;
+    }
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+#[derive(Clone, Default)]
+struct FxBuild;
+impl BuildHasher for FxBuild {
+    type Hasher = FxHasher;
+    fn build_hasher(&self) -> FxHasher {
+        FxHasher::default()
+    }
+}
+type FxMap<K, V> = HashMap<K, V, FxBuild>;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct MeshReport {
@@ -35,10 +63,10 @@ pub struct RepairReport {
     pub flipped_triangles: usize,
 }
 
-type EdgeMap = HashMap<(usize, usize), Vec<(usize, bool)>>;
+type EdgeMap = FxMap<(usize, usize), Vec<(usize, bool)>>;
 
 fn edges(triangles: &[[usize; 3]]) -> EdgeMap {
-    let mut edges: EdgeMap = HashMap::new();
+    let mut edges: EdgeMap = HashMap::with_hasher(FxBuild);
     for (i, [a, b, c]) in triangles.iter().copied().enumerate() {
         for (a, b) in [(a, b), (b, c), (c, a)] {
             edges
@@ -51,7 +79,7 @@ fn edges(triangles: &[[usize; 3]]) -> EdgeMap {
 }
 
 pub(crate) fn weld(part: &mut Part) -> usize {
-    let mut unique = HashMap::new();
+    let mut unique = HashMap::with_hasher(FxBuild);
     let mut vertices = Vec::new();
     let indices: Vec<_> = part
         .vertices
@@ -138,7 +166,7 @@ pub fn inspect(part: &Part) -> io::Result<MeshReport> {
         duplicate_vertices: weld(&mut part),
         ..MeshReport::default()
     };
-    let mut faces = HashSet::new();
+    let mut faces = HashSet::with_hasher(FxBuild);
     for &triangle in &part.triangles {
         let [a, b, c] = triangle.map(|i| part.vertices[i]);
         if norm(cross(sub(b, a), sub(c, a))) == 0.0 {
@@ -151,7 +179,7 @@ pub fn inspect(part: &Part) -> io::Result<MeshReport> {
         }
     }
     let edges = edges(&part.triangles);
-    let mut boundary: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut boundary: FxMap<usize, Vec<usize>> = HashMap::with_hasher(FxBuild);
     for (&(a, b), uses) in &edges {
         match uses.len() {
             1 => {
@@ -163,7 +191,7 @@ pub fn inspect(part: &Part) -> io::Result<MeshReport> {
             _ => report.non_manifold_edges += 1,
         }
     }
-    let mut visited = HashSet::new();
+    let mut visited = HashSet::with_hasher(FxBuild);
     for &start in boundary.keys() {
         if !visited.insert(start) {
             continue;
@@ -192,15 +220,35 @@ pub fn inspect(part: &Part) -> io::Result<MeshReport> {
     Ok(report)
 }
 
+pub(crate) fn shell_count(triangles: &[[usize; 3]]) -> usize {
+    components(triangles, &edges(triangles)).len()
+}
+
 /// Weld exact coincident vertices, remove zero-area/duplicate faces, orient
 /// orientable edge-connected components consistently, and orient each closed
 /// shell outward. Open boundaries and non-manifold junctions remain reported.
 /// No tolerance welding, hole filling, or topology guessing is performed.
 pub fn repair(part: &mut Part) -> io::Result<RepairReport> {
     let before = inspect(part)?;
+    let (removed_triangles, flipped_triangles) = weld_and_orient_counts(part)?;
+    Ok(RepairReport {
+        before,
+        after: inspect(part)?,
+        removed_triangles,
+        flipped_triangles,
+    })
+}
+
+/// Same mesh mutations as [`repair`], without the before/after topology reports.
+pub fn weld_and_orient(part: &mut Part) -> io::Result<()> {
+    weld_and_orient_counts(part)?;
+    Ok(())
+}
+
+fn weld_and_orient_counts(part: &mut Part) -> io::Result<(usize, usize)> {
     weld(part);
     let count = part.triangles.len();
-    let mut faces = HashSet::new();
+    let mut faces = HashSet::with_hasher(FxBuild);
     part.triangles.retain(|triangle| {
         let [a, b, c] = triangle.map(|i| part.vertices[i]);
         let mut canonical = *triangle;
@@ -225,10 +273,5 @@ pub fn repair(part: &mut Part) -> io::Result<RepairReport> {
             }
         }
     }
-    Ok(RepairReport {
-        before,
-        after: inspect(part)?,
-        removed_triangles,
-        flipped_triangles,
-    })
+    Ok((removed_triangles, flipped_triangles))
 }

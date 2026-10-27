@@ -160,6 +160,9 @@ fn report_gpu_residual(native_f64: bool) {
 }
 
 fn main() -> ExitCode {
+    // Rayon defaults to available_parallelism() unless RAYON_NUM_THREADS is set.
+    // Build the pool here so a later library cannot install a smaller one first.
+    let _ = rayon::ThreadPoolBuilder::new().build_global();
     let arguments: Vec<_> = std::env::args_os().collect();
     let json_requested = arguments.iter().any(|argument| argument == "--json");
     let cli = match Cli::try_parse_from(arguments) {

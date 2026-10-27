@@ -6,6 +6,7 @@
 
 use rayon::prelude::*;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 pub type Point = [f64; 3];
 
@@ -28,6 +29,56 @@ pub trait SignedDistance: Send + Sync {
     /// This permits direct bracketing when the far endpoint is in that set.
     fn segment_single_interval(&self, _from: Point, _to: Point, _level: f64) -> bool {
         false
+    }
+
+    /// Unsigned distance from the segment to the surface exceeds `tolerance`.
+    /// A segment deep inside the solid, far from the boundary, also returns
+    /// true. Callers that treat an interior start as a hit must test that
+    /// start before using this as a rejection.
+    fn segment_clear(&self, from: Point, to: Point, tolerance: f64) -> bool {
+        self.segment_distance_bounds(from, to)
+            .is_some_and(|bounds| bounds[0] > tolerance)
+    }
+
+    /// Mark nodes with `distance <= threshold`. `Err` means a distance was
+    /// non-finite. The default evaluates every node.
+    fn conductor_mask(
+        &self,
+        dims: [usize; 3],
+        origin: Point,
+        spacing: Point,
+        threshold: f64,
+        mask: &mut [bool],
+    ) -> Result<(), &'static str> {
+        let bad = AtomicBool::new(false);
+        mask.par_iter_mut().enumerate().for_each(|(i, flag)| {
+            let c = [i % dims[0], i / dims[0] % dims[1], i / (dims[0] * dims[1])];
+            let distance = self.distance(std::array::from_fn(|a| {
+                origin[a] + c[a] as f64 * spacing[a]
+            }));
+            if !distance.is_finite() {
+                bad.store(true, Ordering::Relaxed);
+            }
+            *flag = distance <= threshold;
+        });
+        if bad.load(Ordering::Relaxed) {
+            Err("SDF returned a non-finite distance")
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Set bits for nodes an edge of length about `band` might intersect.
+    /// Does not clear bits. The default marks the whole grid.
+    fn mark_near_nodes(
+        &self,
+        _dims: [usize; 3],
+        _origin: Point,
+        _spacing: Point,
+        _band: f64,
+        near: &mut [bool],
+    ) {
+        near.fill(true);
     }
 
     /// Fill x-fastest samples on a validated grid. The output length must equal

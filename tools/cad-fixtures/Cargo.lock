@@ -381,6 +381,7 @@ name = "simrep-cad"
 version = "0.1.0"
 dependencies = [
  "cc",
+ "rayon",
  "simrep-geom",
  "simrep-mesh",
 ]
@@ -392,6 +393,9 @@ version = "0.1.0"
 [[package]]
 name = "simrep-geom"
 version = "0.1.0"
+dependencies = [
+ "rayon",
+]
 
 [[package]]
 name = "simrep-mesh"
@@ -405,6 +409,7 @@ dependencies = [
  "rayon",
  "serde_json",
  "simrep-core",
+ "simrep-geom",
  "stl_io",
  "tobj",
  "zip",

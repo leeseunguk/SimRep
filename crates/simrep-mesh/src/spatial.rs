@@ -1,5 +1,6 @@
 use crate::{Part, Point, add, cross, dot, inspect, invalid, mul, norm, sub};
 use rayon::prelude::*;
+use std::cell::RefCell;
 use std::io;
 use std::ops::Range;
 
@@ -119,6 +120,8 @@ pub struct Solid {
     triangles: Vec<Triangle>,
     root: Node,
     tolerance: f64,
+    /// True when every closed component was oriented outward by repair/inspect.
+    outward: bool,
 }
 
 impl simrep_geom::SignedDistance for Solid {
@@ -128,6 +131,38 @@ impl simrep_geom::SignedDistance for Solid {
 
     fn sample_grid(&self, dims: [usize; 3], origin: Point, spacing: Point, values: &mut [f64]) {
         self.sample_grid_band(dims, origin, spacing, f64::INFINITY, values);
+    }
+
+    fn segment_clear(&self, from: Point, to: Point, tolerance: f64) -> bool {
+        let seg_min = std::array::from_fn(|a| from[a].min(to[a]));
+        let seg_max = std::array::from_fn(|a| from[a].max(to[a]));
+        self.bvh_segment_far(&self.root, seg_min, seg_max, tolerance)
+    }
+
+    fn conductor_mask(
+        &self,
+        dims: [usize; 3],
+        origin: Point,
+        spacing: Point,
+        threshold: f64,
+        mask: &mut [bool],
+    ) -> Result<(), &'static str> {
+        if mask.len() != dims[0].saturating_mul(dims[1]).saturating_mul(dims[2]) {
+            return Err("SDF returned a non-finite distance");
+        }
+        self.fill_conductor_mask(dims, origin, spacing, threshold, mask);
+        Ok(())
+    }
+
+    fn mark_near_nodes(
+        &self,
+        dims: [usize; 3],
+        origin: Point,
+        spacing: Point,
+        band: f64,
+        near: &mut [bool],
+    ) {
+        self.mark_surface_nodes(dims, origin, spacing, band, near);
     }
 
     fn sample_grid_band(
@@ -180,7 +215,13 @@ impl Solid {
                 part.name
             )));
         }
-        Self::from_surface(part)
+        let mut solid = Self::from_surface(part)?;
+        // A face normal matches even-odd membership only for one outward
+        // shell. Nested shells can both have positive volume; the inner
+        // normal then points into the material, so keep the ray classifier.
+        solid.outward =
+            report.inward_components == 0 && crate::repair::shell_count(&part.triangles) == 1;
+        Ok(solid)
     }
 
     /// Explicit best-effort sampling of a defective triangle surface. This
@@ -232,6 +273,7 @@ impl Solid {
             triangles,
             root,
             tolerance,
+            outward: false,
         })
     }
 
@@ -260,14 +302,82 @@ impl Solid {
     }
 
     pub fn signed_distance(&self, point: Point) -> f64 {
-        let distance = self.distance(point);
+        if point.iter().any(|v| !v.is_finite()) {
+            return f64::NAN;
+        }
+        let (distance, inside) = self.signed_pair(point);
         if distance <= self.tolerance {
             0.0
-        } else if self.classify(point) {
+        } else if inside {
             -distance
         } else {
             distance
         }
+    }
+
+    /// Same magnitude as the BVH query. A face-interior closest point on an
+    /// outward shell takes its sign from the normal; a noisy or edge hit
+    /// falls back to the ray classifier.
+    fn signed_pair(&self, point: Point) -> (f64, bool) {
+        // BVH nearest is the same magnitude as the previous sampler. The ray
+        // classifier is skipped only when that nearest point lies in a face
+        // interior of an outward shell, where the normal sign matches it.
+        let mut best = f64::INFINITY;
+        let mut closest = 0;
+        self.nearest(&self.root, point, &mut best, &mut closest);
+        let distance = best.sqrt();
+        if !distance.is_finite() {
+            return (distance, false);
+        }
+        if distance <= self.tolerance {
+            return (distance, true);
+        }
+        let inside = if self.outward && self.closest_is_face(point, closest) {
+            self.plane_inside(point, closest)
+                .unwrap_or_else(|| self.classify(point))
+        } else {
+            self.classify(point)
+        };
+        (distance, inside)
+    }
+
+    fn bvh_segment_far(&self, node: &Node, seg_min: Point, seg_max: Point, tolerance: f64) -> bool {
+        if aabb_gap(seg_min, seg_max, node.bounds.min, node.bounds.max) > tolerance {
+            return true;
+        }
+        if let Some(children) = &node.children {
+            children
+                .iter()
+                .all(|child| self.bvh_segment_far(child, seg_min, seg_max, tolerance))
+        } else {
+            self.triangles[node.range.clone()].iter().all(|triangle| {
+                aabb_gap(seg_min, seg_max, triangle.bounds.min, triangle.bounds.max) > tolerance
+            })
+        }
+    }
+
+    fn plane_inside(&self, point: Point, triangle: usize) -> Option<bool> {
+        let [a, b, c] = self.triangles[triangle].points;
+        let normal = cross(sub(b, a), sub(c, a));
+        let n2 = dot(normal, normal);
+        if n2 == 0.0 {
+            return None;
+        }
+        // Reject a sign that cancellation could flip. The residual is then
+        // smaller than a few ulps of the triangle scale.
+        let signed = dot(sub(point, a), normal);
+        let scale = norm(sub(point, a))
+            .max(norm(sub(b, a)))
+            .max(norm(sub(c, a)))
+            * n2.sqrt();
+        if signed.abs() <= scale * 1e-10 {
+            return None;
+        }
+        Some(signed < 0.0)
+    }
+
+    fn closest_is_face(&self, point: Point, triangle: usize) -> bool {
+        triangle_closest(point, self.triangles[triangle].points).1
     }
 
     /// Exact ray/triangle intersections of a finite segment, sorted and
@@ -316,7 +426,8 @@ impl Solid {
         node: &Node,
         origin: Point,
         direction: Point,
-        hits: &mut (Vec<f64>, bool),
+        hits: &mut Vec<f64>,
+        ambiguous: &mut bool,
         limit: f64,
     ) {
         if !node.bounds.ray(origin, direction, limit) {
@@ -324,7 +435,7 @@ impl Solid {
         }
         if let Some(children) = &node.children {
             for child in children.iter() {
-                self.intersections(child, origin, direction, hits, limit);
+                self.intersections(child, origin, direction, hits, ambiguous, limit);
             }
         } else {
             for triangle in &self.triangles[node.range.clone()] {
@@ -367,10 +478,10 @@ impl Solid {
                         }
                     }
                     if low <= high {
-                        hits.1 = true;
-                        hits.0.push(low);
+                        *ambiguous = true;
+                        hits.push(low);
                         if high.is_finite() {
-                            hits.0.push(high);
+                            hits.push(high);
                         }
                     }
                     continue;
@@ -388,19 +499,60 @@ impl Solid {
                 if t < -self.tolerance / norm(direction) || t > limit {
                     continue;
                 }
-                hits.1 |= u <= epsilon || v <= epsilon || 1.0 - u - v <= epsilon;
-                hits.0.push(t.max(0.0));
+                *ambiguous |= u <= epsilon || v <= epsilon || 1.0 - u - v <= epsilon;
+                hits.push(t.max(0.0));
             }
         }
     }
 
     fn ray_hits(&self, origin: Point, direction: Point, limit: f64) -> (Vec<f64>, bool) {
-        let mut hits = (Vec::new(), false);
-        self.intersections(&self.root, origin, direction, &mut hits, limit);
-        hits.0.sort_unstable_by(f64::total_cmp);
-        let epsilon = self.tolerance / norm(direction);
-        hits.0.dedup_by(|a, b| (*a - *b).abs() <= epsilon);
-        hits
+        self.with_ray(
+            origin,
+            direction,
+            limit,
+            |hits, ambiguous| -> (Vec<f64>, bool) { (hits.to_vec(), ambiguous) },
+        )
+    }
+
+    /// Parity of a clean ray. None means an edge/vertex hit and the caller
+    /// must use another direction or the winding number.
+    fn ray_parity(&self, origin: Point, direction: Point, limit: f64) -> Option<bool> {
+        self.with_ray(origin, direction, limit, |hits, ambiguous| {
+            if ambiguous {
+                None
+            } else {
+                Some(hits.len() % 2 == 1)
+            }
+        })
+    }
+
+    fn with_ray<T>(
+        &self,
+        origin: Point,
+        direction: Point,
+        limit: f64,
+        finish: impl FnOnce(&[f64], bool) -> T,
+    ) -> T {
+        thread_local! {
+            static HITS: RefCell<Vec<f64>> = RefCell::new(Vec::with_capacity(64));
+        }
+        HITS.with(|slot| {
+            let mut hits = slot.borrow_mut();
+            hits.clear();
+            let mut ambiguous = false;
+            self.intersections(
+                &self.root,
+                origin,
+                direction,
+                &mut hits,
+                &mut ambiguous,
+                limit,
+            );
+            hits.sort_unstable_by(f64::total_cmp);
+            let epsilon = self.tolerance / norm(direction).max(1e-30);
+            hits.dedup_by(|a, b| (*a - *b).abs() <= epsilon);
+            finish(&hits, ambiguous)
+        })
     }
 
     fn classify(&self, point: Point) -> bool {
@@ -412,9 +564,8 @@ impl Solid {
             [0.217731, 1.0, 0.613191],
             [0.419173, 0.263117, 1.0],
         ] {
-            let (hits, ambiguous) = self.ray_hits(point, direction, f64::INFINITY);
-            if !ambiguous {
-                return hits.len() % 2 == 1;
+            if let Some(inside) = self.ray_parity(point, direction, f64::INFINITY) {
+                return inside;
             }
         }
         let angle: f64 = self
@@ -436,6 +587,10 @@ impl Solid {
     /// One accelerated ray for an entire x row; degenerate rays use the
     /// pointwise robust classifier instead of moving the requested samples.
     pub(crate) fn row(&self, start: Point, dx: f64, count: usize) -> Vec<bool> {
+        self.row_flags(start, dx, count, true)
+    }
+
+    fn row_flags(&self, start: Point, dx: f64, count: usize, shell: bool) -> Vec<bool> {
         if start[1] < self.root.bounds.min[1] - self.tolerance
             || start[1] > self.root.bounds.max[1] + self.tolerance
             || start[2] < self.root.bounds.min[2] - self.tolerance
@@ -448,55 +603,212 @@ impl Solid {
             start[1],
             start[2],
         ];
-        let (hits, ambiguous) = self.ray_hits(origin, [1.0, 0.0, 0.0], f64::INFINITY);
-        if ambiguous || hits.len() % 2 != 0 {
-            return (0..count)
-                .map(|x| self.contains([start[0] + x as f64 * dx, start[1], start[2]]))
-                .collect();
+        let classified =
+            self.with_ray(origin, [1.0, 0.0, 0.0], f64::INFINITY, |hits, ambiguous| {
+                if ambiguous || hits.len() % 2 != 0 {
+                    return None;
+                }
+                Some(
+                    (0..count)
+                        .map(|x| {
+                            let t = start[0] + x as f64 * dx - origin[0];
+                            let index = hits.partition_point(|&hit| hit < t - self.tolerance);
+                            let on_hit = hits
+                                .get(index)
+                                .is_some_and(|hit| (hit - t).abs() <= self.tolerance);
+                            if shell {
+                                index % 2 == 1 || on_hit
+                            } else {
+                                index % 2 == 1 && !on_hit
+                            }
+                        })
+                        .collect(),
+                )
+            });
+        if let Some(flags) = classified {
+            return flags;
         }
         (0..count)
             .map(|x| {
-                let t = start[0] + x as f64 * dx - origin[0];
-                let index = hits.partition_point(|&hit| hit < t - self.tolerance);
-                index % 2 == 1
-                    || hits
-                        .get(index)
-                        .is_some_and(|hit| (hit - t).abs() <= self.tolerance)
+                let point = [start[0] + x as f64 * dx, start[1], start[2]];
+                if shell {
+                    self.contains(point)
+                } else {
+                    self.classify(point)
+                }
             })
             .collect()
     }
+
+    fn fill_conductor_mask(
+        &self,
+        dims: [usize; 3],
+        origin: Point,
+        spacing: Point,
+        threshold: f64,
+        mask: &mut [bool],
+    ) {
+        let [nx, ny, nz] = dims;
+        let n = nx * ny * nz;
+        // An edge cannot cross the surface when both ends are farther than the
+        // edge length. Non-boundary components are therefore pure inside or
+        // outside and need one ray, not one per node.
+        let band = spacing.into_iter().fold(0.0_f64, f64::max).max(threshold);
+        let mut boundary = vec![false; n];
+        self.mark_surface_nodes(dims, origin, spacing, band, &mut boundary);
+        let mut label = vec![0u32; n];
+        let mut reps = Vec::new();
+        let mut stack = Vec::new();
+        for seed in 0..n {
+            if boundary[seed] || label[seed] != 0 {
+                continue;
+            }
+            let id = reps.len() as u32 + 1;
+            reps.push(seed);
+            stack.push(seed);
+            label[seed] = id;
+            while let Some(u) = stack.pop() {
+                let x = u % nx;
+                let y = (u / nx) % ny;
+                let z = u / (nx * ny);
+                let mut push = |v: usize| {
+                    if !boundary[v] && label[v] == 0 {
+                        label[v] = id;
+                        stack.push(v);
+                    }
+                };
+                if x > 0 {
+                    push(u - 1);
+                }
+                if x + 1 < nx {
+                    push(u + 1);
+                }
+                if y > 0 {
+                    push(u - nx);
+                }
+                if y + 1 < ny {
+                    push(u + nx);
+                }
+                if z > 0 {
+                    push(u - nx * ny);
+                }
+                if z + 1 < nz {
+                    push(u + nx * ny);
+                }
+            }
+        }
+        let inside: Vec<bool> = reps
+            .par_iter()
+            .map(|&index| self.classify(node_point(index, dims, origin, spacing)))
+            .collect();
+        let boundary_ids: Vec<usize> = (0..n).filter(|&i| boundary[i]).collect();
+        let boundary_hit: Vec<bool> = boundary_ids
+            .par_iter()
+            .map(|&index| {
+                let point = node_point(index, dims, origin, spacing);
+                self.signed_distance(point) <= threshold
+            })
+            .collect();
+        for i in 0..n {
+            if !boundary[i] {
+                mask[i] = inside[label[i] as usize - 1];
+            }
+        }
+        for (index, hit) in boundary_ids.into_iter().zip(boundary_hit) {
+            mask[index] = hit;
+        }
+    }
+
+    fn mark_surface_nodes(
+        &self,
+        dims: [usize; 3],
+        origin: Point,
+        spacing: Point,
+        band: f64,
+        near: &mut [bool],
+    ) {
+        let [nx, ny, nz] = dims;
+        if nx == 0 || ny == 0 || nz == 0 || near.len() != nx * ny * nz {
+            near.fill(true);
+            return;
+        }
+        for tri in &self.triangles {
+            let i0: [usize; 3] = std::array::from_fn(|a| {
+                (((tri.bounds.min[a] - band - origin[a]) / spacing[a]).floor() as isize - 1)
+                    .clamp(0, dims[a] as isize - 1) as usize
+            });
+            let i1: [usize; 3] = std::array::from_fn(|a| {
+                (((tri.bounds.max[a] + band - origin[a]) / spacing[a]).ceil() as isize + 1)
+                    .clamp(0, dims[a] as isize - 1) as usize
+            });
+            for z in i0[2]..=i1[2] {
+                for y in i0[1]..=i1[1] {
+                    let row = nx * (y + ny * z);
+                    for x in i0[0]..=i1[0] {
+                        near[row + x] = true;
+                    }
+                }
+            }
+        }
+    }
 }
 
-fn triangle_distance2(p: Point, [a, b, c]: [Point; 3]) -> f64 {
+fn node_point(index: usize, dims: [usize; 3], origin: Point, spacing: Point) -> Point {
+    let x = index % dims[0];
+    let y = (index / dims[0]) % dims[1];
+    let z = index / (dims[0] * dims[1]);
+    [
+        origin[0] + x as f64 * spacing[0],
+        origin[1] + y as f64 * spacing[1],
+        origin[2] + z as f64 * spacing[2],
+    ]
+}
+
+fn aabb_gap(a_min: Point, a_max: Point, b_min: Point, b_max: Point) -> f64 {
+    let mut gap2 = 0.0;
+    for a in 0..3 {
+        let gap = (b_min[a] - a_max[a]).max(0.0).max(a_min[a] - b_max[a]);
+        gap2 += gap * gap;
+    }
+    gap2.sqrt()
+}
+
+fn triangle_distance2(p: Point, triangle: [Point; 3]) -> f64 {
+    triangle_closest(p, triangle).0
+}
+
+/// Squared distance and whether the closest point is in the relative interior
+/// of the face (not on an edge or vertex).
+fn triangle_closest(p: Point, [a, b, c]: [Point; 3]) -> (f64, bool) {
     let ab = sub(b, a);
     let ac = sub(c, a);
     let ap = sub(p, a);
     let d1 = dot(ab, ap);
     let d2 = dot(ac, ap);
     if d1 <= 0.0 && d2 <= 0.0 {
-        return dot(ap, ap);
+        return (dot(ap, ap), false);
     }
     let bp = sub(p, b);
     let d3 = dot(ab, bp);
     let d4 = dot(ac, bp);
     if d3 >= 0.0 && d4 <= d3 {
-        return dot(bp, bp);
+        return (dot(bp, bp), false);
     }
     let vc = d1 * d4 - d3 * d2;
     if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
         let delta = sub(p, add(a, mul(ab, d1 / (d1 - d3))));
-        return dot(delta, delta);
+        return (dot(delta, delta), false);
     }
     let cp = sub(p, c);
     let d5 = dot(ab, cp);
     let d6 = dot(ac, cp);
     if d6 >= 0.0 && d5 <= d6 {
-        return dot(cp, cp);
+        return (dot(cp, cp), false);
     }
     let vb = d5 * d2 - d1 * d6;
     if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
         let delta = sub(p, add(a, mul(ac, d2 / (d2 - d6))));
-        return dot(delta, delta);
+        return (dot(delta, delta), false);
     }
     let va = d3 * d6 - d5 * d4;
     if va <= 0.0 && d4 - d3 >= 0.0 && d5 - d6 >= 0.0 {
@@ -504,10 +816,13 @@ fn triangle_distance2(p: Point, [a, b, c]: [Point; 3]) -> f64 {
             p,
             add(b, mul(sub(c, b), (d4 - d3) / ((d4 - d3) + (d5 - d6)))),
         );
-        return dot(delta, delta);
+        return (dot(delta, delta), false);
     }
-    let denominator = 1.0 / (va + vb + vc);
+    let sum = va + vb + vc;
+    let denominator = 1.0 / sum;
     let closest = add(a, add(mul(ab, vb * denominator), mul(ac, vc * denominator)));
     let delta = sub(p, closest);
-    dot(delta, delta)
+    // Stay off edges: a nearest point on a silhouette edge does not have a unique normal.
+    let face = va > 1e-3 * sum && vb > 1e-3 * sum && vc > 1e-3 * sum;
+    (dot(delta, delta), face)
 }

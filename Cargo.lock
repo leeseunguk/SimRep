@@ -1222,6 +1222,7 @@ name = "simrep-cad"
 version = "0.1.0"
 dependencies = [
  "cc",
+ "rayon",
  "simrep-geom",
  "simrep-mesh",
  "simrep-solve",

@@ -808,3 +808,49 @@ stopped orphan conhost: 0
 ```
 
 No task-owned `cargo.exe`, `rustc.exe`, or `simrep.exe` remained.
+
+## Tessellated CAD preparation, October 27, 2026
+
+Ryzen 9 5950X, Linux release f64, `RAYON_NUM_THREADS=8`. The CLI default is
+every core unless that variable is set. These comparisons use 8 threads
+because that is the recorded baseline. Single runs, not medians.
+`geometry_preparation_ms` is the phase log. `preparation_ms` includes solver
+setup and excludes solver `compute_ms`.
+
+Private case, recorded 8-thread comparison: an ESA-like toroidal analyzer
+STEP, not stored in this repo, 2.89M-node 3D grid. Preparation 361.4 s to
+19.7 s. Phase times, seconds: source 34.7 to 7.2, owners 28.6 to 1.3, cut
+cells 136.4 to 5.7, links 160.4 to 4.2. Outputs were byte-identical.
+
+Public fixture, measured here with load average about 13.4. `pair.step` is
+the two-sphere assembly from `tools/cad-fixtures` (also
+`simrep_cad::write_fixture` shape 3). Grid 101x101x101, spacing 0.02 mm,
+origin -1 mm, tessellated, chordal tolerance 0.001 mm.
+
+| Phase | Before ms | After ms | Speedup |
+| --- | ---: | ---: | ---: |
+| source | 30.538 | 22.901 | 1.33x |
+| owners | 432.777 | 38.416 | 11.27x |
+| cut cells | 2482.947 | 84.776 | 29.29x |
+| physical links | 3702.519 | 29.129 | 127.11x |
+| samples | 22.435 | 12.150 | 1.85x |
+| sidecar write (I/O) | 4.376 | 2.204 |  |
+| `preparation_ms` | 6822.993 | 326.619 | 20.89x |
+
+`.pa#`, `.pa0`, `.pa1`, `.pa2`, and `cuts.json` were byte-identical. Cut-node
+count was 5188 both.
+
+The acceleration follows ideas in
+[Iteration-CFD](https://github.com/using76/Iteration-CFD) (commit
+`1475bbf781e08f33f681661ec40e00727f1e7021`, Prosperity Public License 3.0.0),
+studied and not copied. No source file in this repo contains its code or
+identifiers. The adopted ideas are: classify a surface band and flood the
+interior instead of querying every node; reject a segment whose bounds cannot
+meet a triangle before tracing it; take the inside/outside sign from an
+outward face normal only for a single outward shell when the nearest point is
+in a face interior, and keep the ray classifier for nested shells and edge
+hits; tessellate independent faces on all cores. A uniform triangle bin was
+tried and removed. On this mesh it was slower than the existing BVH for
+nearest queries. The parallel face mesher reproduces the serial triangulation
+on the sphere fixture, and the private-analyzer arrays above stayed
+byte-identical with it enabled.

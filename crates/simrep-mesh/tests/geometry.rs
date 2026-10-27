@@ -144,7 +144,6 @@ fn narrow_band_sdf_preserves_exact_near_surface_distances_and_all_flags() {
         }
     }
 }
-
 fn compare(part: Part, exact: impl Fn([f64; 3]) -> f64, tolerance: f64) {
     assert!(inspect(&part).unwrap().is_closed_manifold());
     let solid = Solid::new(&part).unwrap();
@@ -357,4 +356,39 @@ fn electrode_faces_roundtrip_voxel_membership_and_anisotropic_iso_plane() {
             .iter()
             .any(|v| v[1] == 3.0 && v[2] == 5.0)
     );
+}
+
+#[test]
+fn repaired_sphere_axis_hits_and_distances_are_pinned() {
+    // Unit sphere with an equator vertex on +x. Axis hits and the exterior
+    // vertex distance are exact. Off-axis distances are the repaired mesh's
+    // signed distances, pinned to the bit so a face-sign mismatch fails.
+    let mut part = sphere(12, 24);
+    repair(&mut part).unwrap();
+    let solid = Solid::new(&part).unwrap();
+    let hits = solid.segment_intersections([-2.0, 0.0, 0.0], [2.0, 0.0, 0.0]);
+    assert_eq!(hits.len(), 2, "{hits:?}");
+    assert!(
+        (hits[0] - 0.25).abs() < 1e-12 && (hits[1] - 0.75).abs() < 1e-12,
+        "{hits:?}"
+    );
+    assert_eq!(
+        solid.signed_distance([2.0, 0.0, 0.0]).to_bits(),
+        1.0f64.to_bits()
+    );
+    let samples = [
+        [0.0, 0.0, 0.0],
+        [0.2, -0.3, 0.4],
+        [1.2, 0.1, -0.2],
+        [-0.5, 0.5, 0.5],
+    ];
+    let expected = [
+        13830402284452567032u64, // -0.98310560276036
+        13825181809118852960,    // -0.45175820563132696
+        4597650986603731302,     // 0.23544961295074102
+        13817057941826397250,    // -0.1253964898885745
+    ];
+    for (point, bits) in samples.iter().zip(expected) {
+        assert_eq!(solid.signed_distance(*point).to_bits(), bits, "{point:?}");
+    }
 }

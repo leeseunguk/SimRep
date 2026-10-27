@@ -10,6 +10,7 @@ default = []
 occt = ["dep:cc"]
 
 [dependencies]
+rayon = "1.11"
 simrep-geom.workspace = true
 simrep-mesh.workspace = true
 
