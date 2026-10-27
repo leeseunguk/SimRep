@@ -1,0 +1,139 @@
+# Third-party notices
+
+The files listed below adapt code from
+[using76/Iteration-CFD](https://github.com/using76/Iteration-CFD)
+`mcp/` at commit `1475bbf781e08f33f681661ec40e00727f1e7021`
+(2026-10-27, `main`).
+
+| File | Source path | Source URL | Blob |
+|---|---|---|---|
+| `mcp/server.mjs` | `mcp/server.mjs` | https://github.com/using76/Iteration-CFD/blob/1475bbf781e08f33f681661ec40e00727f1e7021/mcp/server.mjs | `c6097254d905e7c78c7e7731ca2bbbdd45490431` |
+| `mcp/smoke.mjs` | `mcp/smoke.mjs` | https://github.com/using76/Iteration-CFD/blob/1475bbf781e08f33f681661ec40e00727f1e7021/mcp/smoke.mjs | `ecc53242a7120341faea5035bf3a6270a778c8b2` |
+
+What was adapted is the stdio JSON-RPC loop (`initialize`, `tools/list`,
+`tools/call`, `ping`, notifications), workspace path refusal, and argv-only
+process spawn. SimRep tool definitions, CLI flag mapping, and the einzel
+pipeline checks are not from that repository. `mcp/README.md` is original.
+
+Those two files are under the Prosperity Public License 3.0.0.
+Copyright Iterations Co., Ltd. (주식회사 이터레이션즈).
+Collaborator and contributor: 주식회사 메테오시뮬레이션 (Meteo Simulation Co., Ltd.).
+Source code: https://github.com/using76/Iteration-CFD
+
+Prosperity is not an OSI open-source licence. Non-commercial use is free.
+Commercial use is a thirty-day trial, then a separate licence from the
+contributor (simul@msimul.com). The licence text below is the upstream
+`LICENSE` file, unchanged, including the licensor's additions.
+
+## Prosperity Public License 3.0.0
+
+```
+# Prosperity Public License 3.0.0
+
+Contributor: 주식회사 이터레이션즈 (Iterations Co., Ltd.)
+
+Collaborator and contributor: 주식회사 메테오시뮬레이션 (Meteo Simulation Co., Ltd.)
+
+Source Code: https://github.com/using76/Iteration-CFD
+
+## Purpose
+
+This license allows you to use and share this software for noncommercial purposes for free and to try this software for commercial purposes for thirty days.
+
+## Agreement
+
+In order to receive this license, you have to agree to its rules.  Those rules are both obligations under that agreement and conditions to your license.  Don't do anything with this software that triggers a rule you can't or won't follow.
+
+## Notices
+
+Make sure everyone who gets a copy of any part of this software from you, with or without changes, also gets the text of this license and the contributor and source code lines above.
+
+## Commercial Trial
+
+Limit your use of this software for commercial purposes to a thirty-day trial period.  If you use this software for work, your company gets one trial period for all personnel, not one trial per person.
+
+## Contributions Back
+
+Developing feedback, changes, or additions that you contribute back to the contributor on the terms of a standardized public software license such as [the Blue Oak Model License 1.0.0](https://blueoakcouncil.org/license/1.0.0), [the Apache License 2.0](https://spdx.org/licenses/Apache-2.0.html), [the MIT license](https://spdx.org/licenses/MIT.html), or [the two-clause BSD license](https://spdx.org/licenses/BSD-2-Clause.html) doesn't count as use for a commercial purpose.
+
+## Personal Uses
+
+Personal use for research, experiment, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, amateur pursuits, or religious observance, without any anticipated commercial application, doesn't count as use for a commercial purpose.
+
+## Noncommercial Organizations
+
+Use by any charitable organization, educational institution, public research organization, public safety or health organization, environmental protection organization, or government institution doesn't count as use for a commercial purpose regardless of the source of funding or obligations resulting from the funding.
+
+## Defense
+
+Don't make any legal claim against anyone accusing this software, with or without changes, alone or with other technology, of infringing any patent.
+
+## Copyright
+
+The contributor licenses you to do everything with this software that would otherwise infringe their copyright in it.
+
+## Patent
+
+The contributor licenses you to do everything with this software that would otherwise infringe any patents they can license or become able to license.
+
+## Reliability
+
+The contributor can't revoke this license.
+
+## Excuse
+
+You're excused for unknowingly breaking [Notices](#notices) if you take all practical steps to comply within thirty days of learning you broke the rule.
+
+## No Liability
+
+***As far as the law allows, this software comes as is, without any warranty or condition, and the contributor won't be liable to anyone for any damages related to this software or this license, under any kind of legal claim.***
+
+---
+
+*Everything above this line is the Prosperity Public License 3.0.0, unchanged.
+Everything below it is added by the licensor.*
+
+## What "public research organization" means here
+
+[Noncommercial Organizations](#noncommercial-organizations) makes use by a
+public research organization noncommercial. The licensor reads **public** there
+as the *purpose of the work*, not the ownership of the body doing it.
+
+**Free.** Research whose purpose is public: fire and rescue, medicine and public
+health, occupational and public safety, disaster response, environmental
+protection. This is free wherever it is done, including at a government-funded
+research institute.
+
+**Not free.** Research and development aimed at a particular product, or at
+technology to be transferred to industry, whoever performs it — electric-vehicle
+technology, rail and propulsion technology, aircraft engine technology and
+anything comparable. Work of that kind at a government-funded research institute
+is commercial use.
+
+**The test the licensor applies:** if the work is subject to a technology fee
+(기술료), or is carried out for a company or under a programme that transfers the
+result to one, it is commercial use and needs a licence after the thirty-day
+trial.
+
+Universities and schools, and the institutes and laboratories that belong to
+them, are educational institutions and remain free.
+
+한국어: 「공공 연구기관」의 *공공* 은 기관의 소유 주체가 아니라 **연구의 목적** 을
+뜻합니다. 소방·의료·보건·안전·재난·환경 보호를 목적으로 하는 연구는 정부출연
+연구기관에서 수행하더라도 무료입니다. 특정 제품이나 산업 이전을 목적으로 하는
+기술개발·기반연구는 — 전기차, 철도·추진, 항공기 엔진 기술 등 — 정부출연연구기관에서
+수행하더라도 상업적 이용입니다. **기술료 징수 대상이거나 기업을 위해 또는 결과를
+기업에 이전하는 사업으로 수행되는 연구는 상업적 이용** 이며, 30일 시험 후 라이선스가
+필요합니다. 대학·학교 및 그 소속 연구소는 교육기관으로서 무료입니다.
+
+## Commercial licensing
+
+Commercial use beyond the thirty-day trial requires a separate commercial
+licence from the contributor.
+
+    주식회사 이터레이션즈 (Iterations Co., Ltd.)
+    simul@msimul.com
+
+See [LICENSING.md](LICENSING.md) for what counts as commercial use, what a
+commercial licence covers, and how to ask for one.
+```

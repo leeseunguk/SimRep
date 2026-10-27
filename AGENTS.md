@@ -200,6 +200,7 @@ cargo clippy -p simrep-py --features python -- -D warnings
 cargo test --workspace --release
 . /tmp/simrep-python/bin/activate  # or your venv
 python -m pytest crates/simrep-py/tests -q
+SIMREP_BIN=./target/release/simrep node mcp/smoke.mjs
 ```
 
 Oracle/fixture-gated tests are ignored by default and need env vars plus
@@ -230,6 +231,7 @@ documented numbers.
 - `app/`: Tauri 2 + React desktop app (separate npm workspace)
 - `docs/`: design and validation docs; start at `docs/PLAN.md`
 - `examples/`: runnable end-to-end Python/CLI examples
+- `mcp/`: stdio MCP server over the CLI (`node mcp/smoke.mjs`; see `mcp/README.md`)
 - `bench/`, `tools/`: benchmark records and dev/oracle utilities
 
 ## Dev pitfalls
