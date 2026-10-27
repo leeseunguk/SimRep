@@ -94,6 +94,12 @@
   --handle-hover-scale: 1.35;
   /* Guided tour coach card (components/Tour.tsx). */
   --tour-card-w: 344px;
+  /* AI assistant panel (takes the properties column while open) and the AI accounts dialog. */
+  --panel-ai-w: 400px;
+  --ai-composer-max-h: 160px;
+  --dialog-ai-w: 600px;
+  /* Claude's mark colour on the provider sign-in button (non-text, 3:1 on black and white). */
+  --brand-claude: #d97757;
 
   /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -185,6 +191,7 @@
     --panel-left-w: 304px;
     --panel-right-w: 392px;
     --results-side-w: 280px;
+    --panel-ai-w: 440px;
   }
 }
 
@@ -225,6 +232,10 @@
   --color-info-soft: rgb(92 180 255 / 0.14);
 
   --color-scrim: rgb(6 8 10 / 0.7);
+  /* Provider sign-in buttons: the approved white format on dark surfaces (Sign in with ChatGPT). */
+  --brand-button-bg: #ffffff;
+  --brand-button-fg: #000000;
+  --brand-button-hover: #e6e6e6;
   --color-hairline-light: rgb(255 255 255 / 0.04);
 
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
@@ -315,6 +326,10 @@
   --color-info-soft: rgb(29 104 196 / 0.1);
 
   --color-scrim: rgb(232 230 225 / 0.78);
+  /* Provider sign-in buttons: the approved black format on light surfaces. */
+  --brand-button-bg: #000000;
+  --brand-button-fg: #ffffff;
+  --brand-button-hover: #262626;
   --color-hairline-light: rgb(255 255 255 / 0.7);
 
   --shadow-sm: 0 1px 2px rgb(30 25 15 / 0.08);

@@ -1,5 +1,10 @@
 target/
 node_modules/
+# AI credentials belong in the OS app config directory, never this checkout.
+ai/.credentials/
+ai/.config/
+**/account-*.json
+**/session.lock
 dist/
 # OCCT runtime staged for the Windows installer (tools/win/stage-occt.ps1)
 app/src-tauri/bundle-occt/

@@ -26,6 +26,9 @@ import { useWizard } from "./state/wizard";
 import { useExport } from "./state/exportDialog";
 import { initTour } from "./state/tour";
 import styles from "./App.module.css";
+import { AiAccountsDialog } from "./components/ai/AiAccountsDialog";
+import { AiPanel } from "./components/ai/AiPanel";
+import { useAi } from "./ai/store";
 
 // Plots, table and exports load with the first flight result (own chunk).
 const ResultsPanel = lazy(() => import("./results/ResultsPanel").then((m) => ({ default: m.ResultsPanel })));
@@ -48,6 +51,8 @@ export function App() {
   const hasResults = useApp((s) => s.objects.some((o) => o.kind === "pa" && o.flight.result !== null));
   const wizard = useWizard((s) => s.wizard !== null);
   const exporting = useExport((s) => s.objectId !== null);
+  const aiPanel = useAi((s) => s.panelOpen);
+  const aiSettings = useAi((s) => s.settingsOpen);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
   const [rightWidth, setRightWidth] = useState<number | null>(null);
 
@@ -92,7 +97,7 @@ export function App() {
         return;
       }
       // The export dialog is modal and owns Escape; no second modal (help) on top of it.
-      if (typing || app.busy || useExport.getState().objectId !== null) return;
+      if (typing || app.busy || useExport.getState().objectId !== null || useAi.getState().settingsOpen) return;
       if (e.key === "?" || e.key === "F1") {
         e.preventDefault();
         app.setHelpOpen(!app.helpOpen);
@@ -120,6 +125,8 @@ export function App() {
     ...(rightWidth !== null && { "--panel-right-w": `${rightWidth}px` }),
     // The import wizard needs room for its parts table.
     ...(wizard && { "--panel-right-w": `max(${rightWidth ?? 0}px, var(--panel-wizard-w))` }),
+    // The assistant takes the properties column while it is open, at least its own width.
+    ...(aiPanel && !wizard && { "--panel-right-w": `max(${rightWidth ?? 0}px, var(--panel-ai-w))` }),
   } as CSSProperties;
 
   return (
@@ -140,8 +147,8 @@ export function App() {
         )}
       </main>
       <div className={styles.right} inert={home}>
-        {wizard ? <ImportWizard /> : <PropertiesPanel />}
-        <PanelResizer edge="left" onResize={setRightWidth} label={t("props.title")} />
+        {wizard ? <ImportWizard /> : aiPanel ? <AiPanel /> : <PropertiesPanel />}
+        <PanelResizer edge="left" onResize={setRightWidth} label={aiPanel && !wizard ? t("ai.panel.title") : t("props.title")} />
       </div>
       {home && <StartScreen />}
       <Tour />
@@ -150,6 +157,7 @@ export function App() {
       <DropOverlay />
       {helpOpen && <HelpOverlay />}
       {exporting && <ExportDialog />}
+      {aiSettings && <AiAccountsDialog />}
       <BusyOverlay />
     </div>
   );

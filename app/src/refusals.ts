@@ -1,5 +1,7 @@
 import type { Message } from "./i18n";
 import { reasonMessage, type Reason } from "./scene/backend";
+import { AI_ERROR_CODES } from "./ai/protocol";
+import { isExpired } from "./ai/accounts";
 
 /**
  * Every place SimRep refuses a request, or runs it differently from what was asked, says so
@@ -41,7 +43,21 @@ export const refusals = {
   unsupportedFile: (file: string): Refusal => ({ what: { key: "toast.unsupported.title", params: { file } }, why: { key: "toast.unsupported.body" } }),
   /** Browser preview: refining and flying need the native core. */
   desktopOnly: (): Refusal => ({ what: { key: "sim.desktopOnly.title" }, why: { key: "sim.desktopOnly" } }),
+  /** An AI sign-in, sign-out or chat the bridge refused. `code`: the bridge's stable code (ai/PROTOCOL.md). */
+  ai: (action: "signIn" | "signOut" | "chat", code: string): Refusal => ({
+    what: { key: action === "signIn" ? "ai.refusal.signIn" : action === "signOut" ? "ai.refusal.signOut" : "ai.refusal.chat" },
+    why: aiReason(code),
+  }),
+  /** Browser preview: no AI bridge. */
+  aiDesktopOnly: (): Refusal => ({ what: { key: "ai.refusal.desktopOnly" }, why: { key: "ai.refusal.desktopOnlyWhy" } }),
 };
+
+/** The UI's words for an AI bridge code; a terminal refresh failure reads as "session expired". */
+export function aiReason(code: string): Message {
+  if ((AI_ERROR_CODES as readonly string[]).includes(code)) return { key: `ai.reason.${code as (typeof AI_ERROR_CODES)[number]}` };
+  if (isExpired(code)) return { key: "ai.reason.expired" };
+  return { key: "ai.reason.unknown", params: { code } };
+}
 
 /** One line, "what. why", for hints, tooltips and the activity log. */
 export function refusalLine(r: Refusal): Message {

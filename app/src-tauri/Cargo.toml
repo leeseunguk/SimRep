@@ -38,6 +38,9 @@ tauri-plugin-dialog = "2"
 pollster = "1"
 self_cell = "1"
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 # Decoding, solving and flying are ~10x slower unoptimized; keep the core crates and the
 # commands (src/*.rs) optimized in dev builds too. Tauri and other dependencies stay debug.
 [profile.dev.package.simrep-core]

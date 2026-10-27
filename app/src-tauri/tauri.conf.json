@@ -28,6 +28,12 @@
   },
   "bundle": {
     "active": true,
+    "resources": {
+      "../../ai/*.mjs": "ai/",
+      "../../ai/package.json": "ai/package.json",
+      "../../ai/node_modules/": "ai/node_modules/",
+      "../../mcp/server.mjs": "mcp/server.mjs"
+    },
     "targets": ["nsis"],
     "publisher": "SimRep",
     "shortDescription": "Ion optics studio",

@@ -7,6 +7,7 @@
 use serde::Serialize;
 use tauri::Manager;
 
+mod ai;
 mod cad;
 mod export;
 mod fly;
@@ -43,6 +44,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(session::AppState::default())
+        .manage(ai::AiState::default())
         .setup(|app| {
             // Create the GPU device once, off the UI path: the multigrid solver's (refine), then the
             // flyer's pipelines on that same device (live re-fly). Both are kept for the whole session.
@@ -55,6 +57,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             backend_info,
+            ai::ai_request,
             pa::open_pa,
             pa::read_file,
             pa::path_info,
@@ -80,6 +83,11 @@ fn main() {
             fly::flight_velocities,
             live::compute_device,
         ])
-        .run(tauri::generate_context!())
-        .expect("failed to start the SimRep window");
+        .build(tauri::generate_context!())
+        .expect("failed to start the SimRep window")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                app.state::<ai::AiState>().shutdown();
+            }
+        });
 }

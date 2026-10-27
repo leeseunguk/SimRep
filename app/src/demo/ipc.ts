@@ -1,6 +1,8 @@
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import type { Channel } from "@tauri-apps/api/core";
 import fixtureText from "./fixtures/einzel.json?raw";
+import type { RpcRequest } from "../ai/protocol";
+import { createDemoAi, type DemoAi } from "./ai";
 
 /**
  * Demo mode (VITE_SIMREP_DEMO=1, `npm run dev:demo`, the e2e smoke test): the UI runs as the
@@ -93,6 +95,9 @@ export function installDemo(): void {
     step: (job) => (manual ? send(job) : null),
   };
   (window as unknown as { __simrepDemo: DemoLog }).__simrepDemo = demo;
+  // Both AI providers, mocked to the bridge protocol (src/demo/ai.ts).
+  const ai = createDemoAi(manual, new URLSearchParams(location.search));
+  (window as unknown as { __simrepDemoAi: DemoAi }).__simrepDemoAi = ai.demo;
   // isTauri() reads this flag; the mocks fill window.__TAURI_INTERNALS__.
   (globalThis as unknown as { isTauri: boolean }).isTauri = true;
   mockWindows("main");
@@ -124,6 +129,8 @@ export function installDemo(): void {
   async function handle(cmd: string, args: unknown): Promise<unknown> {
     const a = (args ?? {}) as Record<string, unknown>;
     switch (cmd) {
+      case "ai_request":
+        return ai.handle(a.request as RpcRequest);
       case "backend_info":
         return { appName: "simrep-app", appVersion: "0.1.0 (demo)", coreCrate: "simrep-core" };
       case "compute_device":

@@ -1,7 +1,8 @@
 import { useRef } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { CircleHelp, Download, FolderOpen, House, Monitor, Moon, Redo2, Save, Sun, Undo2 } from "lucide-react";
+import { Bot, CircleHelp, Download, FolderOpen, House, Monitor, Moon, Redo2, Save, Sun, Undo2, UserRound } from "lucide-react";
+import { openPanel, openSettings, useAi } from "../ai/store";
 import { useI18n } from "../i18n";
 import { ACCEPT_ATTRIBUTE, FORMATS } from "../scene/formats";
 import { importFiles } from "../scene/importFiles";
@@ -52,6 +53,7 @@ export function TopBar() {
     return (arrays.find((o) => o.id === s.selectedId) ?? arrays.at(-1))?.id ?? null;
   });
   const fileInput = useRef<HTMLInputElement>(null);
+  const aiOpen = useAi((s) => s.panelOpen);
   const name = projectTitle(project, lang);
 
   return (
@@ -129,6 +131,11 @@ export function TopBar() {
           e.target.value = "";
         }}
       />
+      <div className={styles.divider} />
+      <Button icon={<Bot />} active={aiOpen} disabled={home} title={t("topbar.aiTitle")} onClick={() => openPanel(!aiOpen)} data-testid="ai-toggle">
+        {t("topbar.ai")}
+      </Button>
+      <Button variant="ghost" iconOnly icon={<UserRound />} aria-label={t("topbar.aiAccounts")} title={t("topbar.aiAccounts")} onClick={() => openSettings(true)} data-testid="ai-accounts-open" />
       <div className={styles.divider} />
       <SegmentedControl<Lang>
         ariaLabel={t("topbar.language")}
