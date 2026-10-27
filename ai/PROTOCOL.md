@@ -21,7 +21,7 @@ The Rust host owns one sidecar and terminates it when the app exits.
 | `auth.accounts` | `{provider?}` | `{accounts: Account[]}` |
 | `auth.login` | `{provider, account?}` | `{started: true}` |
 | `auth.logout` | `{provider, account?}` | `{signedOut: true, remoteRevocationConfirmed: boolean}` |
-| `chat.start` | `{provider, model?, workspace, account?}` | `{sessionId, provider, model, workspace}` |
+| `chat.start` | `{provider, model?, workspace, account?, language?}` | `{sessionId, provider, model, workspace}` |
 | `chat.send` | `{sessionId, text}` | `{turnId}` |
 | `chat.cancel` | `{sessionId}` | `{cancelled: true}` |
 | `approval.resolve` | `{approvalId, allow: boolean}` | `{resolved: true}` |
@@ -49,6 +49,13 @@ disabled. One turn per session can run at a time.
 
 Every event has `type` and `provider`; chat events also have `sessionId` and
 `turnId`. Event-specific fields:
+
+Chat events may additionally contain `activeSkill` (`ion-optics`, `einzel`,
+`esa`, `quadrupole`, `magnetic`, `cad`). This additive field drives the recipe
+badge. `language` is a language tag such as `en` or `ko`; if omitted the harness
+matches the user message. Every provider receives the same SimRep harness
+system prompt. See [harness/README.md](harness/README.md) for workflow tools,
+verification, output handles and mock/real-provider evals.
 
 | type | Fields |
 | --- | --- |

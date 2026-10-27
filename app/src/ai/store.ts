@@ -128,7 +128,7 @@ export async function send(text: string): Promise<void> {
   try {
     if (stale) {
       set({ starting: true });
-      const started = await request("chat.start", { provider: s.provider, workspace, ...(s.model && { model: s.model }), ...(account && { account }) });
+      const started = await request("chat.start", { provider: s.provider, workspace, language: useApp.getState().lang, ...(s.model && { model: s.model }), ...(account && { account }) });
       session = { id: started.sessionId, provider: started.provider, model: started.model, workspace: started.workspace };
       set({ chat: { ...get().chat, session } });
     }

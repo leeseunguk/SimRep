@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { RpcProcess } from './rpc.mjs'
 import { HERE, TOOL_NAMES } from './tools.mjs'
 
-const env = Object.fromEntries(['PATH', 'SystemRoot', 'WINDIR', 'HOME', 'TMPDIR', 'TEMP', 'SIMREP_BIN', 'SIMREP_WORKSPACE']
+const env = Object.fromEntries(['PATH', 'SystemRoot', 'WINDIR', 'HOME', 'TMPDIR', 'TEMP', 'SIMREP_BIN', 'SIMREP_WORKSPACE', 'SIMREP_PYTHON']
   .filter(k => process.env[k]).map(k => [k, process.env[k]]))
 const mcp = new RpcProcess(process.execPath, [path.join(HERE, '..', 'mcp', 'server.mjs')], { env })
 const send = message => process.stdout.write(JSON.stringify(message) + '\n')

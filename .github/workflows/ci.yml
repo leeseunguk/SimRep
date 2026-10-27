@@ -142,6 +142,25 @@ jobs:
       - name: Test demo UI in Chromium
         run: npm run e2e
 
+  ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ai
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.14.1"
+          cache: npm
+          cache-dependency-path: ai/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Deterministic SimRep harness evals (no model credentials)
+        run: node harness/evals/run.mjs
+
   claims:
     runs-on: ubuntu-latest
     timeout-minutes: 5

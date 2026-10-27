@@ -36,6 +36,17 @@ describe("protocol mapping", () => {
 });
 
 describe("chat reducer", () => {
+  it("retains only a recognized active harness recipe for the current session", () => {
+    const s = run(addUser(chatOf(), "focus"), { type: "delta", text: "result", activeSkill: "einzel" });
+    expect(s.activeSkill).toBe("einzel");
+    expect(run(s, { type: "done", status: "completed" }).activeSkill).toBe("einzel");
+    expect(run(s, { type: "delta", text: "x", activeSkill: "../outside" }).activeSkill).toBe("einzel");
+    expect(writesFiles("simrep_plan")).toBe(false);
+    expect(writesFiles("analyzer_scan")).toBe(true);
+    expect(writesFiles("grid_convergence")).toBe(true);
+    expect(writesFiles("check_geometry")).toBe(true);
+  });
+
   it("streams deltas into one assistant bubble per run of text", () => {
     let s = addUser(chatOf(), "fly einzel");
     expect(s.running).toBe(true);

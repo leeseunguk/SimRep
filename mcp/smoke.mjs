@@ -126,6 +126,8 @@ try {
   const expected = [
     'gpu_info', 'pa_info', 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'cad_measure', 'fly',
     'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories', 'read_csv_summary',
+    'simrep_plan', 'analyzer_scan', 'grid_convergence', 'compare_runs', 'check_geometry', 'summarize_results',
+    'load_skill', 'fetch_tool_output',
   ]
   check('tools/list', expected.every((name) => names.includes(name)) && names.length === expected.length, names.join(', '))
   check('every tool has a schema', (list.result?.tools ?? []).every((tool) => tool.inputSchema?.type === 'object'))
@@ -286,6 +288,55 @@ try {
   check('read_csv_summary columns', summaryBody?.columns?.includes('tof_us') && summaryBody.columns.includes('reason'))
   check('read_csv_summary tof', typeof summaryBody?.numeric?.tof_us?.mean === 'number')
   check('read_csv_summary reasons', typeof summaryBody?.reason_counts?.plane === 'number' && summaryBody.reason_counts.plane === flyBody.arrivals)
+
+  const plan = jsonOf(await call('tools/call', { name: 'simrep_plan', arguments: { task: 'einzel focusing' } }))
+  check('simrep_plan selects recipe and workspace input', plan?.skill === 'einzel' && plan?.inputs?.geometry === 'examples/data/einzel.gem')
+  const table = jsonOf(await call('tools/call', { name: 'summarize_results', arguments: { paths: [csv] } }))
+  check('summarize_results compact numeric table', table?.rows?.[0]?.rows === 8 && typeof table?.rows?.[0]?.numeric?.tof_us?.mean === 'number')
+  const identity = jsonOf(await call('tools/call', { name: 'compare_runs', arguments: { before: csv, after: csv } }))
+  check('compare_runs uses real identity helper', identity?.identical === true && identity?.files_compared === 1)
+  const recipe = jsonOf(await call('tools/call', { name: 'load_skill', arguments: { id: 'esa' } }))
+  check('load_skill loads one trusted recipe', recipe?.skill === 'esa')
+  const fullSkill = jsonOf(await call('tools/call', { name: 'load_skill', arguments: { id: 'ion-optics' } }))
+  if (fullSkill?.truncated) {
+    const page = jsonOf(await call('tools/call', { name: 'fetch_tool_output', arguments: { handle: fullSkill.handle, length: 1000 } }))
+    check('large skill has a retrievable output handle', page?.text?.length === 1000 && page?.next_offset === 1000)
+  } else check('shared skill is returned intact', fullSkill?.skill === 'ion-optics' && typeof fullSkill?.text === 'string')
+  for (const name of ['compare_runs', 'check_geometry', 'grid_convergence', 'analyzer_scan']) {
+    const argumentsForTool = name === 'compare_runs' ? { before: 'escape-link', after: csv }
+      : name === 'analyzer_scan' ? { pa: '../outside.pa0' } : { input: '../outside.gem' }
+    const refused = await call('tools/call', { name, arguments: argumentsForTool })
+    check(`${name} refuses workspace escapes`, refused.result?.isError === true)
+  }
+  const geometryPacket = await call('tools/call', { name: 'check_geometry', arguments: {
+    input: 'examples/data/einzel.gem',
+    refine: { electrode: ['1=1:0', '2=2:60', '3=3:0'], device: 'cpu', out: 'out/exact' },
+  } })
+  check('check_geometry refuses unresolved GEM gaps without disabling the gate', geometryPacket.result?.isError === true && textOf(geometryPacket).includes('gap check failed'), textOf(geometryPacket).slice(0, 240))
+  // Cylindrical GEM bounds can be uncertified under the gap search budget.
+  // Use exact parallel box faces to prove the successful composite path too.
+  writeFileSync(path.join(workspace, 'plates.gem'), 'pa_define(9,5,5,planar)\ne(1){fill{within{box3d(-1,-1,-1,1,3,3)}}}\ne(2){fill{within{box3d(3,-1,-1,5,3,3)}}}\n')
+  const platePacket = await call('tools/call', { name: 'check_geometry', arguments: {
+    input: 'plates.gem',
+    refine: { electrode: ['1=1:0', '2=2:10'], grid: [17,9,9], spacing: [0.25,0.25,0.25], device: 'cpu', out: 'out/plates' },
+  } })
+  const plateCheck = jsonOf(platePacket)
+  check('check_geometry runs certified exact refinement with mandatory gap gate', plateCheck?.refinement?.converged === true && plateCheck?.refinement?.gap_check?.mode === 'error', textOf(platePacket).slice(0, 240))
+  if (process.env.SIMREP_PYTHON) {
+    const studyPacket = await call('tools/call', { name: 'grid_convergence', arguments: {
+      input: 'plates.gem', electrode: ['1=1:0', '2=2:10'],
+      levels: [
+        { grid: [33,17,17], spacing: [0.125,0.125,0.125] },
+        { grid: [17,9,9], spacing: [0.25,0.25,0.25] },
+        { grid: [9,5,5], spacing: [0.5,0.5,0.5] },
+      ],
+      fly: { beam: { count: 4, mass_amu: 40, energy_ev: 1000, position_mm: [1.5,1,1], ion_file: 'out/study.ion' }, plane: [1,0,0,2.5], duration_us: 100 },
+      observable: 'arrival_tof_us.mean', out: 'out/study',
+    } })
+    const study = jsonOf(studyPacket)
+    check('grid_convergence runs three native solves and Celik helper', study?.values?.length === 3 && typeof study?.value === 'number' && Object.hasOwn(study, 'u_num'), textOf(studyPacket).slice(0, 700))
+    check('grid_convergence keeps solver and flight evidence', study?.runs?.length === 3 && study.runs.every(run => run.solve.converged && run.flight.executed.device === 'cpu'))
+  }
 
   const beam = await call('tools/call', {
     name: 'fly',

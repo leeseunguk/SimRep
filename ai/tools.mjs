@@ -4,9 +4,11 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { BridgeError } from './errors.mjs'
 
-export const READ_ONLY = ['gpu_info', 'pa_info', 'read_csv_summary', 'cad_measure']
+export const READ_ONLY = ['gpu_info', 'pa_info', 'read_csv_summary', 'cad_measure',
+  'simrep_plan', 'compare_runs', 'summarize_results', 'load_skill', 'fetch_tool_output']
 export const TOOL_NAMES = [...READ_ONLY, 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'fly',
-  'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories']
+  'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories',
+  'analyzer_scan', 'grid_convergence', 'check_geometry']
 export const HERE = path.dirname(fileURLToPath(import.meta.url))
 
 // An authenticated private loopback channel connects provider-owned MCP proxies
@@ -45,6 +47,7 @@ export async function toolGate(workspace, approve, emit) {
       env: {
         SIMREP_WORKSPACE: workspace,
         SIMREP_BIN: process.env.SIMREP_BIN || '',
+        SIMREP_PYTHON: process.env.SIMREP_PYTHON || '',
         SIMREP_AI_GATE: `http://127.0.0.1:${address.port}/tool`,
         SIMREP_AI_GATE_KEY: key,
       },

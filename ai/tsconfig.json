@@ -9,5 +9,5 @@
     "strict": false,
     "skipLibCheck": true
   },
-  "include": ["*.mjs"]
+  "include": ["*.mjs", "harness/**/*.mjs"]
 }

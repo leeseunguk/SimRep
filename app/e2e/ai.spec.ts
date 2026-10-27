@@ -62,6 +62,7 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   let type: string | null;
   while ((type = await aiStep(page)) === "delta");
   expect(type).toBe("tool_call");
+  await expect(panel.getByTestId("ai-active-skill")).toHaveText("einzel");
   await expect(panel.getByText("I'll check the refined array first, then fly the ions.")).toBeVisible();
   const card = panel.locator('[data-testid="ai-tool-card"][data-tool="pa_info"]');
   await expect(card).toContainText("Running");
@@ -98,6 +99,9 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   await expect(fly.locator('[data-field="compute_ms"]')).toContainText("6.84");
   await expect(fly.locator('[data-field="arrivals"]')).toContainText("37");
   await expect(panel.getByText(/37 of 40 ions reached the detector plane/)).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("harness-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: test.info().outputPath("harness-mobile.png") });
 
   expect(errors).toEqual([]);
 });

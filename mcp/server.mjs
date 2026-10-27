@@ -21,6 +21,9 @@ import path from 'node:path'
 import process from 'node:process'
 import readline from 'node:readline'
 import { fileURLToPath } from 'node:url'
+import { workflowTools } from './workflows.mjs'
+import { OutputStore } from '../ai/harness/context.mjs'
+import { verifyResult } from '../ai/harness/verification.mjs'
 
 const PROTOCOL_VERSION = '2025-06-18'
 const SERVER = { name: 'simrep', version: '0.1.0' }
@@ -207,8 +210,10 @@ function simrepBin() {
  * stderr is kept so a failure can put it on the error object.
  */
 function runSimrep(args) {
-  const bin = simrepBin()
-  const argv = ['--json', ...args]
+  return runProgram(simrepBin(), ['--json', ...args])
+}
+
+function runProgram(bin, argv) {
   return new Promise((resolve) => {
     const child = spawn(bin, argv, {
       cwd: WORKSPACE,
@@ -589,12 +594,13 @@ const TOOLS = [
         repair: { type: 'boolean' },
         cad_mode: { type: 'string', enum: ['auto', 'exact', 'tessellated'] },
         cad_tolerance: { type: 'number', exclusiveMinimum: 0, description: 'Chordal deflection in mm.' },
+        gap_check: { type: 'string', enum: ['error', 'warn', 'off'], description: 'Default error; refuse under-resolved electrode gaps.' },
       },
       required: ['input', 'electrode', 'out'],
       additionalProperties: false,
     },
     async run(args) {
-      only(args, ['input', 'electrode', 'out', 'device', 'backend', 'grid', 'spacing', 'origin', 'tolerance', 'max_cycles', 'units', 'repair', 'cad_mode', 'cad_tolerance'])
+      only(args, ['input', 'electrode', 'out', 'device', 'backend', 'grid', 'spacing', 'origin', 'tolerance', 'max_cycles', 'units', 'repair', 'cad_mode', 'cad_tolerance', 'gap_check'])
       const argv = [
         'refine-geometry',
         inputFile(reqString(args, 'input'), 'input'),
@@ -611,6 +617,7 @@ const TOOLS = [
       if (optBool(args, 'repair')) argv.push('--repair')
       flag(argv, '--cad-mode', optEnum(args, 'cad_mode', ['auto', 'exact', 'tessellated']))
       if (args.cad_tolerance !== undefined) flag(argv, '--cad-tolerance', finite(args.cad_tolerance, 'cad_tolerance'))
+      flag(argv, '--gap-check', optEnum(args, 'gap_check', ['error', 'warn', 'off']))
       return simrep(argv)
     },
   },
@@ -994,6 +1001,12 @@ async function summarizeCsv(abs, maxRows, sampleN) {
   return summary
 }
 
+const outputs = new OutputStore()
+TOOLS.push(...workflowTools({
+  workspace: WORKSPACE, inputFile, insideWorkspace, prepareOutput, summarizeCsv, outputs, here,
+  runTool: (name, args) => BY_NAME.get(name).run(args),
+  runHelper: (file, args) => runProgram(process.env.SIMREP_PYTHON || 'python3', [file, ...args]),
+}))
 const BY_NAME = new Map(TOOLS.map((tool) => [tool.name, tool]))
 
 let writeChain = Promise.resolve()
@@ -1048,7 +1061,13 @@ async function handle(msg) {
       }
       try {
         const ran = await tool.run(args)
-        return result(id, { content: [{ type: 'text', text: ran.text }], isError: ran.isError })
+        let text = ran.text
+        try {
+          const value = JSON.parse(text)
+          if (value && typeof value === 'object') text = JSON.stringify({ ...value, verification: verifyResult(value) })
+        } catch { /* Plain error text is still an MCP tool error. */ }
+        if (tool.name !== 'fetch_tool_output') text = outputs.compact(text)
+        return result(id, { content: [{ type: 'text', text }], isError: ran.isError })
       } catch (error) {
         const why = error instanceof ToolError ? error.message : `unexpected failure: ${error?.message ?? error}`
         return result(id, { content: [{ type: 'text', text: why }], isError: true })

@@ -46,7 +46,7 @@ export interface Methods {
   "auth.login": { params: { provider: Provider; account?: string }; result: { started: true } };
   "auth.logout": { params: { provider: Provider; account?: string }; result: { signedOut: true; remoteRevocationConfirmed: boolean } };
   "chat.start": {
-    params: { provider: Provider; model?: string; workspace: string; account?: string };
+    params: { provider: Provider; model?: string; workspace: string; account?: string; language?: string };
     result: { sessionId: string; provider: Provider; model: string; workspace: string };
   };
   "chat.send": { params: { sessionId: string; text: string }; result: { turnId: string } };
@@ -80,6 +80,7 @@ interface Base {
 interface ChatBase extends Base {
   sessionId: string;
   turnId?: string;
+  activeSkill?: string;
 }
 
 export type AiEvent =
@@ -134,7 +135,7 @@ export const REFRESH_FAILED_CODES = [
 ] as const;
 
 /** SimRep MCP tools that only read (no approval); the rest may write files in the workspace (ai/tools.mjs). */
-export const READ_ONLY_TOOLS = ["gpu_info", "pa_info", "read_csv_summary", "cad_measure"] as const;
+export const READ_ONLY_TOOLS = ["gpu_info", "pa_info", "read_csv_summary", "cad_measure", "simrep_plan", "compare_runs", "summarize_results", "load_skill", "fetch_tool_output"] as const;
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const isProvider = (v: unknown): v is Provider => typeof v === "string" && /^[a-z][a-z0-9_-]{0,31}$/.test(v);
@@ -168,7 +169,8 @@ export function parseEvent(raw: unknown): AiEvent | null {
   const provider = raw.provider;
   const sessionId = str(raw.sessionId);
   const turnId = str(raw.turnId);
-  const chat = sessionId ? { provider, sessionId, ...(turnId && { turnId }) } : null;
+  const activeSkill = typeof raw.activeSkill === "string" && /^(ion-optics|einzel|esa|quadrupole|magnetic|cad)$/.test(raw.activeSkill) ? raw.activeSkill : undefined;
+  const chat = sessionId ? { provider, sessionId, ...(turnId && { turnId }), ...(activeSkill && { activeSkill }) } : null;
   const args = (v: unknown) => (isObject(v) ? v : {});
   switch (raw.type) {
     case "auth": {

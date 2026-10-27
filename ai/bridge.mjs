@@ -7,6 +7,7 @@ import { ClaudeAuth, ClaudeSession } from './claude.mjs'
 import { ChatGPTSession } from './chatgpt.mjs'
 import { toolGate } from './tools.mjs'
 import { BridgeError, publicError } from './errors.mjs'
+import { createHarness } from './harness/index.mjs'
 
 function required(value, name) {
   if (typeof value !== 'string' || !value.trim()) throw new BridgeError('INVALID_PARAMS', `${name} must be a non-empty string.`)
@@ -50,7 +51,7 @@ export class Bridge {
   }
 
   /** @param {string} method
-   * @param {{provider?: string, account?: string, workspace?: string, model?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean}} params */
+   * @param {{provider?: string, account?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean}} params */
   async dispatch(method, params = {}) {
     if (!params || typeof params !== 'object' || Array.isArray(params)) throw new BridgeError('INVALID_PARAMS', 'params must be an object.')
     switch (method) {
@@ -107,11 +108,14 @@ export class Bridge {
         if (p === 'chatgpt' && !account.planEnabled) throw new BridgeError('PLAN_PERMISSION_REQUIRED', 'Enable ChatGPT plan use before starting a chat.')
         if (params.model !== undefined) required(params.model, 'model')
         const model = params.model || (p === 'claude' ? 'sonnet' : 'gpt-5.4')
-        const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, turn: undefined, client: undefined }
-        const emit = fields => this.emitChat(session, fields)
+        const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, turn: undefined, client: undefined, harness: undefined }
+        if (params.language !== undefined && (typeof params.language !== 'string' || !/^[a-zA-Z-]{2,35}$/.test(params.language))) throw new BridgeError('INVALID_PARAMS', 'language must be a language tag.')
+        const harness = await createHarness({ workspace, language: params.language, emit: fields => this.emitChat(session, fields) })
+        const emit = fields => harness.emit(fields)
         const gate = await toolGate(workspace, (name, args) => this.approve(session, name, args), emit)
         try {
-          session.client = this.create[p]({ auth: this.auth[p], account: account.id, workspace, model, gate, emit })
+          session.client = this.create[p]({ auth: this.auth[p], account: account.id, workspace, model, gate, emit, systemPrompt: harness.systemPrompt })
+          session.harness = harness
           this.sessions.set(session.id, session)
         } catch (error) { gate.close(); throw error }
         return { sessionId: session.id, provider: p, model, workspace }
@@ -129,11 +133,17 @@ export class Bridge {
         setImmediate(() => {
           void (async () => {
             let status = 'failed'
-            try { status = turn.cancelled ? 'interrupted' : await session.client.send(text) } catch (error) {
+            try {
+              if (!turn.cancelled) {
+                const prepared = await session.harness.prepare(text)
+                if (!turn.cancelled) status = await session.client.send(prepared)
+              }
+            } catch (error) {
               if (!turn.cancelled) this.emitChat(session, { type: 'error', ...publicError(error) })
             } finally {
               for (const entry of this.approvals.values()) if (entry.sessionId === session.id) entry.settle(false)
-              this.emitChat(session, { type: 'done', status: turn.cancelled ? 'interrupted' : status })
+              session.harness.finish(turn.cancelled ? 'interrupted' : status)
+              session.harness.emit({ type: 'done', status: turn.cancelled ? 'interrupted' : status })
               session.turn = undefined
             }
           })()

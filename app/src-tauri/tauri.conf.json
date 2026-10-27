@@ -32,7 +32,13 @@
       "../../ai/*.mjs": "ai/",
       "../../ai/package.json": "ai/package.json",
       "../../ai/node_modules/": "ai/node_modules/",
-      "../../mcp/server.mjs": "mcp/server.mjs"
+      "../../mcp/server.mjs": "mcp/server.mjs",
+      "../../mcp/workflows.mjs": "mcp/workflows.mjs",
+      "../../mcp/grid_uncertainty.py": "mcp/grid_uncertainty.py",
+      "../../ai/harness/": "ai/harness/",
+      "../../AGENTS.md": "AGENTS.md",
+      "../../.claude/skills/simrep-ion-optics/": ".claude/skills/simrep-ion-optics/",
+      "../../tools/result_identity.py": "tools/result_identity.py"
     },
     "targets": ["nsis"],
     "publisher": "SimRep",

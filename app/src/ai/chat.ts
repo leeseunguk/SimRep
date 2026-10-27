@@ -37,6 +37,7 @@ export interface ChatState {
   /** A turn is running (from chat.send until its one `done`). */
   running: boolean;
   nextId: number;
+  activeSkill?: string;
 }
 
 export const EMPTY_CHAT: ChatState = { session: null, items: [], running: false, nextId: 1 };
@@ -60,6 +61,7 @@ export function resolveApproval(s: ChatState, approvalId: string, allow: boolean
 export function applyEvent(s: ChatState, e: AiEvent): ChatState {
   if (e.type === "auth") return s;
   if (!s.session || e.sessionId !== s.session.id) return s;
+  if ("activeSkill" in e && e.activeSkill) s = { ...s, activeSkill: e.activeSkill };
   const items = s.items;
   const push = (item: NewItem): ChatState => ({ ...s, items: [...items, { ...item, id: s.nextId } as ChatItem], nextId: s.nextId + 1 });
   switch (e.type) {

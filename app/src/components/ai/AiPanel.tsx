@@ -68,6 +68,7 @@ export function AiPanel() {
         <h2 id="ai-panel-title" className={panel.title}>
           {t("ai.panel.title")}
         </h2>
+        {chat.activeSkill && <span data-testid="ai-active-skill"><Badge>{chat.activeSkill}</Badge></span>}
         <Button variant="ghost" size="sm" iconOnly icon={<MessageSquarePlus />} disabled={chat.running || chat.items.length === 0} aria-label={t("ai.panel.newChat")} title={t("ai.panel.newChat")} onClick={newChat} />
         <Button variant="ghost" size="sm" iconOnly icon={<X />} aria-label={t("ai.close")} title={t("ai.close")} onClick={() => openPanel(false)} />
       </div>

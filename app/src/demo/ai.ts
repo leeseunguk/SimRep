@@ -91,7 +91,7 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
   const words = (s: string) => s.match(/\S+\s*/g) ?? [];
   const chat = (sessionId: string) => {
     const s = sessionId && sessions.get(sessionId)!;
-    return { provider: s ? s.provider : ("chatgpt" as Provider), sessionId, ...(s && s.turnId ? { turnId: s.turnId } : {}) };
+    return { provider: s ? s.provider : ("chatgpt" as Provider), sessionId, activeSkill: "einzel", ...(s && s.turnId ? { turnId: s.turnId } : {}) };
   };
   const deltas = (sessionId: string, s: string): AiEvent[] => words(s).map((w) => ({ type: "delta", ...chat(sessionId), text: w }));
 

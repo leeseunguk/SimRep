@@ -1,0 +1,113 @@
+[
+  {
+    "id": "einzel-refine",
+    "prompt": "Refine einzel.pa# on CPU with refine and report converged and cycles.",
+    "recipe": "einzel",
+    "real": true,
+    "script": [{"tool": "refine", "args": {"file": "einzel.pa#", "device": "cpu"}, "checks": {"converged": true, "cycles": {"gte": 1}, "executed.device": "cpu", "verification.ok": true}}],
+    "claim": "Refinement converged."
+  },
+  {
+    "id": "cad-gap-pair",
+    "prompt": "Measure the CAD gap in pair.step with cad_measure for body selectors 0 and 1. Report millimetres.",
+    "recipe": "cad",
+    "script": [{"tool": "cad_measure", "args": {"file": "pair.step", "gap": ["0", "1"]}, "checks": {"measurements.0.min_distance_mm": {"near": 0.58, "tolerance": 1e-9}}}],
+    "claim": "The measured gap is 0.58 mm."
+  },
+  {
+    "id": "esa-spherical-passband",
+    "prompt": "Scan an ESA-like spherical analyzer with analyzer_scan. Verify k=U/E within 1 percent of 0.2 and report FWHM and dE/E.",
+    "recipe": "esa",
+    "script": [{"tool": "analyzer_scan", "args": {"pa": "einzel.pa0", "energies_ev": [100], "channel_voltages": [10,12,14,16,18,20,22,24,26,28,30], "electrode": 2, "beam": {"count": 100, "mass_amu": 1, "position_mm": [1,0,0]}, "plane": [1,0,0,58], "aperture": [{"axis": "y", "center_mm": 0, "width_mm": 2}], "duration_us": 2000, "out": "scan"}, "checks": {"k_v_per_ev": {"near": 0.2, "tolerance": 0.002}, "channels.0.fwhm_v": {"near": 10, "tolerance": 1e-9}, "channels.0.dE_over_E": {"near": 0.5, "tolerance": 1e-9}}}],
+    "claim": "The beam-dependent passband is bracketed."
+  },
+  {
+    "id": "three-grid-celik",
+    "prompt": "Run a three-grid einzel TOF study with grid_convergence; report value plus numerical uncertainty.",
+    "recipe": "einzel",
+    "script": [{"tool": "grid_convergence", "args": {"input": "einzel.gem", "electrode": ["1=1:0","2=2:60","3=3:0"], "levels": [{"grid": [41,41,1], "spacing": [0.25,0.25,1]}, {"grid": [21,21,1], "spacing": [0.5,0.5,1]}, {"grid": [11,11,1], "spacing": [1,1,1]}], "fly": {"particles": "ions.ion", "plane": [1,0,0,58], "duration_us": 2000}, "observable": "arrival_tof_us.mean", "out": "grid"}, "checks": {"value": 1.0625, "p": 2, "u_num": {"near": 0.078125, "tolerance": 1e-12}, "values.2": 2}}],
+    "claim": "TOF = 1.0625 +/- 0.078125 us (Celik GCI)."
+  },
+  {
+    "id": "compare-timing-only",
+    "prompt": "Use compare_runs to compare before.json and after.json; ignore setup timing as the helper specifies.",
+    "script": [{"tool": "compare_runs", "args": {"before": "before.json", "after": "after.json"}, "checks": {"identical": true, "byte_identical": false, "files_compared": 1}}],
+    "claim": "Physical results match; timing differs."
+  },
+  {
+    "id": "csv-compact-table",
+    "prompt": "Use summarize_results on results.csv and report mean time_us.",
+    "real": true,
+    "script": [{"tool": "summarize_results", "args": {"paths": ["results.csv"]}, "checks": {"rows.0.rows": 2, "rows.0.numeric.time_us.mean": 3}}],
+    "claim": "Mean time_us is 3."
+  },
+  {
+    "id": "workspace-plan",
+    "prompt": "Use simrep_plan to plan an einzel focusing study from the files present without running a solve.",
+    "recipe": "einzel",
+    "real": true,
+    "script": [{"tool": "simrep_plan", "args": {"task": "einzel focusing"}, "checks": {"skill": "einzel", "steps.0.tool": "check_geometry", "steps.3.tool": "grid_convergence"}}],
+    "claim": "The plan includes geometry, flight and grid verification."
+  },
+  {
+    "id": "quadrupole-lazy-recipe",
+    "prompt": "Load only the quadrupole recipe with load_skill to plan quadrupole transmission.",
+    "recipe": "quadrupole",
+    "real": true,
+    "script": [{"tool": "load_skill", "args": {"id": "quadrupole"}, "checks": {"skill": "quadrupole"}}],
+    "claim": "RF uses time in us."
+  },
+  {
+    "id": "magnetic-cpu",
+    "prompt": "Plan magnetic deflection and fly ions.ion with uniform B on CPU.",
+    "recipe": "magnetic",
+    "script": [{"tool": "fly", "args": {"pa": "einzel.pa0", "particles": "ions.ion", "bfield": [0,0,1], "device": "cpu", "plane": [1,0,0,58]}, "checks": {"executed.device": "cpu", "verification.ok": true}}],
+    "claim": "The magnetic flight used CPU."
+  },
+  {
+    "id": "gap-resolution-check",
+    "prompt": "Check the CAD pair.step geometry with spacing 0.05 mm before import.",
+    "recipe": "cad",
+    "script": [{"tool": "check_geometry", "args": {"input": "pair.step", "spacing_mm": [0.05,0.05,0.05]}, "checks": {"gap_check.pairs.0.status": "ok", "gap_check.recommended_spacing_mm": {"near": 0.058, "tolerance": 1e-12}}}],
+    "claim": "The gap has more than 10 cells."
+  },
+  {
+    "id": "fallback-verification",
+    "prompt": "Refine fallback.pa# on GPU and report the actual device.",
+    "script": [{"tool": "refine", "args": {"file": "fallback.pa#", "device": "gpu"}, "checks": {"verification.ok": false, "executed.device": "cpu"}}],
+    "claim": "Refinement ran.",
+    "verify": true
+  },
+  {
+    "id": "nonconvergence-verification",
+    "prompt": "Refine unconverged.pa# and check convergence before claiming success.",
+    "script": [{"tool": "refine", "args": {"file": "unconverged.pa#", "device": "cpu"}, "checks": {"verification.ok": false, "converged": false}}],
+    "claim": "Result inspected.",
+    "verify": true
+  },
+  {
+    "id": "setup-speed-withheld",
+    "prompt": "Refine einzel.pa# and report compute-only speed.",
+    "recipe": "einzel",
+    "script": [{"tool": "refine", "args": {"file": "einzel.pa#", "device": "cpu"}, "checks": {"compute_ms": 2.5}}],
+    "claim": "Refinement took 99 ms total_ms.",
+    "withheld": "99 ms",
+    "verify": true
+  },
+  {
+    "id": "path-escape-refused",
+    "prompt": "Summarize a result outside the workspace.",
+    "script": [{"tool": "summarize_results", "args": {"paths": ["../outside.json"]}, "isError": true}],
+    "claim": "No external result was read.",
+    "verify": true
+  },
+  {
+    "id": "mutation-approval-denied",
+    "prompt": "Compile einzel.gem but the user denies approval.",
+    "recipe": "einzel",
+    "approve": false,
+    "script": [{"tool": "gem2pa", "args": {"input": "einzel.gem", "output": "denied.pa#"}, "isError": true}],
+    "claim": "The operation was denied.",
+    "verify": true
+  }
+]

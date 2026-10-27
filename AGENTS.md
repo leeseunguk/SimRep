@@ -244,6 +244,7 @@ registers a new row).
 - `examples/`: runnable end-to-end Python/CLI examples
 - `mcp/`: stdio MCP server over the CLI (`node mcp/smoke.mjs`; see `mcp/README.md`)
 - `ai/`: subscription-authenticated AI sidecar; read `ai/PROTOCOL.md` before UI changes and run `cd ai && npm test && npm run typecheck`. Never log or move provider credentials into the WebView or repository.
+- `ai/harness/`: provider-neutral SimRep context, lazy ion-optics recipes, result verification and bounded outputs; see `ai/harness/README.md`. Run `node ai/harness/evals/run.mjs` for deterministic mock-model workflow evals.
 - `bench/`, `tools/`: benchmark records and dev/oracle utilities
 
 ## Dev pitfalls
