@@ -14,6 +14,9 @@ Three front ends share one core:
 - `import simrep`: Python/NumPy package (`crates/simrep-py`), mirrors the CLI
 - a Tauri 2 desktop app (`app/`)
 
+For a step-by-step lens/analyzer (ESA) recipe with gates, failure diagnosis
+and pitfalls, read `.claude/skills/simrep-ion-optics/SKILL.md` first.
+
 ## Build and install
 
 ```sh
