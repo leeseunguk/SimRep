@@ -98,11 +98,11 @@ fn numbered(session: &Session) -> PotentialArray {
 /// Workbench transform of a placement, for meshes in PA mm.
 fn transform(p: &Placement) -> Transform {
     let mut m = Transform::IDENTITY.0;
-    for row in 0..3 {
-        for col in 0..3 {
-            m[row][col] = p.axes[col][row] * p.scale;
+    for (row, m_row) in m.iter_mut().enumerate().take(3) {
+        for (col, axis) in p.axes.iter().enumerate() {
+            m_row[col] = axis[row] * p.scale;
         }
-        m[row][3] = p.origin[row];
+        m_row[3] = p.origin[row];
     }
     Transform(m)
 }

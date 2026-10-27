@@ -362,14 +362,14 @@ impl Field for LiveField<'_> {
             if factor != 0.0 {
                 let b = grid.sample(q, t);
                 s.potential_v += factor * b.potential_v;
-                for a in 0..3 {
-                    local[a] += factor * b.electric_v_per_mm[a];
+                for (l, e) in local.iter_mut().zip(b.electric_v_per_mm) {
+                    *l += factor * e;
                 }
             }
         }
         let world = place.world_field(local);
-        for a in 0..3 {
-            s.electric_v_per_mm[a] += world[a];
+        for (e, w) in s.electric_v_per_mm.iter_mut().zip(world) {
+            *e += w;
         }
         s
     }

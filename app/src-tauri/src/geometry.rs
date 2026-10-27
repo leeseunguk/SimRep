@@ -58,6 +58,9 @@ const SUGGEST_POINTS: f64 = 4.0e6;
 /// Largest grid the wizard builds (same as the PA viewer limit, src/pa.rs).
 const MAX_POINTS: usize = 40_000_000;
 
+/// Per-node cut fractions and electrode numbers along the six grid directions.
+type NodeCuts = ([Option<f64>; 6], [Option<usize>; 6]);
+
 fn fail(detail: impl Into<String>) -> PaError {
     PaError::new("geometry", detail)
 }
@@ -1263,7 +1266,7 @@ fn build(state: &AppState, r: BuildRequest) -> Result<BuildResult, PaError> {
     let cuts = prepared.cut_cells(None).map_err(fail)?;
     let mut files = Vec::new();
     if r.sidecar {
-        let cuts_per_node: Vec<([Option<f64>; 6], [Option<usize>; 6])> = (0..owners.len())
+        let cuts_per_node: Vec<NodeCuts> = (0..owners.len())
             .into_par_iter()
             .map(|i| {
                 let mut fractions = [None; 6];
