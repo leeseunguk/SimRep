@@ -861,6 +861,12 @@
       "file": "bench/esa-application.md",
       "section": "SIMION 2024 comparison",
       "pattern": "^\\| esa_g62_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "default_keep_runs": {
+      "kind": "regex",
+      "file": "app/src/state/runFormat.ts",
+      "section": "DEFAULT_KEEP_RUNS",
+      "pattern": "export const DEFAULT_KEEP_RUNS = (\\d+);"
     }
   },
   "readme": [
@@ -1585,6 +1591,13 @@
       "number": "0.12",
       "derive": "esa_fair_simrep_rms_mm",
       "rounding": "0.01"
+    },
+    {
+      "id": "readme-run-history-keep",
+      "fragment": "최근 50개",
+      "number": "50",
+      "derive": "default_keep_runs",
+      "rounding": "1"
     }
   ],
   "report_table13": [

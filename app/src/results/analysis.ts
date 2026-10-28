@@ -233,6 +233,28 @@ export function planeAxes(plane: MapPlane, surface: Surface | null): [MapAxis, M
   return [p[0] as MapAxis, p[1] as MapAxis];
 }
 
+/**
+ * Window and grid of a detector map of (xs, ys) over `idx` (or the union of several runs): square
+ * cells in mm, `bins` across the larger extent, and the smaller axis at least 1/3 of the larger.
+ * Without the minimum a flat pattern (every ion at z = 0 on a cylindrical array) gets a window a
+ * fraction of a mm wide and cells far below one pixel, so the map draws nothing visible.
+ */
+export function mapWindow(extents: { x: [number, number]; y: [number, number] }[], bins: number): { x: [number, number]; y: [number, number]; nx: number; ny: number } | null {
+  if (!extents.length) return null;
+  const ex: [number, number] = [Math.min(...extents.map((e) => e.x[0])), Math.max(...extents.map((e) => e.x[1]))];
+  const ey: [number, number] = [Math.min(...extents.map((e) => e.y[0])), Math.max(...extents.map((e) => e.y[1]))];
+  const big = Math.max(ex[1] - ex[0], ey[1] - ey[0], Math.abs(ex[0]) * 1e-4, Math.abs(ey[0]) * 1e-4, 1e-3);
+  const grow = ([lo, hi]: [number, number]): [number, number] => {
+    const half = Math.max((hi - lo) / 2 + big * 0.04, big / 6);
+    const mid = (lo + hi) / 2;
+    return [mid - half, mid + half];
+  };
+  const x = grow(ex);
+  const y = grow(ey);
+  const cell = Math.max(x[1] - x[0], y[1] - y[0]) / bins;
+  return { x, y, nx: Math.max(1, Math.round((x[1] - x[0]) / cell)), ny: Math.max(1, Math.round((y[1] - y[0]) / cell)) };
+}
+
 /** Extent of col[i] over the given ion indices. */
 export function extentAt(col: Float64Array, idx: Uint32Array): [number, number] | null {
   let lo = Infinity;

@@ -78,7 +78,7 @@ export class Bridge {
   }
 
   /** @param {string} method
-   * @param {{provider?: string, account?: string, region?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean, approvalMode?: string, mode?: string}} params */
+   * @param {{provider?: string, account?: string, region?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean, approvalMode?: string, mode?: string, context?: unknown}} params */
   async dispatch(method, params = {}) {
     if (!params || typeof params !== 'object' || Array.isArray(params)) throw new BridgeError('INVALID_PARAMS', 'params must be an object.')
     switch (method) {
@@ -147,7 +147,9 @@ export class Bridge {
         if (!model || (p === 'github-copilot' && !models.includes(model))) throw new BridgeError('PROVIDER_UNSUPPORTED', 'No enabled tool-capable model is available. Enable a model with the provider first.')
         const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, approvalMode: mode, turn: undefined, client: undefined, harness: undefined }
         if (params.language !== undefined && (typeof params.language !== 'string' || !/^[a-zA-Z-]{2,35}$/.test(params.language))) throw new BridgeError('INVALID_PARAMS', 'language must be a language tag.')
-        const harness = await createHarness({ workspace, language: params.language, approvalMode: mode, emit: fields => this.emitChat(session, fields) })
+        // Additive: a continued chat's bounded summary of the saved chat it follows (untrusted text).
+        if (params.context !== undefined && (typeof params.context !== 'string' || params.context.length > 8000)) throw new BridgeError('INVALID_PARAMS', 'context must be a string of at most 8000 characters.')
+        const harness = await createHarness({ workspace, language: params.language, approvalMode: mode, context: /** @type {string | undefined} */ (params.context), emit: fields => this.emitChat(session, fields) })
         const emit = fields => {
           if (['tool_call', 'tool_result', 'delta'].includes(fields.type)) session.turnOutput = true
           harness.emit(fields)

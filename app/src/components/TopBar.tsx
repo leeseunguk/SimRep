@@ -1,7 +1,7 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Bot, CircleHelp, Download, FolderOpen, House, Monitor, Moon, Redo2, Save, Sun, Undo2, UserRound } from "lucide-react";
+import { Bot, ChevronDown, CircleHelp, Database, Download, FileText, FolderOpen, House, Monitor, Moon, Redo2, Save, Sun, Undo2, UserRound } from "lucide-react";
 import { openPanel, openSettings, useAi } from "../ai/store";
 import { useI18n } from "../i18n";
 import { ACCEPT_ATTRIBUTE, FORMATS } from "../scene/formats";
@@ -10,7 +10,9 @@ import { redo, undo } from "../state/history";
 import { openPaths, PROJECT_EXTENSION, projectTitle, saveProject, showStart } from "../state/project";
 import { useApp, type Lang, type ThemePref } from "../state/store";
 import { useExport } from "../state/exportDialog";
+import { useReportDialog } from "../state/reportDialog";
 import { useWizard } from "../state/wizard";
+import { exportTargetId } from "./CommandPalette";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { SegmentedControl } from "./ui/SegmentedControl";
@@ -48,10 +50,7 @@ export function TopBar() {
   const hasContent = useApp((s) => s.objects.length > 0);
   const wizardOpen = useWizard((s) => s.wizard !== null);
   // Export the selected array, else the newest one.
-  const exportTarget = useApp((s) => {
-    const arrays = s.objects.filter((o) => o.kind === "pa");
-    return (arrays.find((o) => o.id === s.selectedId) ?? arrays.at(-1))?.id ?? null;
-  });
+  const exportTarget = useApp(exportTargetId);
   const fileInput = useRef<HTMLInputElement>(null);
   const aiOpen = useAi((s) => s.panelOpen);
   const name = projectTitle(project, lang);
@@ -109,14 +108,7 @@ export function TopBar() {
       <Button icon={<Save />} title={`${t("topbar.saveTitle")} (${MOD}+S)`} disabled={!hasContent} onClick={() => void saveProject()}>
         {t("topbar.save")}
       </Button>
-      <Button
-        icon={<Download />}
-        title={t("topbar.exportTitle")}
-        disabled={!exportTarget || !isTauri()}
-        onClick={() => exportTarget && useExport.getState().open(exportTarget)}
-      >
-        {t("topbar.export")}
-      </Button>
+      <ExportMenu target={exportTarget} hasContent={hasContent} />
       <input
         ref={fileInput}
         type="file"
@@ -165,5 +157,70 @@ export function TopBar() {
         onClick={() => useApp.getState().setHelpOpen(true)}
       />
     </header>
+  );
+}
+
+/** Export: data files of the selected array (export dialog) or the report (report dialog). */
+function ExportMenu({ target, hasContent }: { target: string | null; hasContent: boolean }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const dataOk = !!target && isTauri();
+  return (
+    <div ref={wrap} className={styles.menuWrap} data-testid="topbar-export">
+      <Button icon={<Download />} title={t("topbar.exportMenu")} aria-haspopup="menu" aria-expanded={open} disabled={!hasContent} onClick={() => setOpen(!open)}>
+        {t("topbar.export")}
+        <ChevronDown className={styles.menuChevron} aria-hidden />
+      </Button>
+      {open && (
+        <div className={styles.menu} role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            disabled={!dataOk}
+            title={t("topbar.exportTitle")}
+            onClick={() => {
+              setOpen(false);
+              if (target) useExport.getState().open(target);
+            }}
+          >
+            <Database aria-hidden />
+            <span className={styles.menuText}>
+              <span>{t("topbar.export.data")}</span>
+              <span className={styles.menuSub}>{t("topbar.export.dataSub")}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={styles.menuItem}
+            onClick={() => {
+              setOpen(false);
+              useReportDialog.getState().show();
+            }}
+          >
+            <FileText aria-hidden />
+            <span className={styles.menuText}>
+              <span>{t("topbar.export.report")}</span>
+              <span className={styles.menuSub}>{t("topbar.export.reportSub")}</span>
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

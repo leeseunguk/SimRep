@@ -8,6 +8,8 @@ import type { FlightHeader, IonSource } from "../scene/flight";
 import { importPaths } from "../scene/importFiles";
 import type { SliceState } from "../scene/pa";
 import { flyNow, startRefine, waitForRefine } from "../scene/simulation";
+import { parseProject, PROJECT_FORMAT, PROJECT_VERSION } from "./projectFormat";
+import { openRuns, resetRuns, restoreRun, saveRuns, shownRun, useRuns, type RunsConfig } from "./runs";
 import { templateById, type TemplateId } from "../scene/templates";
 import type { CameraState } from "../viewport/camera";
 import { cameraState } from "../viewport/viewState";
@@ -18,15 +20,20 @@ import { UNTITLED, useApp, type ProjectMeta, type Projection, type RecentProject
  * Projects: one `.simrep` file (JSON) that references the arrays and meshes it uses by path
  * (relative to the project file, absolute as a fallback; arrays are never copied into it) and
  * stores everything the user set: electrode names / voltages / visibility, ion sources, section
- * planes, the camera, and a summary of the last flight (ions are flown again on open).
+ * planes, the camera, and a summary of the last flight.
+ *
+ * Format 2 adds the data folder `X.simrep.d/` (state/runs.ts, docs/project-format.md): every
+ * completed flight is a run in `runs/<id>/`, and each array names the run it showed. On open that
+ * run is shown again when its inputs still match (same PA sha256 and settings hash); otherwise the
+ * ions are flown again, as format 1 projects always are.
  *
  * The open project is autosaved to a recovery file a moment after each change and the start screen
  * offers it after a crash. Saved projects are listed under "recent projects".
  */
 
 export const PROJECT_EXTENSION = "simrep";
-const FORMAT = "simrep-project";
-const VERSION = 1;
+const FORMAT = PROJECT_FORMAT;
+const VERSION = PROJECT_VERSION;
 const RECENT_KEY = "simrep.recent";
 const RECENT_MAX = 8;
 const AUTOSAVE_MS = 1500;
@@ -51,8 +58,10 @@ interface ArrayEntry {
   showMirrors: boolean;
   slice: SliceState;
   outputDir: string | null;
-  /** Summary of the last flight; the ions are flown again when the project opens. */
+  /** Summary of the last flight. */
   results: Pick<FlightHeader, "ions" | "surfaces" | "tof" | "keMean" | "flyMs"> | null;
+  /** Format 2: the stored run (X.simrep.d/runs/<id>) the array showed, or null. */
+  run: string | null;
 }
 
 interface MeshEntry {
@@ -69,6 +78,8 @@ export interface ProjectFile {
   arrays: ArrayEntry[];
   meshes: MeshEntry[];
   view: { camera: CameraState | null; projection: Projection; grid: boolean };
+  /** Format 2: run history settings. */
+  runs: RunsConfig;
   /** Recovery file only: the project it belongs to. */
   recovery?: { meta: ProjectMeta };
 }
@@ -147,6 +158,7 @@ function serialize(base: string | null): ProjectFile {
         slice: o.slice,
         outputDir: o.outputDir,
         results: h && { ions: h.ions, surfaces: h.surfaces, tof: h.tof, keMean: h.keMean, flyMs: h.flyMs },
+        run: shownRun(o),
       });
     } else if (o.kind === "mesh" && o.path) {
       meshes.push({ file: fileRef(o.path, base), name: o.customName ?? null, visible: o.visible, units: o.units });
@@ -159,15 +171,11 @@ function serialize(base: string | null): ProjectFile {
     arrays,
     meshes,
     view: { camera: cameraState(), projection: s.projection, grid: s.gridVisible },
+    runs: useRuns.getState().config,
   };
 }
 
-function parse(text: string): ProjectFile {
-  const doc = JSON.parse(text) as Partial<ProjectFile>;
-  if (doc.format !== FORMAT || typeof doc.version !== "number") throw new Error("not a SimRep project");
-  if (doc.version > VERSION) throw new Error(`made by a newer SimRep (format ${doc.version})`);
-  return { ...doc, arrays: doc.arrays ?? [], meshes: doc.meshes ?? [] } as ProjectFile;
-}
+const parse = (text: string) => parseProject(text) as ProjectFile;
 
 // ----------------------------------------------------------------------------- scene / meta
 
@@ -180,6 +188,7 @@ function closeScene(meta: ProjectMeta) {
   // The autosave offer is for the start of a session; the new project's own autosave replaces it.
   quietly(() => useApp.setState({ objects: [], selectedId: null, selectedElectrode: null, project: meta, recovery: null }));
   resetHistory();
+  resetRuns(meta.path);
 }
 
 /** Asks before throwing away unsaved changes. */
@@ -236,6 +245,8 @@ export async function saveProject(saveAs = false): Promise<boolean> {
   }
   try {
     await writeText(path, JSON.stringify(serialize(dirname(path)), null, 2));
+    // Runs flown before the first save (or kept in the old folder on "save as") go into X.simrep.d.
+    await saveRuns(path);
   } catch (err) {
     const reason: Message = { key: "project.error.write", params: { detail: backendError(err).detail } };
     app.log("error", { key: "log.projectSaveFailed", params: { file: basename(path), reason } });
@@ -275,18 +286,21 @@ export async function openProject(path?: string): Promise<void> {
     app.toast("error", { key: "toast.projectOpenFailed.title", params: { file: basename(path) } }, reason);
     return;
   }
-  await loadDocument(doc, dirname(path), { name: stem(path), nameKey: null, path, dir: dirname(path) });
+  await loadDocument(doc, dirname(path), { name: stem(path), nameKey: null, path, dir: dirname(path) }, true);
   rememberRecent(path);
   app.log("success", { key: "log.projectOpened", params: { file: path } });
 }
 
-async function loadDocument(doc: ProjectFile, base: string | null, meta: ProjectMeta) {
+/** `stored`: show the arrays' saved runs when they still match (not for the autosave, whose runs may be gone). */
+async function loadDocument(doc: ProjectFile, base: string | null, meta: ProjectMeta, stored = false) {
   const app = useApp.getState();
   app.setBusy({ key: "busy.opening", params: { name: projectTitle(meta) } });
   closeScene(meta);
   app.setHome(false);
+  if (meta.path) await openRuns(meta.path, doc.runs);
+  else resetRuns(null, doc.runs);
   const missing: string[] = [];
-  const fly: string[] = [];
+  const fly: { id: string; run: string | null }[] = [];
   try {
     await quietlyAsync(async () => {
       for (const a of doc.arrays) {
@@ -314,7 +328,7 @@ async function loadDocument(doc: ProjectFile, base: string | null, meta: Project
           slice: { ...o.slice, ...a.slice },
           outputDir: a.outputDir,
         }));
-        if (a.results) fly.push(id);
+        if (a.results || a.run) fly.push({ id, run: stored ? a.run : null });
       }
       for (const m of doc.meshes) {
         const path = await locate(m.file, base);
@@ -332,7 +346,22 @@ async function loadDocument(doc: ProjectFile, base: string | null, meta: Project
     resetHistory();
     app.setBusy(null);
   }
-  for (const id of fly) void flyNow(id);
+  let loaded = 0;
+  let stale = 0;
+  for (const { id, run } of fly) {
+    const o = useApp.getState().objects.find((x) => x.id === id);
+    const outcome = run && o?.kind === "pa" ? await restoreRun(o, run) : "missing";
+    if (outcome === "loaded") loaded++;
+    else {
+      if (outcome === "stale") stale++;
+      void flyNow(id);
+    }
+  }
+  if (loaded) app.log("success", { key: "log.runsLoaded", params: { count: loaded } });
+  if (stale) {
+    app.log("info", { key: "log.runsStale", params: { count: stale } });
+    app.toast("info", { key: "toast.runsStale.title" }, { key: "log.runsStale", params: { count: stale } });
+  }
   if (missing.length) {
     app.log("warning", { key: "log.projectMissing", params: { files: missing.join(", ") } });
     app.toast("warning", { key: "toast.projectMissing.title", params: { count: missing.length } }, { key: "toast.projectMissing.body", params: { files: missing.join(", ") } });

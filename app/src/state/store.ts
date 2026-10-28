@@ -77,6 +77,8 @@ export interface FlightState {
   status: "idle" | "running" | "done" | "error";
   result: Flight | null;
   error: Message | null;
+  /** The shown result was loaded from the project folder (run `runId`) instead of flown. */
+  stored?: { runId: string };
 }
 
 /** A SIMION potential array (.pa / .pa# / .pa0) decoded by the native core (or the browser preview). */

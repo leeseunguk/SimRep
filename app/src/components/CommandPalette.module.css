@@ -1,0 +1,80 @@
+/* Command palette. Base styles: Dialog.module.css. */
+.scrim {
+  align-items: flex-start;
+  padding-top: calc(var(--space-16) * 1.5);
+}
+
+.palette {
+  gap: var(--space-2);
+  width: min(100%, var(--dialog-max-w));
+  padding: var(--space-3);
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-sunken);
+}
+
+.icon {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  color: var(--color-text-subtle);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h-md);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  outline: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  height: var(--control-h-md);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.item[aria-selected="true"] {
+  background: var(--color-accent-soft);
+}
+
+.item[aria-disabled="true"] {
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+.off {
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+}
+
+.empty {
+  padding: var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}

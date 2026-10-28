@@ -97,7 +97,7 @@ export interface Axis {
 
 export type Layer =
   /** Histogram: filled bars (`fill`) or an outline (`stroke`, overlays). */
-  | { kind: "hist"; lo: number; hi: number; counts: ArrayLike<number>; fill?: string; stroke?: string; width?: number }
+  | { kind: "hist"; lo: number; hi: number; counts: ArrayLike<number>; fill?: string; stroke?: string; width?: number; dash?: number[] }
   | { kind: "line"; xs: ArrayLike<number>; ys: ArrayLike<number>; color: string; width?: number; dash?: number[] }
   | { kind: "vline"; x: number; color: string; dash?: number[]; width?: number }
   | { kind: "band"; x0: number; x1: number; color: string }
@@ -110,7 +110,7 @@ export interface ChartSpec {
   layers: Layer[];
   /** Same mm per pixel on both axes (detector maps). */
   equal?: boolean;
-  legend?: { label: string; color: string }[];
+  legend?: { label: string; color: string; dash?: boolean }[];
   title?: string;
 }
 
@@ -258,7 +258,11 @@ export function drawChart(p: Painter, spec: ChartSpec, w: number, h: number, t: 
     const lx = fl + width - fs * 0.6;
     for (const item of spec.legend) {
       const tw = p.measure(item.label);
-      p.rect(lx - tw - fs * 1.6, ly - fs * 0.15, fs, fs * 0.3, item.color);
+      if (item.dash) {
+        // Two short dashes: the series is drawn dashed.
+        p.rect(lx - tw - fs * 1.6, ly - fs * 0.15, fs * 0.4, fs * 0.3, item.color);
+        p.rect(lx - tw - fs * 1.0, ly - fs * 0.15, fs * 0.4, fs * 0.3, item.color);
+      } else p.rect(lx - tw - fs * 1.6, ly - fs * 0.15, fs, fs * 0.3, item.color);
       p.text(item.label, lx, ly, { color: t.textStrong, align: "right", baseline: "middle" });
       ly += fs * 1.5;
     }
@@ -285,7 +289,7 @@ function drawLayer(p: Painter, f: Frame, layer: Layer, t: PlotTheme) {
       const [ex, ey] = toPx(f, layer.hi, base);
       pts.push(ex, ey);
       if (layer.fill) p.path(pts, { fill: layer.fill });
-      if (layer.stroke) p.path(pts, { stroke: layer.stroke, width: layer.width ?? t.lineW });
+      if (layer.stroke) p.path(pts, { stroke: layer.stroke, width: layer.width ?? t.lineW, dash: layer.dash });
       return;
     }
     case "line": {

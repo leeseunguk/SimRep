@@ -5,7 +5,7 @@ import { READ_ONLY_TOOLS, type AiEvent, type DoneStatus, type Provider } from ".
  * one model. Model and tool text stays plain strings here; the view renders it as text, never HTML.
  */
 export type ChatItem =
-  | { kind: "user"; id: number; text: string }
+  | { kind: "user"; id: number; text: string; /** When it was sent (ms since epoch). */ at?: number }
   | { kind: "assistant"; id: number; turnId: string | null; text: string }
   | {
       kind: "tool";
@@ -47,8 +47,8 @@ export interface ChatState {
 
 export const EMPTY_CHAT: ChatState = { session: null, items: [], running: false, nextId: 1 };
 
-export function addUser(s: ChatState, text: string): ChatState {
-  return { ...s, items: [...s.items, { kind: "user", id: s.nextId, text }], running: true, nextId: s.nextId + 1 };
+export function addUser(s: ChatState, text: string, at?: number): ChatState {
+  return { ...s, items: [...s.items, { kind: "user", id: s.nextId, text, ...(at !== undefined && { at }) }], running: true, nextId: s.nextId + 1 };
 }
 
 export function addError(s: ChatState, provider: Provider, code: string): ChatState {

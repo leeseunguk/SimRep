@@ -71,7 +71,16 @@ export interface Methods {
   "auth.logout": { params: { provider: Provider; account?: string }; result: { signedOut: true; remoteRevocationConfirmed: boolean } };
   "auth.openUsage": { params: { provider: Provider }; result: { opened: true } };
   "chat.start": {
-    params: { provider: Provider; model?: string; workspace: string; account?: string; language?: string; approvalMode?: ApprovalMode };
+    params: {
+      provider: Provider;
+      model?: string;
+      workspace: string;
+      account?: string;
+      language?: string;
+      approvalMode?: ApprovalMode;
+      /** Additive: summary of a saved chat this one continues (untrusted background, at most 8000 chars). */
+      context?: string;
+    };
     result: { sessionId: string; provider: Provider; model: string; workspace: string; approvalMode?: ApprovalMode };
   };
   "chat.setApprovalMode": { params: { sessionId: string; mode: ApprovalMode }; result: { sessionId: string; approvalMode: ApprovalMode } };

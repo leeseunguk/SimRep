@@ -18,6 +18,7 @@ mod live;
 mod options;
 mod pa;
 mod project;
+mod projectdir;
 mod refine;
 mod session;
 mod templates;
@@ -73,6 +74,11 @@ fn main() {
             project::write_bytes,
             project::remove_file,
             project::recovery_path,
+            projectdir::project_dir_write,
+            projectdir::project_dir_read,
+            projectdir::project_dir_list,
+            projectdir::project_dir_delete,
+            projectdir::file_sha256,
             templates::create_template,
             refine::refine_targets,
             refine::refine_start,

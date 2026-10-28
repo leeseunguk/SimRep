@@ -20,6 +20,7 @@ const GROUPS: { title: MessageKey; items: { keys: string[][]; label: MessageKey 
       { keys: [[MOD, "O"]], label: "help.open" },
       { keys: [[MOD, "S"]], label: "help.save" },
       { keys: [[MOD, "Shift", "S"]], label: "help.saveAs" },
+      { keys: [[MOD, "K"], [MOD, "Shift", "P"]], label: "help.palette" },
     ],
   },
   {

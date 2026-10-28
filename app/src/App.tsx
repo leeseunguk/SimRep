@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { DropOverlay } from "./components/DropOverlay";
+import { CommandPalette } from "./components/CommandPalette";
 import { ExportDialog } from "./components/ExportDialog";
+import { ReportDialog } from "./components/ReportDialog";
 import { ImportWizard } from "./components/ImportWizard";
 import { BusyOverlay, HelpOverlay } from "./components/HelpOverlay";
 import { LogDrawer } from "./components/LogDrawer";
@@ -24,6 +26,7 @@ import { Viewport } from "./viewport/Viewport";
 import { useResults } from "./results/store";
 import { useWizard } from "./state/wizard";
 import { useExport } from "./state/exportDialog";
+import { useReportDialog } from "./state/reportDialog";
 import { initTour } from "./state/tour";
 import styles from "./App.module.css";
 import { AiAccountsDialog } from "./components/ai/AiAccountsDialog";
@@ -51,6 +54,8 @@ export function App() {
   const hasResults = useApp((s) => s.objects.some((o) => o.kind === "pa" && o.flight.result !== null));
   const wizard = useWizard((s) => s.wizard !== null);
   const exporting = useExport((s) => s.objectId !== null);
+  const reporting = useReportDialog((s) => s.open);
+  const palette = useReportDialog((s) => s.paletteOpen);
   const aiPanel = useAi((s) => s.panelOpen);
   const aiSettings = useAi((s) => s.settingsOpen);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
@@ -79,7 +84,11 @@ export function App() {
       const typing = isTextTarget(e.target);
       if ((e.ctrlKey || e.metaKey) && !e.altKey) {
         const k = e.key.toLowerCase();
-        if ((k === "z" || k === "y") && !typing) {
+        if (k === "k" || (k === "p" && e.shiftKey)) {
+          e.preventDefault();
+          const r = useReportDialog.getState();
+          if (!r.open && useExport.getState().objectId === null) r.setPalette(!r.paletteOpen);
+        } else if ((k === "z" || k === "y") && !typing) {
           e.preventDefault();
           if (k === "y" || e.shiftKey) redo();
           else undo();
@@ -97,7 +106,8 @@ export function App() {
         return;
       }
       // The export dialog is modal and owns Escape; no second modal (help) on top of it.
-      if (typing || app.busy || useExport.getState().objectId !== null || useAi.getState().settingsOpen) return;
+      const report = useReportDialog.getState();
+      if (typing || app.busy || useExport.getState().objectId !== null || report.open || report.paletteOpen || useAi.getState().settingsOpen) return;
       if (e.key === "?" || e.key === "F1") {
         e.preventDefault();
         app.setHelpOpen(!app.helpOpen);
@@ -157,6 +167,8 @@ export function App() {
       <DropOverlay />
       {helpOpen && <HelpOverlay />}
       {exporting && <ExportDialog />}
+      {reporting && <ReportDialog />}
+      {palette && <CommandPalette />}
       {aiSettings && <AiAccountsDialog />}
       <BusyOverlay />
     </div>

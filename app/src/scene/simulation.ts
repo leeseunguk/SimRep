@@ -18,7 +18,7 @@ import {
 } from "./backend";
 import { REFINE_TOLERANCE } from "../components/simulationFormat";
 import { computeLabels } from "./electrodes";
-import { DEFAULT_DRAWN, directionOf, parseFlight } from "./flight";
+import { DEFAULT_DRAWN, directionOf, parseFlight, type Flight } from "./flight";
 import { buildPaSurface, formatOfName, voltagesOf } from "./importPa";
 import { parsePacket, parsePotentialsPacket, type PaGrid, type PaInfo } from "./pa";
 import { isIdentity } from "./placement";
@@ -305,6 +305,13 @@ export function flyBlocker(o: PaObject): Message | null {
   return null;
 }
 
+/** Told about every flight whose result is shown (state/runs.ts keeps the run history). */
+type FlightListener = (id: string, request: FlyRequest, result: Flight, live: boolean) => void;
+let flightListener: FlightListener | null = null;
+export function setFlightListener(fn: FlightListener | null) {
+  flightListener = fn;
+}
+
 let flySeq = 0;
 /** Newest flight whose result was applied, per array: results may arrive out of order (live re-fly pipelines). */
 const appliedFly = new Map<string, number>();
@@ -324,10 +331,12 @@ export async function flyNow(id: string, live = false) {
   if (!live) app.updatePa(id, (p) => ({ flight: { ...p.flight, status: "running", error: null } }));
   const started = performance.now();
   try {
-    const result = parseFlight(await fly(flyRequest(o)), 0);
+    const request = flyRequest(o);
+    const result = parseFlight(await fly(request), 0);
     result.roundTripMs = performance.now() - started;
     if (!claimResult(id, seq)) return; // a newer flight's result is already shown
     app.updatePa(id, () => ({ flight: { status: "done", result, error: null } }));
+    flightListener?.(id, request, result, live);
     if (!live) {
       const h = result.header;
       app.log("success", {

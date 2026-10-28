@@ -1,13 +1,14 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
-import { Bot, Check, CheckCheck, ChevronRight, CircleAlert, CircleSlash, FolderOpen, Loader2, MessageSquarePlus, Pencil, Send, ShieldAlert, ShieldOff, Square, UserRound, X } from "lucide-react";
+import { ArrowLeft, Bot, Check, CheckCheck, ChevronRight, CircleAlert, CircleSlash, CornerDownRight, Eye, FolderOpen, History, Loader2, MessageSquarePlus, Pencil, Send, ShieldAlert, ShieldOff, Square, Trash2, UserRound, X } from "lucide-react";
 import { useI18n } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { accountKind, providerState, usableAccounts } from "../../ai/accounts";
 import { keyArgs, writesFiles, type ChatItem } from "../../ai/chat";
+import { toChatState, type SavedChat } from "../../ai/history";
 import type { Provider } from "../../ai/protocol";
 import { providerIds, providerInfo } from "../../ai/providers";
-import { allowAllInChat, answerApproval, approvalModeOf, cancel, newChat, openPanel, openSettings, send, setApproval, setProvider, useAi, workspaceOf } from "../../ai/store";
+import { allowAllInChat, answerApproval, approvalModeOf, cancel, continueChat, deleteSavedChat, newChat, openHistory, openPanel, openSettings, refreshHistory, send, setApproval, setProvider, useAi, viewChat, workspaceOf } from "../../ai/store";
 import { refusals } from "../../refusals";
 import { useApp } from "../../state/store";
 import { Button } from "../ui/Button";
@@ -43,7 +44,13 @@ export function AiPanel() {
   // The bridge's live model list when it reported one, else the provider's catalog.
   const models = ["", ...(state.status?.models ?? info.models).filter((m) => m !== "")];
   const loaded = useAi((s) => s.loaded);
-  const chat = useAi((s) => s.chat);
+  const activeChat = useAi((s) => s.chat);
+  const viewing = useAi((s) => s.viewing);
+  const historyOpen = useAi((s) => s.historyOpen);
+  const continuedFrom = useAi((s) => s.saved?.continuedFrom);
+  // A saved chat opened read-only replaces the transcript until Back, Continue or New chat.
+  const viewed = useMemo(() => (viewing ? toChatState(viewing) : null), [viewing]);
+  const chat = viewed ?? activeChat;
   const starting = useAi((s) => s.starting);
   const approval = useAi((s) => s.approval);
   const mode = useAi(approvalModeOf);
@@ -57,6 +64,11 @@ export function AiPanel() {
   const input = useRef<HTMLTextAreaElement>(null);
   const desktop = isTauri();
 
+  // The previous-chats list follows the open project.
+  useEffect(() => {
+    void refreshHistory();
+  }, [project.path, project.dir]);
+
   // Follow the stream: keep the newest item in view.
   useEffect(() => {
     const el = list.current;
@@ -64,7 +76,7 @@ export function AiPanel() {
   }, [chat.items]);
 
   const busy = chat.running || starting;
-  const ready = desktop && info.toolCalling !== false && Boolean(active) && Boolean(workspace);
+  const ready = desktop && !viewing && !historyOpen && info.toolCalling !== false && Boolean(active) && Boolean(workspace);
   const canSend = ready && !busy && draft.trim().length > 0;
   const submit = () => {
     if (!canSend) return;
@@ -93,6 +105,7 @@ export function AiPanel() {
   const using = !active ? null : accountKind(active) === "apiKey" ? t("ai.panel.usingApiKey", { provider: info.label }) : info.usingLabel ? t(info.usingLabel) : t("ai.panel.usingAccount", { account: active.label });
   const last = chat.items.at(-1);
   const streaming = chat.running && last?.kind === "assistant" ? last.id : null;
+  const historyLabel = t(historyOpen || viewing ? "ai.history.back" : "ai.history.open");
 
   return (
     <aside className={`${panel.panel} ${styles.panel}`} aria-labelledby="ai-panel-title" data-testid="ai-panel" onKeyDown={onPanelKey}>
@@ -113,7 +126,18 @@ export function AiPanel() {
           <option value="ask">{`${t("ai.approval.mode")}: ${t("ai.approval.modeAsk")}`}</option>
           <option value="bypass">{`${t("ai.approval.mode")}: ${t("ai.approval.modeBypass")}`}</option>
         </select>
-        <Button variant="ghost" size="sm" iconOnly icon={<MessageSquarePlus />} disabled={chat.running || chat.items.length === 0} aria-label={t("ai.panel.newChat")} title={t("ai.panel.newChat")} onClick={newChat} />
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          icon={historyOpen || viewing ? <ArrowLeft /> : <History />}
+          aria-label={historyLabel}
+          title={historyLabel}
+          aria-expanded={historyOpen}
+          onClick={() => (viewing ? viewChat(null) : openHistory(!historyOpen))}
+          data-testid="ai-history-toggle"
+        />
+        <Button variant="ghost" size="sm" iconOnly icon={<MessageSquarePlus />} disabled={activeChat.running || (activeChat.items.length === 0 && !viewing && !historyOpen && !continuedFrom)} aria-label={t("ai.panel.newChat")} title={t("ai.panel.newChat")} onClick={newChat} />
         <Button variant="ghost" size="sm" iconOnly icon={<X />} aria-label={t("ai.close")} title={t("ai.close")} onClick={() => openPanel(false)} />
       </div>
       <div className={styles.controls}>
@@ -173,7 +197,32 @@ export function AiPanel() {
       )}
       {confirming && <BypassConfirm onClose={() => setConfirming(false)} />}
 
-      <ol ref={list} className={styles.transcript} aria-live="polite" aria-label={t("ai.panel.transcript")}>
+      {viewing && (
+        <div className={styles.savedBar} role="status" data-testid="ai-history-readonly">
+          <span className={styles.chip} data-tone="neutral">
+            <Eye aria-hidden />
+            {t("ai.history.readOnly")}
+          </span>
+          <span className={styles.skippingText}>{t("ai.history.readOnlyBody")}</span>
+          <Button size="sm" variant="primary" icon={<CornerDownRight />} disabled={busy} onClick={() => continueChat(viewing)} data-testid="ai-history-continue-open">
+            {t("ai.history.continue")}
+          </Button>
+        </div>
+      )}
+      {!viewing && !historyOpen && continuedFrom && (
+        <div className={styles.savedBar} data-continued role="note" data-testid="ai-continued">
+          <span className={styles.chip} data-tone="info">
+            <CornerDownRight aria-hidden />
+            {t("ai.history.continued")}
+          </span>
+          <span className={styles.skippingText}>{t("ai.history.continuedBody", { title: continuedFrom.title || t("ai.history.untitled") })}</span>
+        </div>
+      )}
+
+      {historyOpen ? (
+        <HistoryList busy={busy} />
+      ) : (
+      <ol ref={list} className={styles.transcript} aria-live={viewing ? "off" : "polite"} aria-label={viewing ? `${t("ai.panel.transcript")} (${t("ai.history.readOnly")})` : t("ai.panel.transcript")} data-readonly={viewing ? true : undefined}>
         {!desktop ? (
           <li className={styles.empty}>
             <p className={styles.emptyTitle}>{tm(blocked.what)}</p>
@@ -197,7 +246,7 @@ export function AiPanel() {
             <FolderOpen className={styles.emptyIcon} aria-hidden />
             <p>{t("ai.panel.noWorkspace")}</p>
           </li>
-        ) : chat.items.length === 0 ? (
+        ) : chat.items.length === 0 && !viewing ? (
           <li className={styles.empty} data-testid="ai-empty">
             <Bot className={styles.emptyIcon} aria-hidden />
             <p className={styles.emptyTitle}>{t("ai.panel.emptyTitle")}</p>
@@ -211,7 +260,7 @@ export function AiPanel() {
             </div>
           </li>
         ) : (
-          chat.items.map((item) => <Item key={item.id} item={item} provider={chat.session?.provider ?? provider} streaming={item.id === streaming} />)
+          chat.items.map((item) => <Item key={item.id} item={item} provider={viewing?.provider ?? chat.session?.provider ?? provider} streaming={item.id === streaming} />)
         )}
         {chat.running && last?.kind === "user" && (
           <li className={styles.thinking} role="status">
@@ -220,6 +269,7 @@ export function AiPanel() {
           </li>
         )}
       </ol>
+      )}
 
       <div className={styles.composer}>
         {/* Where the assistant works and whose plan it uses, next to the composer (SIWC: "Using ChatGPT plan"). */}
@@ -274,6 +324,78 @@ export function AiPanel() {
         </div>
       </div>
     </aside>
+  );
+}
+
+/** The open project's saved chats: title (first message), date, provider and model; open, continue, delete. */
+function HistoryList({ busy }: { busy: boolean }) {
+  const { t, lang } = useI18n();
+  const history = useAi((s) => s.history);
+  const ready = useAi((s) => s.historyReady);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const date = (ms: number) => new Intl.DateTimeFormat(lang === "ko" ? "ko-KR" : "en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ms));
+  const titleOf = (c: SavedChat) => c.title || t("ai.history.untitled");
+  return (
+    <section className={styles.history} aria-labelledby="ai-history-title" data-testid="ai-history">
+      <h3 id="ai-history-title" className={styles.historyTitle}>
+        {t("ai.history.title")}
+      </h3>
+      {!ready ? (
+        <p className={styles.historyEmpty}>{t("ai.history.unsaved")}</p>
+      ) : history.length === 0 ? (
+        <p className={styles.historyEmpty}>{t("ai.history.empty")}</p>
+      ) : (
+        <ul className={styles.historyList} aria-label={t("ai.history.list")}>
+          {history.map((c) => {
+            const title = titleOf(c);
+            const messages = c.items.filter((i) => i.kind === "user" || i.kind === "assistant").length;
+            return (
+              <li key={c.id} className={styles.historyItem} data-testid="ai-history-item" data-chat={c.id}>
+                <button type="button" className={styles.historyMain} onClick={() => viewChat(c)} title={t("ai.history.viewTitle", { title })} aria-label={t("ai.history.viewTitle", { title })}>
+                  <span className={styles.historyName}>{title}</span>
+                  <span className={styles.historyMeta}>
+                    <span className={styles.historyMark} data-provider={c.provider} aria-hidden>
+                      <ProviderMark provider={c.provider} label={c.providerLabel} />
+                    </span>
+                    <span className="num">{t("ai.history.meta", { provider: c.providerLabel, model: c.model || t("ai.history.modelDefault") })}</span>
+                    <span aria-hidden>·</span>
+                    <time dateTime={new Date(c.updatedAt).toISOString()} className="tnum">
+                      {date(c.updatedAt)}
+                    </time>
+                    <span aria-hidden>·</span>
+                    <span className="tnum">{t("ai.history.messages", { n: messages })}</span>
+                    {c.continuedFrom && (
+                      <span className={styles.historyContinued} title={t("ai.history.continuedBody", { title: c.continuedFrom.title || t("ai.history.untitled") })}>
+                        <CornerDownRight aria-hidden />
+                        {t("ai.history.continued")}
+                      </span>
+                    )}
+                  </span>
+                </button>
+                {confirming === c.id ? (
+                  <div className={styles.historyActions} role="group" aria-label={t("ai.history.deleteConfirm")}>
+                    <span className={styles.historyConfirm}>{t("ai.history.deleteConfirm")}</span>
+                    <Button size="sm" autoFocus onClick={() => setConfirming(null)}>
+                      {t("ai.history.deleteKeep")}
+                    </Button>
+                    <Button size="sm" variant="danger" icon={<Trash2 />} onClick={() => { setConfirming(null); void deleteSavedChat(c.id); }} data-testid="ai-history-delete-confirm">
+                      {t("ai.history.delete")}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className={styles.historyActions}>
+                    <Button size="sm" icon={<CornerDownRight />} disabled={busy} title={t("ai.history.continueTitle", { title })} aria-label={t("ai.history.continueTitle", { title })} onClick={() => continueChat(c)} data-testid="ai-history-continue">
+                      {t("ai.history.continue")}
+                    </Button>
+                    <Button size="sm" variant="ghost" iconOnly icon={<Trash2 />} title={t("ai.history.deleteTitle", { title })} aria-label={t("ai.history.deleteTitle", { title })} onClick={() => setConfirming(c.id)} data-testid="ai-history-delete" />
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 

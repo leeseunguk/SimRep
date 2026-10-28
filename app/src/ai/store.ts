@@ -3,6 +3,9 @@ import { dirname } from "../state/project";
 import { useApp } from "../state/store";
 import { applyAuthEvent, deviceCodeOf, EMPTY_ACCOUNTS, providerState, setNotice, setStatus, startSignIn, usableAccounts, type AccountsState } from "./accounts";
 import { addError, addUser, applyEvent, EMPTY_CHAT, resolveApproval, type ChatState } from "./chat";
+import { continueSummary, deleteChat as removeSavedChat, historyDataDir, listChats, saveChat, serializeChat, transcriptOf, type SavedChat } from "./history";
+import { registerTranscript } from "../report/transcript";
+import { displayLabel } from "../components/ai/BrandMarks";
 import { onAiEvent, request } from "./client";
 import { AiError, type ApprovalMode, type Provider } from "./protocol";
 import { PROVIDER_LIST, installProviderMetadata, providerIds, providerInfo } from "./providers";
@@ -31,6 +34,25 @@ interface AiState {
   loaded: boolean;
   /** The panel's approval choice: ask for each write tool, or bypass (run without asking). */
   approval: "ask" | "bypass";
+  /** Saved identity of the active chat (ai/<id>.json); null until its first message. */
+  saved: ActiveChat | null;
+  /** The open project's saved chats, newest first, and whether the project has a data folder. */
+  history: SavedChat[];
+  historyReady: boolean;
+  /** The panel shows the previous-chats list instead of the transcript. */
+  historyOpen: boolean;
+  /** A saved chat opened read-only (the transcript shows it instead of the active chat). */
+  viewing: SavedChat | null;
+}
+
+interface ActiveChat {
+  id: string;
+  createdAt: number;
+  /** The project data folder the chat belongs to (null: not saved yet). */
+  dataDir: string | null;
+  /** Continue: the saved chat this one started from, and the summary the next chat.start sends. */
+  continuedFrom?: { id: string; title: string };
+  context?: string;
 }
 
 export const useAi = create<AiState>()(() => ({
@@ -46,6 +68,11 @@ export const useAi = create<AiState>()(() => ({
   welcome: false,
   loaded: false,
   approval: localStorage.getItem(STORAGE_BYPASS) === "1" ? "bypass" : "ask",
+  saved: null,
+  history: [],
+  historyReady: false,
+  historyOpen: false,
+  viewing: null,
 }));
 
 const set = useAi.setState;
@@ -61,6 +88,8 @@ onAiEvent((e) => {
   const finished = providerState(accounts, e.provider).notice?.kind === "success" && providerState(s.accounts, e.provider).notice?.kind === "signingIn";
   const welcome = s.welcome || (!welcomed && finished && providerInfo(e.provider).planWelcome === true);
   set({ accounts, chat, welcome });
+  // Autosave after each turn of the active chat.
+  if (e.type === "done" && chat !== s.chat) void autosave();
 });
 
 /** The project folder the assistant works in: the project's folder, else the saved file's folder. */
@@ -175,13 +204,17 @@ export async function send(text: string): Promise<void> {
   const account = s.account || usableAccounts(s.accounts[s.provider])[0]?.id;
   let session = s.chat.session;
   const stale = !session || session.provider !== s.provider || session.account !== account || session.workspace !== workspace || (s.model && session.model !== s.model);
-  set({ chat: addUser(stale ? { ...EMPTY_CHAT, nextId: s.chat.nextId, items: s.chat.items } : s.chat, text) });
+  const saved = s.saved ?? { id: crypto.randomUUID(), createdAt: Date.now(), dataDir: historyDataDir() };
+  set({ saved, viewing: null, historyOpen: false, chat: addUser(stale ? { ...EMPTY_CHAT, nextId: s.chat.nextId, items: s.chat.items, ...(s.chat.activeSkill && { activeSkill: s.chat.activeSkill }) } : s.chat, text, Date.now()) });
   try {
     if (stale) {
       set({ starting: true });
-      const started = await request("chat.start", { provider: s.provider, workspace, language: useApp.getState().lang, approvalMode: approvalModeOf(get()), ...(s.model && { model: s.model }), ...(account && { account }) });
+      // A continued chat's new provider session gets the old chat's summary as its first context.
+      const context = get().saved?.context;
+      const started = await request("chat.start", { provider: s.provider, workspace, language: useApp.getState().lang, approvalMode: approvalModeOf(get()), ...(s.model && { model: s.model }), ...(account && { account }), ...(context && { context }) });
       session = { id: started.sessionId, provider: started.provider, model: started.model, workspace: started.workspace, account };
-      set({ chat: { ...get().chat, session } });
+      const current = get().saved;
+      set({ chat: { ...get().chat, session }, saved: current && { ...current, context: undefined } });
     }
     await request("chat.send", { sessionId: session!.id, text });
   } catch (err) {
@@ -214,7 +247,94 @@ export async function answerApproval(approvalId: string, allow: boolean): Promis
 
 export function newChat(): void {
   if (get().chat.running) return;
-  set({ chat: { ...EMPTY_CHAT, nextId: get().chat.nextId } });
+  set({ chat: { ...EMPTY_CHAT, nextId: get().chat.nextId }, saved: null, viewing: null, historyOpen: false });
+}
+
+// ------------------------------------------------------------------------------ chat history
+
+/** The active chat as its saved, redacted record (what autosave writes). */
+function activeRecord(chat: ChatState, saved: ActiveChat): SavedChat {
+  const provider = chat.session?.provider ?? get().provider;
+  return serializeChat(chat, {
+    id: saved.id,
+    provider,
+    providerLabel: displayLabel(provider, providerInfo(provider).label),
+    model: chat.session?.model ?? get().model,
+    createdAt: saved.createdAt,
+    updatedAt: Date.now(),
+    ...(saved.continuedFrom && { continuedFrom: saved.continuedFrom }),
+  });
+}
+
+// The report's AI appendix: the saved chat open read-only, else the active chat, redacted exactly
+// like a saved chat (serializeChat).
+registerTranscript(() => {
+  const { viewing, chat, saved } = get();
+  if (viewing) return transcriptOf(viewing, useApp.getState().lang);
+  if (!chat.items.some((i) => i.kind === "user")) return null;
+  return transcriptOf(activeRecord(chat, saved ?? { id: "active", createdAt: Date.now(), dataDir: null }), useApp.getState().lang);
+});
+
+/** Saves the active chat to the open project's `ai/<id>.json`; failures go to the log. */
+export async function autosave(): Promise<void> {
+  const { chat, saved } = get();
+  if (!saved || !chat.items.some((i) => i.kind === "user")) return;
+  const dir = historyDataDir();
+  // A chat belongs to the project it started in; one started before the first save joins it.
+  if (!dir || (saved.dataDir !== null && saved.dataDir !== dir)) return;
+  if (saved.dataDir === null) set({ saved: { ...saved, dataDir: dir } });
+  const record = activeRecord(chat, saved);
+  try {
+    await saveChat(record);
+    set({ history: [record, ...get().history.filter((c) => c.id !== record.id)] });
+  } catch (err) {
+    useApp.getState().log("error", { key: "log.aiChatSaveFailed", params: { reason: String(err) } });
+  }
+}
+
+/** Reloads the open project's saved chats. */
+export async function refreshHistory(): Promise<void> {
+  try {
+    const ready = historyDataDir() !== null;
+    set({ history: ready ? await listChats() : [], historyReady: ready });
+  } catch (err) {
+    set({ history: [], historyReady: false });
+    useApp.getState().log("error", { key: "log.aiChatListFailed", params: { reason: String(err) } });
+  }
+}
+
+export function openHistory(open: boolean): void {
+  set({ historyOpen: open, ...(open && { viewing: null }) });
+  if (open) void refreshHistory();
+}
+
+/** Opens a saved chat read-only. */
+export function viewChat(chat: SavedChat | null): void {
+  set({ viewing: chat, historyOpen: chat === null && get().historyOpen });
+}
+
+export async function deleteSavedChat(id: string): Promise<void> {
+  try {
+    await removeSavedChat(id);
+  } catch (err) {
+    useApp.getState().log("error", { key: "log.aiChatDeleteFailed", params: { reason: String(err) } });
+    return;
+  }
+  set({ history: get().history.filter((c) => c.id !== id), ...(get().viewing?.id === id && { viewing: null, historyOpen: true }), ...(get().saved?.id === id && { saved: null }) });
+}
+
+/**
+ * Continue a saved chat: provider sessions cannot be resumed, so this starts a new chat whose
+ * provider session (at its first message) gets a short, bounded summary of the old one.
+ */
+export function continueChat(from: SavedChat): void {
+  if (get().chat.running || get().starting) return;
+  set({
+    chat: { ...EMPTY_CHAT, nextId: get().chat.nextId },
+    saved: { id: crypto.randomUUID(), createdAt: Date.now(), dataDir: null, continuedFrom: { id: from.id, title: from.title }, context: continueSummary(from) },
+    viewing: null,
+    historyOpen: false,
+  });
 }
 
 export function openSettings(open: boolean): void {

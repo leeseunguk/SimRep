@@ -67,3 +67,20 @@ describe("detector map", () => {
     expect(nearestIon(xs, ys, idx, 3, 3, 100, 100, 5)).toBeNull();
   });
 });
+
+describe("detector map window", () => {
+  it("keeps a flat pattern visible: the thin axis spans at least a third of the long extent, cells stay square", async () => {
+    const { mapWindow } = await import("./analysis");
+    // Cylindrical array: every ion at z = 0, y from -8 to 8 mm (the einzel demo flight).
+    const w = mapWindow([{ x: [0, 0], y: [-8, 8] }], 48)!;
+    expect(w.x[1] - w.x[0]).toBeCloseTo(16 / 3, 9);
+    expect(w.x[0]).toBeLessThan(0);
+    expect(w.x[1]).toBeGreaterThan(0);
+    expect(w.ny).toBe(48);
+    expect((w.x[1] - w.x[0]) / w.nx).toBeCloseTo((w.y[1] - w.y[0]) / w.ny, 1);
+    const both = mapWindow([{ x: [0, 1], y: [0, 1] }, { x: [-2, 0], y: [0, 3] }], 10)!;
+    expect(both.x[0]).toBeLessThan(-2);
+    expect(both.y[1]).toBeGreaterThan(3);
+    expect(mapWindow([], 10)).toBeNull();
+  });
+});

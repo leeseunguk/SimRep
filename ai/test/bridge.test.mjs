@@ -346,3 +346,10 @@ for (const mode of ['ask', 'session', 'bypass']) {
     await done
   })
 }
+
+test('chat.start accepts an optional bounded context and rejects oversized or non-string context', async t => {
+  const { bridge, workspace } = await setup(t)
+  assert.ok((await bridge.dispatch('chat.start', { provider: 'claude', workspace, context: 'Summary of an earlier SimRep chat.' })).sessionId)
+  await assert.rejects(bridge.dispatch('chat.start', { provider: 'claude', workspace, context: 'x'.repeat(8001) }), e => e.code === 'INVALID_PARAMS')
+  await assert.rejects(bridge.dispatch('chat.start', { provider: 'claude', workspace, context: 42 }), e => e.code === 'INVALID_PARAMS')
+})

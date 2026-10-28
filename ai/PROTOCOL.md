@@ -22,11 +22,26 @@ the sidecar/process group. Node.js 24+ is required.
 | `auth.login` | `{provider, account?, region?}` | `{started: true}` |
 | `auth.logout` | `{provider, account?}` | `{signedOut: true, remoteRevocationConfirmed: boolean}` |
 | `auth.openUsage` | `{provider}` | `{opened: true}` |
-| `chat.start` | `{provider, model?, workspace, account?, language?, approvalMode?}` | `{sessionId, provider, model, workspace, approvalMode}` |
+| `chat.start` | `{provider, model?, workspace, account?, language?, approvalMode?, context?}` | `{sessionId, provider, model, workspace, approvalMode}` |
 | `chat.setApprovalMode` | `{sessionId, mode}` | `{sessionId, approvalMode}` |
 | `chat.send` | `{sessionId, text}` | `{turnId}` |
 | `chat.cancel` | `{sessionId}` | `{cancelled: true}` |
 | `approval.resolve` | `{approvalId, allow: boolean}` | `{resolved: true}` |
+
+`chat.start.context` (additive, optional) is a string of at most 8000
+characters: the UI's bounded summary of a saved chat that the new chat
+continues. Provider sessions are never resumed; the harness puts the summary,
+escaped like the workspace observation, in a `<previous_chat_summary>` block
+of the first turn only and treats it as untrusted data. Older bridges ignore
+it; a non-string or longer value fails with `INVALID_PARAMS`.
+
+Saved chats themselves are a UI concern, not a protocol method: the desktop UI
+writes each conversation to `ai/<chat-id>.json` in the project's data folder
+(`<X>.simrep.d/`) with messages, tool calls (name, compacted arguments, the
+card's compact result summary), approvals (including `auto`), provider id and
+label, model, timestamps and the harness recipe (`activeSkill`). It redacts
+tokens, JWTs, keys and e-mail addresses and stores no account ids or file
+contents (app/src/ai/history.ts).
 
 `auth.providers` is the provider registry, not an entitlement check. Each entry
 has `{id, label, authKind, planNote?, models?, toolCalling, withoutPlan,

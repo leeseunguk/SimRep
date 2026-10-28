@@ -37,6 +37,36 @@ export interface DemoLog {
   answered(cmd: string, count?: number): Promise<unknown>;
   /** With `?replay=manual` (e2e): send the next message of refine `job`; its type, or null once the job has ended. */
   step(job: number): string | null;
+  /** Files the demo keeps (project files, X.simrep.d), path -> size; they survive a reload. */
+  files(): Record<string, number>;
+  /** Text of a kept file (null when missing). */
+  text(path: string): string | null;
+  /** Changes the sha256 the demo reports for `path` (an array edited on disk). */
+  setSha(path: string, sha: string): void;
+}
+
+/**
+ * Demo files: project files and their data folders, in localStorage (base64) so a reload, like
+ * reopening the app, still finds them. Data folder paths follow src-tauri/src/projectdir.rs.
+ */
+const FS_KEY = "simrep.demo.fs";
+const SHA_KEY = "simrep.demo.sha";
+const toB64 = (b: Uint8Array) => {
+  let s = "";
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+  return btoa(s);
+};
+const store = <T,>(key: string): Record<string, T> => JSON.parse(localStorage.getItem(key) ?? "{}") as Record<string, T>;
+const keep = (key: string, v: unknown) => localStorage.setItem(key, JSON.stringify(v));
+
+function relOk(rel: string, allowEmpty = false): boolean {
+  if (rel === "") return allowEmpty;
+  return !/[\\:]/.test(rel) && !rel.startsWith("/") && rel.replace(/\/$/, "").split("/").every((s) => s !== "" && s !== "." && s !== "..");
+}
+function dataPath(project: string, rel: string, allowEmpty = false): string {
+  if (!/\.simrep$/i.test(project) || !relOk(rel, allowEmpty)) throw { code: "unexpected", detail: `path leaves the project folder: ${rel}` };
+  const sep = project.includes("\\") ? "\\" : "/";
+  return `${project}.d${rel ? sep + rel.replace(/\/$/, "").split("/").join(sep) : ""}`;
 }
 
 /** A refine job being replayed: its channel, the index of its next message and what is left to send. */
@@ -93,7 +123,19 @@ export function installDemo(): void {
         else waiters.push({ cmd, count, resolve });
       }),
     step: (job) => (manual ? send(job) : null),
+    files: () => Object.fromEntries(Object.entries(store<string>(FS_KEY)).map(([k, v]) => [k, atob(v).length])),
+    text: (path) => {
+      const v = store<string>(FS_KEY)[path];
+      return v === undefined ? null : new TextDecoder().decode(Uint8Array.from(atob(v), (c) => c.charCodeAt(0)));
+    },
+    setSha: (path, sha) => keep(SHA_KEY, { ...store<string>(SHA_KEY), [path]: sha }),
   };
+  const fsGet = (path: string): Uint8Array<ArrayBuffer> | null => {
+    const v = store<string>(FS_KEY)[path];
+    return v === undefined ? null : Uint8Array.from(atob(v), (c) => c.charCodeAt(0));
+  };
+  const fsPut = (path: string, bytes: Uint8Array) => keep(FS_KEY, { ...store<string>(FS_KEY), [path]: toB64(bytes) });
+  const notFound = (path: string) => ({ code: "notFound", detail: `demo mode has no ${path}` });
   (window as unknown as { __simrepDemo: DemoLog }).__simrepDemo = demo;
   // Both AI providers, mocked to the bridge protocol (src/demo/ai.ts).
   const ai = createDemoAi(manual, new URLSearchParams(location.search));
@@ -113,6 +155,8 @@ export function installDemo(): void {
     }
   };
 
+  /** Headers of the call being handled (raw-body commands carry their paths there). */
+  let headers: Record<string, string> = {};
   mockIPC(
     async (cmd, args) => {
       demo.calls.push(cmd);
@@ -125,6 +169,12 @@ export function installDemo(): void {
     },
     { shouldMockEvents: true },
   );
+  const internals = (window as unknown as { __TAURI_INTERNALS__: { invoke(cmd: string, args: unknown, options?: { headers?: Record<string, string> }): Promise<unknown> } }).__TAURI_INTERNALS__;
+  const mocked = internals.invoke;
+  internals.invoke = (cmd, args, options) => {
+    headers = options?.headers ?? {};
+    return mocked(cmd, args, options);
+  };
 
   async function handle(cmd: string, args: unknown): Promise<unknown> {
     const a = (args ?? {}) as Record<string, unknown>;
@@ -140,13 +190,47 @@ export function installDemo(): void {
         return fx.created;
       case "path_info":
         return (a.paths as string[]).map((p) => fx.info.find((i) => i.path === p) ?? { path: p, name: p.split(/[\\/]/).pop(), size: 0 });
-      case "open_pa":
-        if (a.path !== fx.created.path) throw refused(`demo mode cannot open ${String(a.path)}`);
-        return decode(fx.opened);
+      case "open_pa": {
+        if (a.path === fx.created.path) return decode(fx.opened);
+        // The refined .pa0 (a saved project points at it): the refine result packet.
+        const refined = fx.messages.filter((m): m is { at: number; packet: string } => "packet" in m).map((m) => decode(m.packet)).filter((b) => String.fromCharCode(...new Uint8Array(b, 0, 4)) === "SPA1").at(-1);
+        if (refined && a.path === `${fx.created.dir}\\einzel.pa0`) return refined;
+        throw refused(`demo mode cannot open ${String(a.path)}`);
+      }
       case "close_session":
-      case "write_text":
       case "remove_file":
         return null;
+      case "write_text":
+        fsPut(a.path as string, new TextEncoder().encode(a.contents as string));
+        return null;
+      case "project_dir_write": {
+        const body = args instanceof Uint8Array ? args : new TextEncoder().encode(String(args));
+        fsPut(dataPath(decodeURIComponent(headers["project-path"] ?? ""), decodeURIComponent(headers["rel-path"] ?? "")), body);
+        return null;
+      }
+      case "project_dir_read": {
+        const path = dataPath(a.projectPath as string, a.relPath as string);
+        const bytes = fsGet(path);
+        if (!bytes) throw notFound(path);
+        return bytes.buffer;
+      }
+      case "project_dir_list": {
+        const root = dataPath(a.projectPath as string, "", true);
+        const dir = dataPath(a.projectPath as string, a.prefix as string, true);
+        const sep = root.includes("\\") ? "\\" : "/";
+        return Object.entries(store<string>(FS_KEY))
+          .filter(([k]) => k.startsWith(dir + sep))
+          .map(([k, v]) => ({ path: k.slice(root.length + 1).split(sep).join("/"), size: atob(v).length }))
+          .sort((x, y) => x.path.localeCompare(y.path));
+      }
+      case "project_dir_delete": {
+        const path = dataPath(a.projectPath as string, a.relPath as string);
+        const sep = path.includes("\\") ? "\\" : "/";
+        keep(FS_KEY, Object.fromEntries(Object.entries(store<string>(FS_KEY)).filter(([k]) => k !== path && !k.startsWith(path + sep))));
+        return null;
+      }
+      case "file_sha256":
+        return store<string>(SHA_KEY)[a.path as string] ?? "d3m0".padEnd(64, "0");
       case "electrode_labels":
         return decode(fx.labels);
       case "refine_targets":
@@ -176,11 +260,17 @@ export function installDemo(): void {
       }
       case "ion_trace":
         return decode(fx.trace);
+      case "file_sha256":
+        // Run history (state/runs.ts) hashes the array; the demo has one fixed array.
+        return "0".repeat(64);
       case "write_bytes":
         demo.writes.push({ path: lastSave, text: new TextDecoder().decode(args as Uint8Array) });
         return null;
-      case "read_text":
-        throw { code: "notFound", detail: "demo mode keeps no files" };
+      case "read_text": {
+        const bytes = fsGet(a.path as string);
+        if (!bytes) throw notFound(String(a.path));
+        return new TextDecoder().decode(bytes);
+      }
       case "recovery_path":
         return "C:\\Users\\demo\\AppData\\Local\\dev.simrep.app\\recovery.simrep";
       case "plugin:dialog|save": {

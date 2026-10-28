@@ -784,3 +784,213 @@
     white-space: nowrap;
   }
 }
+
+/* -------------------------------------------------------------------------------- run history */
+.numberInput {
+  width: calc(var(--space-16) + var(--space-2));
+}
+
+.historyScroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: var(--border-w) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--plot-bg);
+}
+
+.history {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.history th,
+.history td {
+  height: var(--table-row-h);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--border-w) solid var(--color-divider);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.history thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface-2);
+  color: var(--color-text-subtle);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.history tbody tr:hover {
+  background: var(--color-sunken);
+}
+
+.history tr[data-selected] {
+  background: var(--color-accent-soft);
+}
+
+.history tr[data-differs] {
+  background: var(--color-warning-soft);
+}
+
+.history .numCol {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.historyName {
+  min-width: calc(var(--results-side-w) * 0.6);
+}
+
+.historyLabel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.historyPin {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  color: var(--color-accent-text);
+}
+
+.historySub {
+  display: block;
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+}
+
+/* A user note: marked with its icon, so it does not read as part of the run's description. */
+.historyNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin-top: var(--space-0-5);
+  color: var(--color-text-muted);
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.historyNote svg {
+  flex: none;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  margin-top: var(--space-0-5);
+}
+
+/* Fixed columns: the setting name, both runs at equal width, the same/different marker. */
+.diffTable {
+  table-layout: fixed;
+}
+
+.diffTable td {
+  overflow-wrap: anywhere;
+}
+
+.diffKeyCol {
+  width: 30%;
+}
+
+.diffRunCol {
+  width: 30%;
+}
+
+.diffSameCol {
+  width: 10%;
+}
+
+.diffRunHead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--color-text);
+}
+
+.history tr[data-differs] th,
+.history tr[data-differs] td {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.history td + td {
+  border-left: var(--border-w) solid var(--color-divider);
+}
+
+.diffState {
+  color: var(--color-warning);
+  font-size: var(--text-2xs);
+  white-space: nowrap;
+}
+
+.swatchLine,
+.dashSwatch {
+  flex: none;
+  width: var(--space-4);
+  height: 0;
+  border-top: 2px solid var(--swatch);
+}
+
+.dashSwatch {
+  border-top-style: dashed;
+}
+
+.historySplats {
+  min-width: var(--space-16);
+  color: var(--color-text-muted);
+}
+
+/* Actions stay in view when a narrow panel scrolls the table sideways. */
+.historyActions {
+  position: sticky;
+  right: 0;
+  background: var(--plot-bg);
+  white-space: nowrap;
+}
+
+/* The selection tint is translucent: layer it over the opaque table background. */
+.history tr[data-selected] .historyActions {
+  background: linear-gradient(var(--color-accent-soft), var(--color-accent-soft)), var(--plot-bg);
+}
+
+.historyKey {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+}
+
+.pairRuns {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.pairRuns li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.pairRuns b {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.pairPlots {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 0;
+}

@@ -147,6 +147,8 @@ export interface Flight {
   ke: Float64Array<ArrayBuffer>;
   /** UI round trip, ms. */
   roundTripMs: number;
+  /** Final vx, vy, vz mm/us per ion, when known here (a flight loaded from the project folder). */
+  velocities?: Float64Array<ArrayBuffer>;
 }
 
 /**

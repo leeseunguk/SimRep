@@ -11,7 +11,7 @@ import type { Trace, TraceQuantity } from "./trace";
  * or part of the project file.
  */
 
-export type ResultsTab = "hist" | "map" | "ion" | "table" | "compare";
+export type ResultsTab = "hist" | "map" | "ion" | "table" | "compare" | "history";
 export type TableColumn = "index" | "surface" | Quantity;
 
 export interface SelectedIon {
@@ -58,6 +58,8 @@ interface ResultsState extends Views {
   traceStatus: "idle" | "loading" | "error";
   traceError: Message | null;
   snapshots: Snapshot[];
+  /** Two history runs (state/runs.ts ids) the compare tab shows instead of the current + kept runs. */
+  pair: [string, string] | null;
 
   setOpen(open: boolean): void;
   setHeight(height: number | null): void;
@@ -67,6 +69,7 @@ interface ResultsState extends Views {
   keep(o: PaObject, run: RunData, detail: string): void;
   patchSnapshot(id: number, patch: Partial<Pick<Snapshot, "visible" | "label">>): void;
   removeSnapshot(id: number): void;
+  comparePair(pair: [string, string] | null): void;
 }
 
 const STORAGE = "simrep.results";
@@ -91,6 +94,7 @@ export const useResults = create<ResultsState>()((set, get) => ({
   traceStatus: "idle",
   traceError: null,
   snapshots: [],
+  pair: null,
   hist: { quantity: "tof", bins: 0, log: false, filter: "landed", zoom: null },
   map: { surface: null, plane: "auto", mode: "density", colorBy: "tof", log: true, bins: 80 },
   ionView: { quantities: ["x", "y", "speed", "ke", "potential"], xAxis: "t" },
@@ -119,6 +123,7 @@ export const useResults = create<ResultsState>()((set, get) => ({
     }),
   patchSnapshot: (id, patch) => set((s) => ({ snapshots: s.snapshots.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
   removeSnapshot: (id) => set((s) => ({ snapshots: s.snapshots.filter((x) => x.id !== id) })),
+  comparePair: (pair) => set(pair ? { pair, tab: "compare", open: true } : { pair: null }),
 }));
 
 useResults.subscribe((s, prev) => {

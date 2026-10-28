@@ -18,7 +18,7 @@ export interface DemoAi {
   /** Types of the events sent so far, in order. */
   sent: string[];
   queued(): number;
-  started: { sessionId: string; provider: Provider; account?: string; approvalMode?: ApprovalMode }[];
+  started: { sessionId: string; provider: Provider; account?: string; approvalMode?: ApprovalMode; context?: string }[];
   /** Every chat.setApprovalMode mode, in order. */
   modes: ApprovalMode[];
 }
@@ -210,7 +210,7 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       if (!ready) throw { code: "AUTH_REQUIRED", message: "Continue with ChatGPT to sign in." };
       if (p.provider === "chatgpt" && !ready.planEnabled) throw { code: "PLAN_PERMISSION_REQUIRED", message: "ChatGPT plan use is not enabled." };
       const sessionId = `session-${++ids}`;
-      demo.started.push({ sessionId, provider: p.provider, account: p.account, approvalMode: p.approvalMode });
+      demo.started.push({ sessionId, provider: p.provider, account: p.account, approvalMode: p.approvalMode, ...(p.context && { context: p.context }) });
       const approvalMode = p.approvalMode ?? "ask";
       sessions.set(sessionId, { provider: p.provider, turn: 0, turnId: null, approvalMode });
       return { sessionId, provider: p.provider, model: p.model ?? (p.provider === "claude" ? "sonnet" : "gpt-6.1-sol"), workspace: p.workspace, approvalMode };

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { DemoAi } from "../src/demo/ai";
+import type { DemoLog } from "../src/demo/ipc";
 import { answered, startEinzel, step } from "./demo";
 
 // The AI accounts page and assistant panel against the demo bridge (src/demo/ai.ts). With
@@ -316,4 +317,119 @@ test("AI: a remembered Bypass survives a new launch", async ({ page }) => {
   await page.getByTestId("ai-toggle").click();
   await expect(page.getByTestId("ai-panel").getByLabel("Approval", { exact: true })).toHaveValue("bypass");
   await expect(page.getByTestId("ai-approval-skipping")).toContainText("Approvals skipped");
+});
+
+type FilesWindow = { __simrepDemo: DemoLog };
+/** Saved chats in the demo's project data folders (src/demo/ipc.ts, kept across a reload): path -> text. */
+const savedFiles = (page: Page) =>
+  page.evaluate(() => {
+    const demo = (window as unknown as FilesWindow).__simrepDemo;
+    return Object.fromEntries(Object.keys(demo.files()).filter((p) => /\.simrep\.d[\\/]ai[\\/]/.test(p)).map((p) => [p, demo.text(p)!]));
+  });
+
+/** Einzel refined and saved as a project, so it has a data folder (`<X>.simrep.d/`). */
+async function savedProject(page: Page) {
+  await workspaceReady(page);
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await answered(page, "write_text");
+  await expect(page.getByRole("status").filter({ hasText: /^Saved / }).first()).toBeVisible();
+}
+
+test("AI: chats are saved per project, listed after a reload, opened read-only and continued", async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await savedProject(page);
+  let panel = await signedInPanel(page);
+  const box = panel.getByRole("textbox", { name: "Message the assistant" });
+
+  // One turn (no write tool asked: the second turn of a session); autosave follows its `done`.
+  await box.fill("Check the refined einzel array");
+  await panel.getByTestId("ai-send").click();
+  let type: string | null;
+  while ((type = await aiStep(page)) !== "approval") expect(type).not.toBeNull();
+  await panel.getByTestId("ai-approval").getByRole("button", { name: "Allow", exact: true }).click();
+  await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
+  while ((await aiStep(page)) !== null);
+  await expect.poll(async () => Object.keys(await savedFiles(page)).length).toBe(1);
+  const [path, text] = Object.entries(await savedFiles(page))[0]!;
+  expect(path).toMatch(/\.simrep\.d[\\/]ai[\\/][0-9a-f-]{36}\.json$/);
+  const saved = JSON.parse(text);
+  expect(saved).toMatchObject({ title: "Check the refined einzel array", provider: "chatgpt", providerLabel: "ChatGPT", model: "gpt-6.1-sol", recipe: "einzel" });
+  expect(saved.approvals).toEqual([{ name: "fly", decision: "allowed" }]);
+  // The demo account is researcher@example.com (id chatgpt-demo-1): neither is in the file.
+  expect(text).not.toMatch(/@|chatgpt-demo-1|eyJ[\w-]+\.[\w-]+\.|token/i);
+
+  // The report's AI appendix carries the active chat, redacted like the saved file.
+  await page.getByTestId("topbar-export").getByRole("button", { name: "Export" }).click();
+  await page.getByRole("menu").getByRole("menuitem", { name: /Report/ }).click();
+  const report = page.getByTestId("report-dialog");
+  await expect(report.getByRole("switch", { name: "AI chat transcript (appendix)" })).toBeChecked();
+  await expect(report.getByText("No chat transcript is available.")).toHaveCount(0);
+  await report.getByTestId("report-run").click();
+  await answered(page, "write_bytes", 1);
+  const html = (await page.evaluate(() => (window as unknown as FilesWindow).__simrepDemo.writes)).at(-1)!.text;
+  expect(html).toContain("Appendix: AI assistant transcript");
+  expect(html).toContain("Check the refined einzel array");
+  expect(html).toContain("Tool · fly");
+  expect(html).not.toMatch(/researcher@example\.com|chatgpt-demo-1|eyJ[\w-]+\.[\w-]+\./);
+  await report.getByRole("button", { name: "Close" }).first().click();
+  await expect(report).toBeHidden();
+
+  // Reload: the same project (saved again to its path) lists the chat. The one-time welcome is
+  // already dismissed, so this sign-in has none.
+  await page.reload();
+  await savedProject(page);
+  await page.getByTestId("ai-accounts-open").click();
+  const dialog = page.getByRole("dialog", { name: "AI accounts" });
+  await dialog.getByRole("button", { name: "Continue with ChatGPT" }).click();
+  expect(await aiStep(page)).toBe("auth");
+  await dialog.getByRole("button", { name: "Close" }).first().click();
+  await page.getByTestId("ai-toggle").click();
+  panel = page.getByTestId("ai-panel");
+  await panel.getByTestId("ai-history-toggle").click();
+  const history = panel.getByTestId("ai-history");
+  await expect(history.getByRole("heading", { name: "Previous chats" })).toBeVisible();
+  const item = history.getByTestId("ai-history-item");
+  await expect(item).toHaveCount(1);
+  await expect(item).toContainText("Check the refined einzel array");
+  await expect(item).toContainText("ChatGPT · gpt-6.1-sol");
+
+  // Open read-only: the transcript, no composer, a Continue action.
+  await item.getByRole("button", { name: "Open Check the refined einzel array (read only)" }).click();
+  await expect(panel.getByTestId("ai-history-readonly")).toContainText("Read only");
+  await expect(panel.getByText(/37 of 40 ions reached the detector plane/)).toBeVisible();
+  await expect(panel.locator('[data-testid="ai-tool-card"][data-tool="fly"]')).toContainText("Done");
+  await expect(box).toBeDisabled();
+
+  // Continue: a new chat marked as continued; its chat.start carries the bounded summary.
+  await panel.getByTestId("ai-history-continue-open").click();
+  await expect(panel.getByTestId("ai-continued")).toContainText("Continued");
+  await expect(panel.getByTestId("ai-continued")).toContainText("Check the refined einzel array");
+  await expect(box).toBeEnabled();
+  await box.fill("Lower electrode 2 and fly again");
+  await panel.getByTestId("ai-send").click();
+  await expect(panel.getByTestId("ai-stop")).toBeVisible();
+  const started = await page.evaluate(() => (window as unknown as AiWindow).__simrepDemoAi.started);
+  expect(started).toHaveLength(1);
+  expect(started[0]!.context).toContain("User: Check the refined einzel array");
+  expect(started[0]!.context!.length).toBeLessThanOrEqual(4000);
+  while ((type = await aiStep(page)) !== "approval") expect(type).not.toBeNull();
+  await panel.getByTestId("ai-approval").getByRole("button", { name: "Deny" }).click();
+  await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
+  while ((await aiStep(page)) !== null);
+  await expect.poll(async () => Object.keys(await savedFiles(page)).length).toBe(2);
+
+  // The list shows both, the continued one marked; delete asks first and removes the file.
+  await panel.getByTestId("ai-history-toggle").click();
+  await expect(item).toHaveCount(2);
+  await expect(item.first()).toContainText("Lower electrode 2 and fly again");
+  await expect(item.first()).toContainText("Continued");
+  await page.screenshot({ path: test.info().outputPath("history-list.png") });
+  await item.last().getByTestId("ai-history-delete").click();
+  await expect(item.last().getByRole("group", { name: "Delete this chat?" })).toBeVisible();
+  await item.last().getByTestId("ai-history-delete-confirm").click();
+  await expect(item).toHaveCount(1);
+  expect(Object.keys(await savedFiles(page))).toHaveLength(1);
+  expect(errors).toEqual([]);
 });

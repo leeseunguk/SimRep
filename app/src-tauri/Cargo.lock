@@ -3289,6 +3289,7 @@ dependencies = [
  "self_cell",
  "serde",
  "serde_json",
+ "sha2",
  "simrep-cad",
  "simrep-core",
  "simrep-fly",

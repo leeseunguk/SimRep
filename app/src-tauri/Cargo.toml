@@ -37,6 +37,7 @@ rayon = "1"
 tauri-plugin-dialog = "2"
 pollster = "1"
 self_cell = "1"
+sha2 = "0.10"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

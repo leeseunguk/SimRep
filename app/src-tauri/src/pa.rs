@@ -92,6 +92,11 @@ impl PaError {
         }
     }
 
+    #[cfg(test)]
+    pub fn code(&self) -> &'static str {
+        self.code
+    }
+
     /// The localized reason, or `fallback` carrying the technical detail.
     pub fn into_reason(self, fallback: &'static str) -> Reason {
         self.reason

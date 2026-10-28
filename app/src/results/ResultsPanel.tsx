@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from "react";
-import { Activity, BarChart3, Camera, ChevronDown, ChevronUp, Crosshair, Download, FileSpreadsheet, GitCompareArrows, Image, Table2 } from "lucide-react";
+import { Activity, BarChart3, Camera, ChevronDown, ChevronUp, Crosshair, Download, FileSpreadsheet, GitCompareArrows, HistoryIcon, Image, Play, Table2 } from "lucide-react";
 import { RunBadge } from "../components/SimulationSections";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -10,6 +10,10 @@ import type { PaObject } from "../state/store";
 import { useApp } from "../state/store";
 import { runOf } from "./analysis";
 import { CompareTab } from "./CompareTab";
+import { HistoryTab } from "./HistoryTab";
+import { PairCompare } from "./PairCompare";
+import { flyNow } from "../scene/simulation";
+import { useRuns } from "../state/runs";
 import { DetectorTab } from "./DetectorTab";
 import { currentFigure, endStatesCsv, exportStem, figurePng, figureSvg, saveFile, traceCsv, viewportPng } from "./exporters";
 import { HistogramTab } from "./HistogramTab";
@@ -25,6 +29,7 @@ const TABS: { id: ResultsTab; icon: ReactNode }[] = [
   { id: "ion", icon: <Activity /> },
   { id: "table", icon: <Table2 /> },
   { id: "compare", icon: <GitCompareArrows /> },
+  { id: "history", icon: <HistoryIcon /> },
 ];
 
 /** Bottom results workspace for the active array's last flight (hidden until something has flown). */
@@ -36,6 +41,8 @@ export function ResultsPanel() {
   const tab = useResults((s) => s.tab);
   const kept = useResults((s) => s.snapshots.length);
   const ion = useResults((s) => s.ion);
+  const pair = useResults((s) => s.pair);
+  const runCount = useRuns((s) => s.runs.length);
   const panel = useRef<HTMLElement>(null);
   if (!o) return null;
   const h = o.flight.result!.header;
@@ -59,12 +66,23 @@ export function ResultsPanel() {
               {icon}
               {t(`results.tab.${id}` as MessageKey)}
               {id === "ion" && ionHere !== null && <span className={styles.tabCount}>#{ionHere}</span>}
-              {id === "compare" && kept > 0 && <span className={styles.tabCount}>{kept}</span>}
+              {id === "compare" && (pair ? 2 : kept) > 0 && <span className={styles.tabCount}>{pair ? 2 : kept}</span>}
+              {id === "history" && runCount > 0 && <span className={styles.tabCount}>{runCount}</span>}
             </button>
           ))}
         </div>
         {/* Badges first: on a narrow header the name and the count give way before them. */}
         <div className={styles.context}>
+          {o.flight.stored && (
+            <>
+              <Badge tone="info" title={t("results.stored.title")}>
+                <span data-testid="results-stored">{t("results.stored")}</span>
+              </Badge>
+              <Button size="sm" variant="ghost" icon={<Play />} disabled={o.flight.status === "running"} onClick={() => void flyNow(o.id)} data-testid="results-fly-again">
+                {t("results.stored.flyAgain")}
+              </Button>
+            </>
+          )}
           <RunBadge h={h} />
           {h.surface ? (
             <Badge
@@ -104,7 +122,8 @@ export function ResultsPanel() {
           {tab === "map" && <DetectorTab o={o} />}
           {tab === "ion" && <IonTab o={o} />}
           {tab === "table" && <TableTab o={o} />}
-          {tab === "compare" && <CompareTab o={o} />}
+          {tab === "compare" && (pair ? <PairCompare pair={pair} /> : <CompareTab o={o} />)}
+          {tab === "history" && <HistoryTab />}
         </div>
       )}
     </section>

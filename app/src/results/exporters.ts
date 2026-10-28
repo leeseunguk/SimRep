@@ -17,8 +17,8 @@ export { endStatesCsv, traceCsv } from "./csv";
  * Browser preview: a download.
  */
 
-export type ExportKind = "csv" | "png" | "svg";
-const MIME: Record<ExportKind, string> = { csv: "text/csv", png: "image/png", svg: "image/svg+xml" };
+export type ExportKind = "csv" | "png" | "svg" | "html";
+const MIME: Record<ExportKind, string> = { csv: "text/csv", png: "image/png", svg: "image/svg+xml", html: "text/html" };
 
 /** Where exports go by default: the project folder, else next to the array. */
 function defaultDir(o: PaObject | null): string | null {
@@ -30,7 +30,8 @@ export function exportStem(o: PaObject | null): string {
   return (o?.fileName ?? "simrep").replace(/\.[^.]+$/, "");
 }
 
-export async function saveFile(name: string, kind: ExportKind, data: Uint8Array<ArrayBuffer> | string, o: PaObject | null): Promise<void> {
+/** Saves `data`; the path written (desktop), "" for a browser download, null when cancelled or failed. */
+export async function saveFile(name: string, kind: ExportKind, data: Uint8Array<ArrayBuffer> | string, o: PaObject | null): Promise<string | null> {
   const app = useApp.getState();
   const t = (key: Parameters<typeof translate>[1], params?: Parameters<typeof translate>[2]) => translate(app.lang, key, params);
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
@@ -41,7 +42,7 @@ export async function saveFile(name: string, kind: ExportKind, data: Uint8Array<
     a.download = name;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    return;
+    return "";
   }
   const dir = defaultDir(o);
   const sep = dir?.includes("\\") ? "\\" : "/";
@@ -50,15 +51,17 @@ export async function saveFile(name: string, kind: ExportKind, data: Uint8Array<
     defaultPath: dir ? `${dir}${sep}${name}` : name,
     filters: [{ name: t(`results.export.filter.${kind}`), extensions: [kind] }],
   });
-  if (!path) return;
+  if (!path) return null;
   try {
     await writeBytes(path, bytes);
     app.log("success", { key: "log.exported", params: { path } });
     app.toast("success", { key: "toast.exported.title" }, { key: "toast.exported.body", params: { path } });
+    return path;
   } catch (err) {
     const detail = errorMessage(backendError(err));
     app.log("error", { key: "log.exportFailed", params: { path, detail } });
     app.toast("error", { key: "toast.exportFailed.title" }, { key: "toast.exportFailed.body", params: { detail } });
+    return null;
   }
 }
 
