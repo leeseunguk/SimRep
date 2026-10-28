@@ -25,8 +25,15 @@ export class OutputStore {
       ? bounded(Object.fromEntries(Object.entries(value).filter(([key]) => IMPORTANT.has(key)))) : {}
     // Even a very large gap report must not consume the entire model context.
     delete summary.gap_check
-    return JSON.stringify({ ...summary, verification: verifyResult(value), truncated: true, handle, characters: text.length,
-      preview: text.slice(0, Math.min(1200, this.limit / 4)), fetch: 'fetch_tool_output({handle, offset, length})' })
+    const result = { ...summary, verification: bounded(verifyResult(value)), truncated: true, handle, characters: text.length,
+      preview: text.slice(0, Math.min(1200, this.limit / 4)), fetch: 'fetch_tool_output({handle, offset, length})' }
+    if (JSON.stringify(result).length > this.limit) delete result.preview
+    for (const key of Object.keys(summary)) if (JSON.stringify(result).length > this.limit) delete result[key]
+    if (JSON.stringify(result).length > this.limit) result.verification = { ok: result.verification.ok, issue_count: result.verification.issue_count }
+    if (JSON.stringify(result).length > this.limit) delete result.fetch
+    const serialized = JSON.stringify(result)
+    if (serialized.length > this.limit) throw new Error('Output limit too small for a handle')
+    return serialized
   }
   fetch({ handle, offset = 0, length = 6000 }) {
     if (!this.outputs.has(handle)) throw new Error('Unknown or expired output handle')

@@ -405,7 +405,7 @@ function ApprovalCard({ item }: { item: Extract<ChatItem, { kind: "approval" }> 
   const pending = item.state === "pending";
   if (!approvalSeen.has(item.approvalId)) approvalSeen.set(item.approvalId, Date.now());
   const now = useNow(pending);
-  const left = Math.max(0, approvalSeen.get(item.approvalId)! + APPROVAL_MS - now);
+  const left = Math.max(0, (item.expiresAt ?? approvalSeen.get(item.approvalId)! + APPROVAL_MS) - now);
   const done: Record<Exclude<typeof item.state, "pending">, MessageKey> = { allowed: "ai.approval.allowed", denied: "ai.approval.denied", expired: "ai.approval.expired" };
   return (
     <li className={styles.approval} data-state={item.state} data-testid="ai-approval" role={pending ? "group" : undefined} aria-labelledby={`approval-${item.id}`}>

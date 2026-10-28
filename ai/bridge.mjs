@@ -47,9 +47,10 @@ export class Bridge {
     const approvalId = randomUUID()
     return new Promise(resolve => {
       const settle = allow => { clearTimeout(timer); this.approvals.delete(approvalId); resolve(allow) }
-      const timer = setTimeout(() => settle(false), 120_000)
+      const expiresAt = Date.now() + 120_000
+      const timer = setTimeout(() => settle(false), Math.max(0, expiresAt - Date.now()))
       this.approvals.set(approvalId, { sessionId: session.id, settle })
-      this.emitChat(session, { type: 'approval', approvalId, name, arguments: args })
+      this.emitChat(session, { type: 'approval', approvalId, name, arguments: args, expiresAt })
     })
   }
 

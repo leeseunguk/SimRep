@@ -114,7 +114,7 @@ verification, output handles and mock/real-provider evals.
 | `delta` | `text` (append to assistant message) |
 | `tool_call` | `callId, name, arguments` |
 | `tool_result` | `callId, name?, result` |
-| `approval` | `approvalId, name, arguments` |
+| `approval` | `approvalId, name, arguments, expiresAt` (Unix epoch milliseconds; additive) |
 | `done` | `status: "completed" \| "interrupted" \| "failed"` |
 | `error` | `code, message, details?` (safe diagnostics, never credentials) |
 

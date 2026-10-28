@@ -76,6 +76,7 @@ test('mutating tools cannot execute without user approval and cancellation denie
   const approval = event(events, 'approval'), done = event(events, 'done')
   await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'Overwrite geometry' })
   const request = await approval
+  assert.ok(request.expiresAt > Date.now() && request.expiresAt <= Date.now() + 120_000)
   assert.equal(request.name, 'gem2pa')
   await bridge.dispatch('chat.cancel', { sessionId: session.sessionId })
   assert.equal((await done).status, 'interrupted')
@@ -124,6 +125,7 @@ test('ChatGPT app-server receives only child env token and restarts/resumes afte
         if (method === 'initialize') assert.deepEqual(params.clientInfo, { name: 'SimRep', title: 'SimRep', version: '0.1.0' })
         if (method.startsWith('thread/')) {
           assert.equal(params.cwd, path.join(directory, 'codex'))
+          assert.equal(params.baseInstructions, 'Harness sentinel prompt')
           return { thread: { id: 'thread-1' } }
         }
         if (method === 'turn/start') {
@@ -139,7 +141,7 @@ test('ChatGPT app-server receives only child env token and restarts/resumes afte
     return rpc
   }
   const gate = { config: { command: 'node', args: ['proxy'], env: { SIMREP_WORKSPACE: directory } }, close() {} }
-  const session = new ChatGPTSession({ auth, account: 'account', workspace: directory, model: 'model', gate, emit: event => events.push(event), rpcFactory })
+  const session = new ChatGPTSession({ auth, account: 'account', workspace: directory, model: 'model', gate, emit: event => events.push(event), rpcFactory, systemPrompt: 'Harness sentinel prompt' })
   t.after(() => session.close())
   assert.equal(await session.send('first'), 'completed')
   access = 'access-2'

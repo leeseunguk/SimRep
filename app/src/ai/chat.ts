@@ -17,7 +17,7 @@ export type ChatItem =
       status: "running" | "done" | "error" | "skipped";
       result: ToolSummary | null;
     }
-  | { kind: "approval"; id: number; approvalId: string; name: string; args: Record<string, unknown>; state: "pending" | "allowed" | "denied" | "expired" }
+  | { kind: "approval"; id: number; approvalId: string; name: string; args: Record<string, unknown>; expiresAt?: number; state: "pending" | "allowed" | "denied" | "expired" }
   | { kind: "error"; id: number; code: string; provider: Provider }
   | { kind: "ended"; id: number; status: Exclude<DoneStatus, "completed"> };
 
@@ -83,7 +83,7 @@ export function applyEvent(s: ChatState, e: AiEvent): ChatState {
       };
     }
     case "approval":
-      return push({ kind: "approval", approvalId: e.approvalId, name: e.name, args: e.arguments, state: "pending" });
+      return push({ kind: "approval", approvalId: e.approvalId, name: e.name, args: e.arguments, expiresAt: e.expiresAt, state: "pending" });
     case "error":
       return push({ kind: "error", code: e.code, provider: e.provider });
     case "done": {

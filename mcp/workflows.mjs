@@ -150,13 +150,15 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
       const result = { schema_version: 1, measurement: undefined, refinement: undefined, gap_check: undefined }
       if (cad) {
         result.measurement = parse(await runTool('cad_measure', { file: args.input, ...(args.gap ? { gap: args.gap } : { all_pairs: true }) }))
-        const gaps = result.measurement.measurements?.map(item => item.min_distance_mm).filter(gap => gap > 0) ?? []
+        const measurements = result.measurement.measurements ?? []
+        requireCondition(!measurements.some(item => item.touching || item.min_distance_mm === 0), 'gap check failed: CAD bodies are in contact or unresolved')
+        const gaps = measurements.map(item => item.min_distance_mm).filter(gap => Number.isFinite(gap) && gap >= 0)
         if (args.spacing_mm) {
           const spacing = vector(args.spacing_mm, 3, 'spacing_mm').map(value => positive(value, 'spacing_mm'))
           const minimum = gaps.length ? Math.min(...gaps) : null
           result.gap_check = { mode: 'error', recommended_spacing_mm: minimum === null ? null : minimum / 10,
-            pairs: gaps.map(gap => ({ gap_mm: gap, cells_across: gap / Math.max(...spacing), status: gap / Math.max(...spacing) < 2.5 ? 'under-resolved' : 'ok' })) }
-          requireCondition(!result.gap_check.pairs.some(pair => pair.status !== 'ok'), 'gap check failed: fewer than 2.5 cells across the CAD gap; refine spacing')
+            pairs: gaps.map(gap => ({ gap_mm: gap, cells_across: gap / Math.max(...spacing), status: gap === 0 ? 'contact' : gap / Math.max(...spacing) < 2.5 ? 'under-resolved' : 'ok' })) }
+          requireCondition(!result.gap_check.pairs.some(pair => pair.status !== 'ok'), 'gap check failed: contact or fewer than 2.5 cells across the CAD gap; inspect contact and refine spacing')
         }
       }
       requireCondition(cad || args.refine, 'GEM/mesh gap check needs refine settings (electrode, out, grid/spacing)')

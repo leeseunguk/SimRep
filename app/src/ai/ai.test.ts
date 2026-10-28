@@ -103,6 +103,11 @@ describe("chat reducer", () => {
     expect(summarizeResult({ content: [{ type: "text", text: '{"error":{"message":"bad pa","kind":"io"}}' }] })).toEqual({ isError: true, fields: [], text: "bad pa" });
   });
 
+  it("preserves the bridge approval deadline through parsing and the chat reducer", () => {
+    const s = run(addUser(chatOf(), "x"), { type: "approval", approvalId: "deadline", name: "fly", arguments: {}, expiresAt: 123456 });
+    expect(s.items.at(-1)).toMatchObject({ kind: "approval", expiresAt: 123456 });
+  });
+
   it("resolves approvals and closes open ones when the turn ends", () => {
     let s = run(addUser(chatOf(), "x"), { type: "approval", approvalId: "a1", name: "fly", arguments: {} }, { type: "approval", approvalId: "a2", name: "refine", arguments: {} });
     s = resolveApproval(s, "a1", true);

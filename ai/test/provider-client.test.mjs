@@ -21,6 +21,7 @@ async function fixture(t, id, { tool = 'read_csv_summary', args = { path: 'data.
       requests.push({ body, headers: req.headers, url: req.url })
       const first = requests.length % 2 === 1
       if (p.wireApi === 'kiro') {
+        assert.ok(JSON.stringify(body.conversationState.history).includes('Harness instructions'))
         assert.equal(body.conversationState.currentMessage.userInputMessage.userInputMessageContext.tools[0].toolSpecification.name, 'gpu_info')
         if (!first) results.push(JSON.parse(body.conversationState.currentMessage.userInputMessage.userInputMessageContext.toolResults[0].content[0].text))
         res.writeHead(200, { 'content-type': 'application/vnd.amazon.eventstream' })

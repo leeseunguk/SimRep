@@ -31,11 +31,9 @@ export async function createHarness({ workspace, language = 'auto', emit = (_fie
   const agents = await readFile(new URL('../../AGENTS.md', import.meta.url), 'utf8')
   // Only the simulator reference sections belong in the model's system context.
   const essentials = agents.split(/^## /m).filter(section => /^(Device and precision rules|Units and conventions|Performance measurement rule)\n/.test(section)).join('\n## ')
-  const inventory = await inspectWorkspace(workspace)
   const systemPrompt = [
     'You are the SimRep ion-optics assistant. Carry the user request through geometry -> solve -> fly -> verification.',
     `<simrep_rules>\n${RULES}\n${essentials}\n</simrep_rules>`,
-    `<workspace_state>\n${JSON.stringify(inventory)}\n</workspace_state>`,
     `Response language: ${language === 'auto' ? 'match the latest user message' : language}.`,
     `<available_skills>\n${JSON.stringify(skillCatalog())}\nLoad only a relevant skill, not the full catalog.\n</available_skills>`,
   ].join('\n\n')
@@ -50,7 +48,7 @@ export async function createHarness({ workspace, language = 'auto', emit = (_fie
     systemPrompt,
     get activeSkill() { return activeSkill },
     async prepare(text) {
-      buffer = ''; issues = []; compute = []
+      buffer = ''; issues = []
       const recipe = selectRecipe(text)
       const context = []
       if (recipe) {
@@ -58,7 +56,10 @@ export async function createHarness({ workspace, language = 'auto', emit = (_fie
         for (const id of ['ion-optics', recipe.id]) if (!loaded.has(id)) { context.push((await loadSkill(id)).text); loaded.add(id) }
       }
       const state = await inspectWorkspace(workspace)
-      return `${context.length ? `<loaded_skill>\n${context.join('\n\n')}\n</loaded_skill>\n` : ''}<current_workspace>${JSON.stringify({ ...state, last_tool_results: recent })}</current_workspace>\nRespond in ${language === 'auto' ? /[가-힣]/.test(text) ? 'Korean' : 'the user language' : language}.\n<user_request>\n${text}\n</user_request>`
+      const observation = JSON.stringify({ type: 'workspace_observation', ...state, last_tool_results: recent })
+        .replaceAll('<', '\\u003c').replaceAll('>', '\\u003e').replaceAll('&', '\\u0026')
+      const boundedObservation = observation.length <= 12000 ? observation : JSON.stringify({ type: 'workspace_observation', truncated: true })
+      return `${context.length ? `<loaded_skill>\n${context.join('\n\n')}\n</loaded_skill>\n` : ''}<untrusted_context>${boundedObservation}</untrusted_context>\nRespond in ${language === 'auto' ? /[가-힣]/.test(text) ? 'Korean' : 'the user language' : language}.\n<user_request>\n${text}\n</user_request>`
     },
     emit(fields) {
       if (fields.type === 'delta') { buffer += fields.text; return }
@@ -69,8 +70,8 @@ export async function createHarness({ workspace, language = 'auto', emit = (_fie
         if (value) recent = [...recent, { tool: fields.name, ...Object.fromEntries(['requested', 'executed', 'converged', 'cycles', 'final_residual', 'fallback_reason', 'compute_ms', 'arrivals', 'u_num', 'value', 'handle']
           .filter(key => value[key] !== undefined).map(key => [key, value[key]])) }].slice(-5)
         const verification = value?.verification ?? verifyResult(value)
-        issues.push(...verification.issues)
-        if (fields.result?.isError && !verification.issues.length) issues.push(`${fields.name} failed; no successful result was verified`)
+        issues.push(...(verification.issues ?? []))
+        if (fields.result?.isError && !(verification.issues?.length)) issues.push(`${fields.name} failed; no successful result was verified`)
         if (value?.skill) activeSkill = value.skill
       }
       sendEvent(fields)

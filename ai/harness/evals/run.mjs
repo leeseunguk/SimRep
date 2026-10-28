@@ -51,7 +51,6 @@ export async function runEvals({ real = false, report = (_line) => {} } = {}) {
       const account = { id: 'eval', provider: 'claude', label: 'Mock', authenticated: true, planEnabled: true }
       class MockAuth extends ClaudeAuth { async accounts() { return [account] } }
       class MockSession extends ClaudeSession {
-        constructor(options) { super(options); this.systemPrompt = options.systemPrompt }
         /** @returns {Promise<'completed'>} */
         async send(text) {
           assert.ok(this.systemPrompt && text.includes(task.prompt), `${task.id}: harness must prepare provider input`)
@@ -95,7 +94,7 @@ export async function runEvals({ real = false, report = (_line) => {} } = {}) {
         if (task.recipe) assert.ok(seen.some(event => event.activeSkill === task.recipe), `${task.id}: active recipe event`)
         const answer = seen.filter(event => event.type === 'delta').map(event => event.text).join('')
         if (task.verify) assert.match(answer, /\[verify\]/, `${task.id}: verification note`)
-        if (task.withheld) assert.ok(!answer.includes(task.withheld), `${task.id}: unsupported speed claim leaked`)
+        if (task.withheld) assert.ok(answer.includes(task.withheld) && answer.includes('[verify]'), `${task.id}: speed claim must remain and be annotated`)
         if (task.approve === false) {
           const files = await readFile(path.join(workspace, 'einzel.pa#'), 'utf8').catch(() => '')
           assert.equal(files, '{"h":1}')
