@@ -9,7 +9,7 @@ import { RpcProcess } from '../rpc.mjs'
 import { Store } from '../store.mjs'
 
 const HARNESS_TOOLS = ['load_skill', 'fetch_tool_output', 'simrep_plan', 'analyzer_scan',
-  'grid_convergence', 'compare_runs', 'check_geometry', 'summarize_results']
+  'grid_convergence', 'compare_runs', 'check_geometry', 'summarize_results', 'optimize_design']
 
 for (const provider of PROVIDERS.filter(p => p.toolCalling)) {
   test(`${provider.id}: Bridge supplies the harness system prompt and every harness MCP tool`, async t => {

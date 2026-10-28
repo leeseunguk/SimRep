@@ -8,7 +8,7 @@ export const READ_ONLY = ['gpu_info', 'pa_info', 'read_csv_summary', 'cad_measur
   'simrep_plan', 'compare_runs', 'summarize_results', 'load_skill', 'fetch_tool_output']
 export const TOOL_NAMES = [...READ_ONLY, 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'fly',
   'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories',
-  'analyzer_scan', 'grid_convergence', 'check_geometry']
+  'analyzer_scan', 'grid_convergence', 'check_geometry', 'optimize_design']
 export const HERE = path.dirname(fileURLToPath(import.meta.url))
 
 // An authenticated private loopback channel connects provider-owned MCP proxies

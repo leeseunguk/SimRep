@@ -2,6 +2,7 @@
 // existing workspace guard and argv-only child runner.
 import { readFile, readdir, lstat } from 'node:fs/promises'
 import path from 'node:path'
+import { optimizeTool } from './optimize.mjs'
 import { inspectWorkspace } from '../ai/harness/workspace.mjs'
 import { loadSkill, selectRecipe, skillCatalog } from '../ai/harness/skills.mjs'
 
@@ -104,7 +105,7 @@ async function csvRows(file) {
   return lines.filter(line => line.trim()).map(line => Object.fromEntries(line.split(',').map((value, i) => [columns[i], value.trim()])))
 }
 
-export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOutput, runTool, runHelper, summarizeCsv, outputs, here }) {
+export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOutput, runTool, runHelper, summarizeCsv, outputs, here, timeoutSeconds = 3600 }) {
   const tool = (name, description, properties, required, readOnly, run) => ({
     name, title: name.replaceAll('_', ' '), description,
     inputSchema: { ...object(properties), required }, readOnly, run,
@@ -119,6 +120,7 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
   }
   async function csvSummary(relative) { return summarizeCsv(inputFile(relative, 'path'), 2_000_000, 0) }
   return [
+    optimizeTool({ inputFile, insideWorkspace, prepareOutput, runTool, timeoutSeconds }),
     tool('simrep_plan', 'Inspect available workspace geometry, PA families, particles and last JSON results; propose steps and gates without executing a solve. task is the user objective, not a shell command.', { task: string }, ['task'], true, async args => {
       only(args, ['task'])
       requireCondition(typeof args.task === 'string' && args.task.length > 0, 'task is required')

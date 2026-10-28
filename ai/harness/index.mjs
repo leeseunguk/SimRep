@@ -40,7 +40,7 @@ export async function createHarness({ workspace, language = 'auto', approvalMode
     ...(approvalMode === 'ask' ? [] : [BYPASS_NOTE]),
     `<available_skills>\n${JSON.stringify(skillCatalog())}\nLoad only a relevant skill, not the full catalog.\n</available_skills>`,
   ].join('\n\n')
-  let activeSkill, buffer = '', issues = [], compute = [], fwhmUncertaintyAvailable = false, loaded = new Set(), recent = []
+  let activeSkill, buffer = '', issues = [], compute = [], fwhmUncertaintyAvailable = false, budgetExhausted = false, loaded = new Set(), recent = []
   const sendEvent = fields => emit({ ...fields, ...(activeSkill && { activeSkill }) })
   function record(value) {
     if (!value || typeof value !== 'object') return
@@ -52,7 +52,7 @@ export async function createHarness({ workspace, language = 'auto', approvalMode
     get activeSkill() { return activeSkill },
     /** approvalMode is the session's current mode; it can change after the system prompt was fixed. */
     async prepare(text, approvalMode = 'ask') {
-      buffer = ''; issues = []
+      buffer = ''; issues = []; budgetExhausted = false
       const recipe = selectRecipe(text)
       const context = []
       if (recipe) {
@@ -71,6 +71,7 @@ export async function createHarness({ workspace, language = 'auto', approvalMode
       if (fields.type === 'tool_result') {
         const value = parseToolResult(fields.result)
         record(value)
+        if (fields.name === 'optimize_design' && value?.verdict === 'budget_exhausted') budgetExhausted = true
         if (value) recent = [...recent, { tool: fields.name, ...Object.fromEntries(['requested', 'executed', 'converged', 'cycles', 'final_residual', 'fallback_reason', 'compute_ms', 'arrivals', 'u_num', 'value', 'handle']
           .filter(key => value[key] !== undefined).map(key => [key, value[key]])) }].slice(-5)
         const verification = value?.verification ?? verifyResult(value)
@@ -83,7 +84,8 @@ export async function createHarness({ workspace, language = 'auto', approvalMode
     },
     finish(status) {
       const checked = checkClaims(buffer, compute, fwhmUncertaintyAvailable)
-      const notes = [...new Set([...issues, ...checked.notes])]
+      const optimizationNote = budgetExhausted && buffer.split(/(?<=[.!?\n])\s*/u).some(sentence => /\b(optimal|optimum|converged)\b|최적|수렴/i.test(sentence) && !/(?:\bnot\b|\bnon[- ]|아니|미수렴|수렴하지)/i.test(sentence)) ? ['Budget-exhausted optimization is a candidate, not a verified optimum or converged result.'] : []
+      const notes = [...new Set([...issues, ...checked.notes, ...optimizationNote])]
       if (checked.text) sendEvent({ type: 'delta', text: checked.text })
       if (notes.length && status === 'completed') sendEvent({ type: 'delta', text: `\n\n[verify] ${notes.join('; ')}` })
       buffer = ''

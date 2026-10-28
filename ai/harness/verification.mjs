@@ -5,7 +5,7 @@ export function verifyResult(value) {
   function visit(node, location = '') {
     if (!node || typeof node !== 'object') return
     if (node.identical === false) issues.push(`${location}comparison reports differences`)
-    if (node.converged === false) issues.push(`${location}solver did not converge; inspect cycles, residual and electrode constraints`)
+    if (node.converged === false) issues.push(node.verdict === 'budget_exhausted' ? `${location}optimization did not converge; the result is only a candidate` : `${location}solver did not converge; inspect cycles, residual and electrode constraints`)
     if (node.fallback_reason) issues.push(`${location}fallback: ${node.fallback_reason}`)
     for (const key of ['device', 'precision', 'backend', 'surface_mode']) {
       const wanted = node.requested?.[key], got = node.executed?.[key]

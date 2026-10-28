@@ -241,3 +241,34 @@ z=0. The default surface sampling step is spacing/64; narrower features may
 be missed. The midpoint vacuum interval must be bounded by two surfaces.
 
 `refine_geometry`의 `insulator` 배열은 전위 경계가 아닌 충돌 전용 부품을 지정합니다. `fly`에서 `no_cuts: true`와 `surface_collisions: "insulators"` (또는 `"all"`)을 함께 쓰면 계단식 전위를 유지하면서 정확한 표면 충돌을 추가합니다. CPU가 필요합니다.
+
+## Design optimization
+
+`optimize_design` is a write tool and needs approval. Set `template` to a
+workspace GEM file with numeric `{{name}}` placeholders, `parameters` to
+1-6 objects with `name`, `min`, `max`, `initial` and optional `step`, and
+`electrodes` to the usual refine-geometry assignments. `fixed` is an object
+of additional placeholder names and numeric values. Choose a workspace `out`
+folder. Optional `refine` supplies refine-geometry grid, spacing and other
+settings; the tool forces CPU and `gap_check: "error"`.
+
+For a flight objective use e.g. `objective: {"kind":"flight_scalar",
+"key":"arrival_tof_us.mean", "fly":{"particles":"ions.ion",
+"plane":[1,0,0,58],"duration_us":10}, "target":1}`. Omit `target` to
+minimize the scalar; `minimize:false` maximizes it. Analyzer objectives use
+`kind:"analyzer"`, analyzer_scan arguments other than `pa` and `out`, and
+`targets`/`weights` keyed by `k_v_per_ev` and/or `de_over_e`. The score is
+the weighted sum of squared target deviations; `de_over_e` is the channel mean.
+
+`budget` defaults to 20 and is capped at 100. `method` defaults to
+`nelder-mead`; `grid` supports one or two parameters and uses `step` (default
+one quarter of the range). `xtol` and `ftol` default to 1e-4 and 1e-6.
+Failed geometry, refinement and transmission produce `"+inf"` and a reason.
+Each `eval-NNNN` directory and `history.json` is retained. Reuse the same
+folder and inputs with a larger budget to resume; mismatched settings are
+rejected. `confirm_grid:true` additionally evaluates the best point at half
+the spacing, requiring explicit `refine.grid` and `refine.spacing`; this
+confirmation does not count against the search budget. A `budget_exhausted`
+result is only a candidate; neither optimization convergence nor confirmation
+proves grid convergence or checks quantities outside the objective. The whole
+search is bounded by `SIMREP_MCP_TIMEOUT_S`.

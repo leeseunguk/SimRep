@@ -16,6 +16,7 @@
 // SIMREP_BIN, never a caller string. Every caller path is resolved and refused
 // unless it stays inside SIMREP_WORKSPACE, including after symlink resolution.
 import { spawn } from 'node:child_process'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { createReadStream, existsSync, mkdirSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
@@ -61,6 +62,7 @@ function defaultBin() {
 
 const WORKSPACE = workspaceRoot()
 const children = new Set()
+const deadlineContext = new AsyncLocalStorage()
 function shutdown() {
   for (const child of children) {
     if (process.platform !== 'win32') {
@@ -255,7 +257,7 @@ function runProgram(bin, argv) {
     const timer = setTimeout(() => {
       killed = true
       killTree()
-    }, TIMEOUT_S * 1000)
+    }, Math.max(1, Math.min(TIMEOUT_S * 1000, (deadlineContext.getStore() ?? Infinity) - Date.now())))
     child.on('error', (error) => {
       clearTimeout(timer)
       resolve({ code: null, out, err: `${err}\n${error.message}`, killed, truncated, argv })
@@ -1027,8 +1029,11 @@ async function summarizeCsv(abs, maxRows, sampleN) {
 
 const outputs = new OutputStore()
 TOOLS.push(...workflowTools({
-  workspace: WORKSPACE, inputFile, insideWorkspace, prepareOutput, summarizeCsv, outputs, here,
-  runTool: (name, args) => BY_NAME.get(name).run(args),
+  workspace: WORKSPACE, inputFile, insideWorkspace, prepareOutput, summarizeCsv, outputs, here, timeoutSeconds: TIMEOUT_S,
+  runTool: (name, args) => {
+    if ((deadlineContext.getStore() ?? Infinity) <= Date.now()) throw new ToolError('optimization timeout')
+    return BY_NAME.get(name).run(args)
+  },
   runHelper: (file, args) => runProgram(process.env.SIMREP_PYTHON || 'python3', [file, ...args]),
 }))
 const BY_NAME = new Map(TOOLS.map((tool) => [tool.name, tool]))
@@ -1084,7 +1089,7 @@ async function handle(msg) {
         return result(id, { content: [{ type: 'text', text: 'arguments must be an object' }], isError: true })
       }
       try {
-        const ran = await tool.run(args)
+        const ran = await (tool.name === 'optimize_design' ? deadlineContext.run(Date.now() + TIMEOUT_S * 1000, () => tool.run(args)) : tool.run(args))
         let text = ran.text
         try {
           const value = JSON.parse(text)

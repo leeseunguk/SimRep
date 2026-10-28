@@ -37,6 +37,8 @@ The workspace `cargo build`/`test` compiles an empty stub for `simrep-py`;
 only maturin builds the real extension. Building a Python wheel with CAD:
 `maturin build ... --features cad`.
 
+MCP `optimize_design` runs a bounded, resumable GEM design loop; see `mcp/README.md`. Budget exhaustion yields a candidate, not an optimum.
+
 ## Core workflow
 
 Geometry -> potential array -> refined field -> fly particles -> export.

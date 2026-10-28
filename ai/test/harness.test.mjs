@@ -186,3 +186,15 @@ test('analyzer aligns shuffled ion IDs and validates bootstrap configuration', a
   mismatch = true
   await assert.rejects(tool.run(args), /ion IDs must match/)
 })
+
+
+test('budget exhausted optimization claims receive a verification note', async () => {
+  const events = []
+  const harness = await createHarness({ workspace: process.cwd(), emit: event => events.push(event) })
+  await harness.prepare('optimize design')
+  assert.equal(harness.activeSkill, 'optimize')
+  harness.emit({ type: 'tool_result', name: 'optimize_design', result: { content: [{ type: 'text', text: JSON.stringify({ verdict: 'budget_exhausted', converged: false }) }] } })
+  harness.emit({ type: 'delta', text: 'Other quantities were not checked. This design is optimal.' })
+  harness.finish('completed')
+  assert.ok(events.some(event => event.text?.includes('Budget-exhausted optimization')))
+})

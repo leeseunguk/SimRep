@@ -125,3 +125,11 @@ also receives a note; the original reply is preserved. The default paired
 particle bootstrap uses 200 resamples and seed 1; `bootstrap: false` disables it.
 Report the SD or 95% percentile interval alongside the FWHM. This does not
 replace grid convergence or beam-sampling checks.
+
+## Design optimization
+
+Requests containing optimize, optimise, 최적화 or 설계 select the optimize
+recipe and `optimize_design`. The write tool requires approval. A
+budget-exhausted result is a candidate, not an optimum or converged result;
+the verification layer flags unsupported claims. Independently check
+quantities outside the objective and grid convergence. See `mcp/README.md`.

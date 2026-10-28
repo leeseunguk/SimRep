@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 export const RECIPES = [
+  { id: 'optimize', keywords: /optimi[sz]e|최적화|설계/i, tools: ['optimize_design'], title: 'Design optimization',
+    steps: 'Use optimize_design with a numeric GEM template, explicit bounds and a defined flight or analyzer objective. A budget-exhausted result is a candidate, not an optimum. Check other design quantities independently and validate the best candidate on finer grids.' },
   { id: 'einzel', keywords: /einzel|focus|lens|렌즈|초점/i, tools: [], title: 'Einzel focusing',
     steps: 'Use refine_geometry with all electrode assignments, CPU, gap_check error. Keep the PA0, numbered bases and cuts sibling together. Fly the same beam at several lens voltages using fast adjust; apply the detector aperture to plane hits. Minimize spot RMS at a fixed detector or locate the waist; report beam, focal metric, arrivals and three-grid u_num. Start from examples/data/einzel.gem and ions.ion only if the user selected that example.' },
   { id: 'esa', keywords: /\bESA\b|analy[sz]er|energy.channel|passband|FWHM|dE\/E|분석기|에너지.*채널/i, tools: ['analyzer_scan'], title: 'ESA energy channels',

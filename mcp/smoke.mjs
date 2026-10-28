@@ -126,7 +126,7 @@ try {
   const expected = [
     'gpu_info', 'pa_info', 'aperture_check', 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'cad_measure', 'fly',
     'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories', 'read_csv_summary',
-    'simrep_plan', 'analyzer_scan', 'grid_convergence', 'compare_runs', 'check_geometry', 'summarize_results',
+    'simrep_plan', 'optimize_design', 'analyzer_scan', 'grid_convergence', 'compare_runs', 'check_geometry', 'summarize_results',
     'load_skill', 'fetch_tool_output',
   ]
   check('tools/list', expected.every((name) => names.includes(name)) && names.length === expected.length, names.join(', '))

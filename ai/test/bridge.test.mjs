@@ -323,3 +323,26 @@ test('bypass never approves a tool outside the allow-list', async t => {
   assert.deepEqual(options().tools, [])
   assert.equal((await options().canUseTool('Bash', {})).behavior, 'deny')
 })
+
+
+for (const mode of ['ask', 'session', 'bypass']) {
+  test(`optimize_design uses ${mode} approval mode`, async t => {
+    const { bridge, session, events } = await setup(t, { tool: 'optimize_design', args: {}, start: { approvalMode: mode } })
+    const seen = []
+    events.on('bridge:tool_result', value => seen.push(value))
+    const approval = event(events, 'approval'), result = event(events, 'tool_result'), done = event(events, 'done')
+    await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'optimize design' })
+    const request = await approval
+    assert.equal(request.name, 'optimize_design')
+    if (mode === 'ask') {
+      assert.equal(request.auto, undefined)
+      assert.equal(seen.length, 0)
+      await bridge.dispatch('approval.resolve', { approvalId: request.approvalId, allow: false })
+      assert.equal((await result).result.content[0].text, 'User declined tool execution.')
+    } else {
+      assert.equal(request.auto, true)
+      assert.notEqual((await result).result.content[0].text, 'User declined tool execution.')
+    }
+    await done
+  })
+}

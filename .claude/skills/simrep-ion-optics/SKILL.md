@@ -229,3 +229,10 @@ simrep --json pa-info einzel.pa0
 ```
 
 판정: `refine`은 `converged: true`, `executed.device: "cpu"`. 첫 `fly`는 `surface_mode: "staircase"`, `ez.pa0` 비행은 `surface_mode: "source-geometry"`(옆 `ez.cuts.json` 자동 사용). 둘 다 `arrivals: 8`, `splat_counts.plane: 8`, 평균 TOF 약 1.1922 us.
+
+### 설계 최적화
+
+MCP `optimize_design`에 숫자 `{{name}}` GEM 템플릿, 매개변수 범위,
+전극 및 비행 또는 분석기 목적 함수를 지정한다. 각 평가의 틈 검사와
+비수렴을 확인한다. 예산 소진 결과는 최적해가 아닌 후보이며 목적
+함수 밖의 물리량과 격자 수렴은 별도로 검증한다. 파일 쓰기 승인 필요.
