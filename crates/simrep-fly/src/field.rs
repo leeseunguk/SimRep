@@ -220,7 +220,7 @@ impl GridField {
     ) -> Result<Self, FlyError> {
         surface.validate_array(&self.array)?;
         let (filled, report) = ghost::fill(&self.array, surface);
-        if report.degree_counts.iter().sum::<usize>() > 0 {
+        if self.ghost_fill.is_some() || report.degree_counts.iter().sum::<usize>() > 0 {
             let rebuilt = Self::build(filled, self.reconstruction, self.compact)?;
             self.coefficients = rebuilt.coefficients;
             self.coefficient_dims = rebuilt.coefficient_dims;

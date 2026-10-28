@@ -156,7 +156,7 @@ pub(crate) struct ReconstructionCuts {
     pub(crate) links: Vec<LinkIntersections>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 struct Domain {
     dims: [usize; 3],
     origin: Vector,
@@ -469,13 +469,24 @@ impl SurfaceModel {
                 "cylindrical surface domain requires nz=1 and zero radial/z origins",
             ));
         }
-        self.domain = Some(Domain {
+        let domain = Domain {
             dims,
             origin: origin_mm,
             spacing,
             cylindrical,
             mirrors: [array.mirrors.x, array.mirrors.y, array.mirrors.z],
-        });
+        };
+        if self.domain.as_ref().is_some_and(|old| *old != domain)
+            && self.reconstruction_cuts.is_some()
+        {
+            if self.accuracy != SurfaceAccuracy::SourceGeometry {
+                return Err(FlyError(
+                    "cannot rebind cuts without retained source geometry",
+                ));
+            }
+            self.reconstruction_cuts = None;
+        }
+        self.domain = Some(domain);
         Ok(self)
     }
 
@@ -1157,6 +1168,100 @@ mod tests {
         let r = fly(&field, &p, &FlightOptions::default()).unwrap();
         assert_eq!(r.splat_reason, SplatReason::SurfaceElectrode { number: 4 });
         assert!((r.final_state.position_mm[0] + 0.63).abs() < 1e-11);
+    }
+
+    #[test]
+    fn loaded_sidecar_rebinding_invalidates_grid_specific_cuts() {
+        let gem = simrep_gem::parse_gem(
+            "pa_define{nx=9,ny=3,nz=1,dx=0.25} e(1){fill{within{box3d(0,0,0,0.65,1,1)}}}",
+        )
+        .unwrap();
+        let source = gem.electrode_sdfs().unwrap().remove(0);
+        let data = serde_json::json!({
+            "version": 3, "dims": [9,3,1], "origin_mm": [0.0,0.0,0.0],
+            "spacing_mm": [0.25,0.25,1.0], "symmetry": "planar", "mirrors": ([false;3]),
+            "electrode_numbers": [17],
+            "source_geometry": [SourceSurface { number: 17, geometry: SourceGeometry::gem(&source).unwrap() }],
+            "node_electrodes": vec![Some(17); 27],
+            "link_intersections": [{ "node": 26, "fractions": [null,0.25,null,null,null,null],
+                "electrodes": [null,17,null,null,null,null] }]
+        });
+        let load = || SurfaceModel::from_reader(data.to_string().as_bytes()).unwrap();
+        let mut original = PotentialArray::new(9, 3, 1);
+        original.dx_mm = 0.25;
+        original.dy_mm = 0.25;
+        let same = load().with_pa_domain(&original, [0.0; 3]).unwrap();
+        let cuts = same.reconstruction_cuts.as_ref().unwrap();
+        assert_eq!(cuts.nodes, vec![Some(17); 27]);
+        assert_eq!(cuts.links.len(), 1);
+        assert_eq!(cuts.links[0].node, 26);
+        assert_eq!(
+            cuts.links[0].fractions,
+            [None, Some(0.25), None, None, None, None]
+        );
+        assert_eq!(
+            cuts.links[0].electrodes,
+            [None, Some(17), None, None, None, None]
+        );
+        let small = PotentialArray::new(3, 3, 1);
+        let rebound = load().with_pa_domain(&small, [0.0; 3]).unwrap();
+        assert!(rebound.reconstruction_cuts.is_none());
+        GridField::new(small)
+            .unwrap()
+            .with_surface(&rebound)
+            .unwrap();
+        let mut shifted = original.clone();
+        shifted.dx_mm = 0.2;
+        for i in 0..shifted.potentials.len() {
+            let x = 0.1 + (i % shifted.nx) as f64 * shifted.dx_mm;
+            shifted.electrodes[i] = x <= 0.65;
+            shifted.potentials[i] = (x - 0.65).max(0.0);
+        }
+        let origin = [0.1, 0.0, 0.0];
+        let rebound = load().with_pa_domain(&shifted, origin).unwrap();
+        let fresh = SurfaceModel::from_sdfs(vec![(17, Arc::new(source))], 1e-11)
+            .unwrap()
+            .with_pa_domain(&shifted, origin)
+            .unwrap();
+        assert!(rebound.reconstruction_cuts.is_none());
+        let rebuilt = GridField::new(shifted.clone())
+            .unwrap()
+            .with_surface(&rebound)
+            .unwrap();
+        let expected = GridField::new(shifted)
+            .unwrap()
+            .with_surface(&fresh)
+            .unwrap();
+        assert_eq!(rebuilt.ghost_fill_report(), expected.ghost_fill_report());
+        for p in [[0.6, 0.25, 0.0], [0.8, 0.25, 0.0]] {
+            assert_eq!(rebuilt.sample(p, 0.0), expected.sample(p, 0.0));
+        }
+        for x in [0.2, 0.4, 0.6] {
+            let from = [x, 0.25, 0.0];
+            let to = [x + 0.2, 0.25, 0.0];
+            let a = rebound.first_hit(from, to);
+            let b = fresh.first_hit(from, to);
+            assert_eq!(a.is_some(), b.is_some());
+            if let (Some((a, na)), Some((b, nb))) = (a, b) {
+                assert_eq!(na, nb);
+                assert!((a - b).abs() < 1e-8);
+            }
+        }
+        let v2 = sampled(
+            &Sdf::Sphere {
+                center: [0.0; 3],
+                radius: 0.5,
+            },
+            5,
+            1,
+        );
+        assert!(
+            v2.with_pa_domain(&original, [0.0; 3])
+                .err()
+                .unwrap()
+                .to_string()
+                .contains("source geometry")
+        );
     }
 
     #[test]

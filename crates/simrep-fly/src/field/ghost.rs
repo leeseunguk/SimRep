@@ -550,6 +550,51 @@ mod tests {
     }
 
     #[test]
+    fn replacing_surface_with_no_eligible_electrodes_restores_original_field() {
+        use crate::{Field, GridField};
+        let (array, surface) = capacitor(1.0, 0.0);
+        let skipped = SurfaceModel::from_sdfs(
+            vec![(
+                12,
+                Arc::new(Sdf::Plane {
+                    normal: [1.0, 0.0, 0.0],
+                    offset: -10.0,
+                }),
+            )],
+            1e-13,
+        )
+        .unwrap()
+        .with_pa_domain(&array, [0.0; 3])
+        .unwrap();
+        for compact in [false, true] {
+            let original = if compact {
+                GridField::new_compact(array.clone())
+            } else {
+                GridField::new(array.clone())
+            }
+            .unwrap();
+            let filled = original.clone().with_surface(&surface).unwrap();
+            assert!(
+                filled
+                    .ghost_fill_report()
+                    .unwrap()
+                    .degree_counts
+                    .iter()
+                    .sum::<usize>()
+                    > 0
+            );
+            let replaced = filled.with_surface(&skipped).unwrap();
+            assert_eq!(
+                replaced.ghost_fill_report().unwrap().skipped_electrodes,
+                vec![12]
+            );
+            for p in [[0.2, 0.4, 0.0], [0.24, 0.4, 0.0], [1.56, 0.4, 0.0]] {
+                assert_eq!(replaced.sample(p, 0.0), original.sample(p, 0.0));
+            }
+        }
+    }
+
+    #[test]
     fn band_mask_leaves_deep_metal_untouched() {
         let mut array = PotentialArray::new(61, 3, 1);
         for i in 0..array.potentials.len() {
