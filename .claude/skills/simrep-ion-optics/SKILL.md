@@ -187,9 +187,27 @@ SIMREP_BIN=./target/release/simrep node mcp/smoke.mjs     # 점검: "all checks 
 - 표본 dE/E는 스캔 간격, 입자 수, 빔 각도·위치 폭에 민감하다(4절). 한 번 잰 값을 분석기 고유값처럼 쓰지 않는다. 설정을 바꿔 안정한지 본다.
 - cut-cell 표면 근처 전기장은 문서화된 차수에 못 미친다. `docs/validation/GATES.md`에서 `mms-cut-cylinder-field`(기대 1.0, 끝점 0.441, 인접 최소 -0.125), `mms-cut-sphere-field`(기대 1.0, 끝점 0.257)가 "endpoint below documented order"다. 전위 자체(`mms-cut-*-potential`, 1.7~1.8)도 2차에 못 미친다. 표면에서 셀 한두 개 안쪽을 지나는 궤적은 격자를 곱게 해도 오차가 기대만큼 줄지 않는다. 그런 양은 세 격자 `u_num`을 꼭 내고, 틈은 h <= g/10으로 해상한다.
 - 정확 표면이 조용히 빠질 수 있다. `fly`와 `load_field`는 PA0 옆 같은 이름의 `.cuts.json`만 자동으로 줍는다. PA0만 옮기거나 이름을 바꾸면 계단 충돌이 된다. 다른 위치면 `--cuts`(`cuts=`)로 넘긴다. JSON `executed.surface_mode`(`source-geometry` 대 `staircase`)로 확인한다.
+- 형상 파라미터는 키 이름을 읽고 옮긴다. 설계 결과의 `mean_radius_mm`(R0)를 R2로 옮겨 적은 적이 있다. 분석기는 R1, R2, 간격, R0를 따로 적는다.
+- 매개변수 모델에서 반지름을 바꿀 때 입구 덮개·출구 창 같은 다른 형상이 같이 움직이면 그 모델의 결과는 전부 무효다(실제로 v1 모델을 버렸다). 바꾸지 않는 형상이 그대로인지 회귀 검사로 고정한다.
+- 최적화 결과는 `success`와 평가 횟수를 같이 본다. 평가 예산을 다 써서 멈춘 것은 수렴이 아니다. 목적함수에 없는 양(예: 에너지만 맞춘 설계의 각도 수용)은 따로 재기 전엔 주장하지 않는다.
+- 각도 폭은 조건부 1차원 절단이다. 한 축을 0으로 고정하고 잰 FWHM 두 개는 직사각형 수용각이 아니다. 소스 각도 창이 실제 수용폭보다 좁으면(예: 방위각 창 ±2.25° 대 실제 FWHM 13.7°) 창이 결과를 자른다. 코드의 radial/tangential이 문서의 자오/방위와 같은 뜻인지 먼저 맞춘다.
+- 결과 캐시 키에 들어가지 않는 설정(창, 점 수, 전압)을 바꿀 땐 이름표를 새로 붙인다. 그렇지 않으면 옛 결과가 조용히 재사용된다.
+- 재구성·충돌 코드가 바뀌면 이전 채널 결론을 대표 채널 몇 개로 다시 계산해 본다. 표면 근처 재구성 수정 뒤 판 근처 궤도 편향은 4.9%에서 0.03%로 줄었지만, ESA의 k는 0.0923에서 0.0928로만 움직였다.
+- 같은 광선이라도 입력 형식이 다르면 결과 개수가 달라질 수 있다. `.ion`은 각도를 반올림해서 경계 광선 하나가 바뀌었다(Python 배열 30개 대 `.ion` 29개). 개수를 비교할 땐 같은 입력 파일로 돌린다.
+- 반올림한 상한("0.004 mm 이내")은 정확값(0.0041 mm)과 대조한다. 상한은 아래로 반올림하지 않는다.
+- 공개 그림에는 부품 번호, STEP 파일 이름, 경로, 치수 주석이 남기 쉽다(CAD 범례, 앱 장면 트리). 일반 이름(내부 판, 외부 판, 검출기)으로 바꾸고, 글자를 전부 읽어 확인한 뒤 내보낸다.
 - WSL에서 Windows exe(`simrep.exe`, `cargo.exe`, `python.exe`, `maturin.exe`)를 부르면 stdin을 닫지 않을 때 멈춘다. 항상 `(cd /mnt/c && timeout 900 <exe> ... < /dev/null)` 꼴로 부른다. 환경 변수는 `WSLENV`로 넘긴다(경로는 `/p`). 자세한 것은 `docs/python.md`의 "Windows build with cargo.exe".
 
-## 8. 검증된 시작점 (einzel, CPU)
+## 8. SIMION과 같은 모델로 비교할 때
+
+- SIMION 바이너리는 역분석하지 않는다(라이선스). `simion.exe --nogui --noprompt`의 명령(`refine`, `fastadj`, `fly`, `lua`)과 Lua API만 쓴다. 예시는 `tools/simion-oracle/`(README, `quad_collision_probe.py`, `workbench_metadata.lua`).
+- 원통 대칭 PA#를 SIMION에 넣기 전에 헤더 간격을 확인한다. y·z 간격이 서로 다른 원통 대칭 PA#는 SIMION이 거부했다. 단일 z 평면의 헤더를 맞춘 복사본은 받아들였다.
+- SIMION은 PA0만으로 날리지 못한다(`IOB corrupt: Invalid workspace size`). 워크벤치(IOB)가 필요하다. GUI 없이 만들려면 비슷한 예제 IOB(원통 대칭 3전극이면 `examples/einzel/einzel.iob`)를 복사해 `lua setup.lua`로 `simion.wb:load(...)`, `simion.wb.instances[1].pa:load('x.pa0')`, 위치·`scale` 설정, fast adjust, `simion.wb:save('x.iob')`를 하고, `workbench_metadata.lua`로 인스턴스 PA, 배율, 위치, 대칭을 확인한다.
+- 두 프로그램의 `1e-7` 수렴 기준은 정의가 다르다. 같은 숫자를 넣었다고 같은 수렴이 아니다. 노드별 전위차(최대·RMS)로 맞춘다. ESA에서는 최대 0.0122 V, RMS 0.0022 V였다.
+- SIMION과의 직접 비교는 계단 충돌(`--no-cuts`)로 한다. 정확 표면 결과와의 차이는 그다음에 따로 적는다. 같은 광선에서 계단 0개 대 정확 표면 29개처럼 크게 갈리면 물리 차이로 보기 전에 검출면, 원점, 전압 규약부터 같은지 확인한다.
+- 시간은 계산 시간만 비교한다(로드, 출력, IOB 준비 제외). 원시 시간에서 배수를 다시 계산하고, 다른 무거운 작업(예: Opera FEA)이 돌던 측정은 경합으로 표시한다. Windows 프로세스는 분리 실행하지 말고, 모든 명령에 타임아웃을 걸고, 끝나면 `tools/win/winproc.ps1 cleanup`으로 남은 conhost를 확인한다.
+
+## 9. 검증된 시작점 (einzel, CPU)
 
 ```sh
 simrep --json gem2pa examples/data/einzel.gem einzel.pa#
