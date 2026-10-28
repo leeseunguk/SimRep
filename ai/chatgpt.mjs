@@ -6,10 +6,11 @@ import { HERE } from './tools.mjs'
 import { BridgeError, providerDiagnostic } from './errors.mjs'
 
 export class ChatGPTSession {
-  constructor({ auth, account, workspace, model, gate, emit, systemPrompt = undefined, rpcFactory = (command, args, options) => new RpcProcess(command, args, options) }) {
+  constructor({ auth, account, workspace, model, gate, emit, systemPrompt = undefined, fallbackModels = [], onModel = (_model) => {}, canRetryModel = () => true, rpcFactory = (command, args, options) => new RpcProcess(command, args, options) }) {
     this.auth = auth; this.account = account; this.workspace = workspace; this.model = model
     this.gate = gate; this.emit = emit; this.rpcFactory = rpcFactory
     this.systemPrompt = systemPrompt
+    this.fallbackModels = [...fallbackModels]; this.onModel = onModel; this.canRetryModel = canRetryModel; this.hasCompletedTurn = false
     this.rpc = undefined; this.threadId = undefined; this.token = undefined; this.turnId = undefined
     this.completion = undefined
     this.catalog = 'catalog-' + randomUUID()
@@ -92,8 +93,7 @@ export class ChatGPTSession {
         this.emit({ type: 'delta', text: p.delta })
       } else if (p?.threadId === this.threadId && message.method === 'turn/completed') {
         const status = p.turn.status
-        if (status === 'failed') this.emit({ type: 'error', ...providerDiagnostic(p.turn.error, this.secrets) })
-        this.completion?.resolve(['completed', 'interrupted'].includes(status) ? status : 'failed')
+        this.completion?.resolve({ status, error: p.turn.error })
       }
     }
     rpc.onclose = () => this.completion?.reject(new BridgeError('PROVIDER_CLOSED', 'ChatGPT process disconnected.'))
@@ -112,15 +112,25 @@ export class ChatGPTSession {
     this.cancelled = false
     await this.connect()
     if (this.cancelled) return 'interrupted'
-    const completed = new Promise((resolve, reject) => { this.completion = { resolve, reject } })
-    // Subscribe before turn/start because a short turn may finish before its
-    // request response. Attach rejection handling immediately for process exit.
-    completed.catch(() => {})
-    try {
-      const result = await this.rpc.request('turn/start', { threadId: this.threadId, input: [{ type: 'text', text, text_elements: [] }] })
-      this.turnId = result.turn.id
-      return await completed
-    } finally { this.completion = undefined; this.turnId = undefined }
+    while (true) {
+      const completed = new Promise((resolve, reject) => { this.completion = { resolve, reject } })
+      completed.catch(() => {})
+      try {
+        const result = await this.rpc.request('turn/start', { threadId: this.threadId, input: [{ type: 'text', text, text_elements: [] }] })
+        this.turnId = result.turn.id
+        const outcome = await completed
+        if (outcome.status === 'failed' && !this.hasCompletedTurn && this.canRetryModel() && this.fallbackModels.length &&
+            /\bmodel_not_found\b/i.test(JSON.stringify(outcome.error || {}))) {
+          this.model = this.fallbackModels.shift()
+          this.rpc.close(); this.rpc = undefined; this.threadId = undefined
+          await this.connect()
+          continue
+        }
+        if (outcome.status === 'failed') this.emit({ type: 'error', ...providerDiagnostic(outcome.error, this.secrets) })
+        if (outcome.status === 'completed') { this.hasCompletedTurn = true; this.onModel(this.model) }
+        return ['completed', 'interrupted'].includes(outcome.status) ? outcome.status : 'failed'
+      } finally { this.completion = undefined; this.turnId = undefined }
+    }
   }
 
   async cancel() {

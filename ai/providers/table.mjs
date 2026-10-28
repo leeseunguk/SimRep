@@ -25,7 +25,7 @@ const key = (id, label, envKey, baseUrl, model, wireApi = 'chat-completions') =>
   toolCalling: true, withoutPlan: 'apiKey', planNote: 'API-key usage is billed by the provider, not a subscription login.',
 })
 export const PROVIDERS = [
-  { id: 'chatgpt', label: 'ChatGPT', authKind: 'oauth', wireApi: 'codex-responses', defaultModel: 'gpt-5.4', models: ['gpt-5.4'],
+  { id: 'chatgpt', label: 'ChatGPT', authKind: 'oauth', wireApi: 'codex-responses', defaultModel: 'gpt-6.1-sol', models: ['gpt-6.1-sol', 'gpt-5.6-terra', 'gpt-5.5', 'gpt-5.3-codex-spark'],
     toolCalling: true, withoutPlan: 'blocked', usageUrl: 'https://chatgpt.com/settings/usage',
     planNote: 'Continue with ChatGPT using the Codex subscription OAuth client. Provider plan eligibility and limits apply.' },
   { id: 'claude', label: 'Claude', authKind: 'oauth', wireApi: 'claude-agent-sdk', defaultModel: 'sonnet', models: ['sonnet', 'opus', 'haiku'],

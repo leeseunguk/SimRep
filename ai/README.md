@@ -294,3 +294,12 @@ Transitive versions are locked in `package-lock.json`. Preserve redistributed
 `node_modules` notices, including `@bufbuild/protobuf`'s Apache-2.0 AND BSD-3-Clause
 notice and the Anthropic SDK/native commercial terms. The MIT auth adaptation
 does not relicense either the SDK or the existing Prosperity-licensed MCP files.
+
+### ChatGPT model selection
+
+The Codex bridge uses an ordered fallback catalog (gpt-6.1-sol, gpt-5.6-terra,
+gpt-5.5, gpt-5.3-codex-spark); it is not an account entitlement list. On the
+first turn, `model_not_found` retries the next model. After a successful turn,
+`auth.status` reports the selected model first. Set `SIMREP_AI_CHATGPT_MODEL`
+to pin a model, or pass `model` to `chat.start`; explicit choices do not fall
+back. The start result reports the initial model, which can change after retry.

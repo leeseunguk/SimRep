@@ -158,7 +158,7 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
   const methods: { [M in Method]: Handler<M> } = {
     "auth.providers": () => ({
       providers: [
-        { id: "chatgpt", label: "ChatGPT", authKind: "oauth", models: ["gpt-5.4"], toolCalling: true, withoutPlan: "blocked" },
+        { id: "chatgpt", label: "ChatGPT", authKind: "oauth", models: ["gpt-6.1-sol", "gpt-5.6-terra", "gpt-5.5", "gpt-5.3-codex-spark"], toolCalling: true, withoutPlan: "blocked" },
         { id: "claude", label: "Claude", authKind: "oauth", models: ["sonnet", "opus", "haiku"], toolCalling: true, withoutPlan: "apiKey" },
         ...extras,
       ],
@@ -206,7 +206,7 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       const sessionId = `session-${++ids}`;
       demo.started.push({ sessionId, provider: p.provider, account: p.account });
       sessions.set(sessionId, { provider: p.provider, turn: 0, turnId: null });
-      return { sessionId, provider: p.provider, model: p.model ?? (p.provider === "claude" ? "sonnet" : "gpt-5.4"), workspace: p.workspace };
+      return { sessionId, provider: p.provider, model: p.model ?? (p.provider === "claude" ? "sonnet" : "gpt-6.1-sol"), workspace: p.workspace };
     },
     "chat.send": (p) => {
       const s = sessions.get(p.sessionId);

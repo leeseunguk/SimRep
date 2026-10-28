@@ -18,7 +18,7 @@ test('pinned Codex app-server initializes the restricted model catalog and SimRe
   const gate = await toolGate(directory, async () => false, () => {})
   const auth = { store, access: async () => ({ access_token: 'test-not-a-real-access-token' }) }
   let diagnostics = ''
-  const session = new ChatGPTSession({ auth, account: 'test', workspace: directory, model: 'gpt-5.4', gate, emit: () => {},
+  const session = new ChatGPTSession({ auth, account: 'test', workspace: directory, model: 'gpt-6.1-sol', gate, emit: () => {},
     rpcFactory: (command, args, options) => {
       return new RpcProcess(command, args, { ...options, onStderr: text => { diagnostics += text } })
     } })

@@ -64,7 +64,7 @@ export const PROVIDER_LIST: readonly ProviderInfo[] = [
     usingLabel: "ai.panel.usingChatgpt",
     usageUrl: "https://chatgpt.com/settings/usage",
     planWelcome: true,
-    models: ["", "gpt-5.4"],
+    models: ["", "gpt-6.1-sol", "gpt-5.6-terra", "gpt-5.5", "gpt-5.3-codex-spark"],
   },
   {
     id: "claude",

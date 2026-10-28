@@ -183,3 +183,34 @@ test('provider discovery, device-code events, fixed usage URLs and unsupported p
   await assert.rejects(bridge.dispatch('auth.setApiKey', { provider: 'openai', key: 'never-accepted' }), e => e.code === 'METHOD_NOT_FOUND')
   finish()
 })
+
+
+test('ChatGPT retries model_not_found only and reports the successful model', async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'simrep-model-fallback-'))
+  const store = new Store(directory); await store.init()
+  const auth = { store, access: async () => ({ access_token: 'fake-token' }) }
+  const attempts = [], events = [], selected = []
+  const rpcFactory = () => {
+    const model = session.model
+    const rpc = { closed: false, onmessage: async () => {}, onclose: () => {}, send() {}, close() { this.closed = true },
+      async request(method) {
+        if (method === 'thread/start') return { thread: { id: model } }
+        if (method === 'turn/start') {
+          attempts.push(model)
+          queueMicrotask(() => void rpc.onmessage({ method: 'turn/completed', params: { threadId: model,
+            turn: model === 'missing' ? { status: 'failed', error: { message: 'model_not_found' } } : { status: 'completed' } } }))
+          return { turn: { id: 'turn' } }
+        }
+        return {}
+      } }
+    return rpc
+  }
+  const session = new ChatGPTSession({ auth, account: 'a', workspace: directory, model: 'missing', fallbackModels: ['available'],
+    onModel: model => selected.push(model), gate: { config: { command: 'node', args: [], env: {} }, close() {} },
+    emit: event => events.push(event), rpcFactory })
+  t.after(async () => { session.close(); await rm(directory, { recursive: true, force: true }) })
+  assert.equal(await session.send('hello'), 'completed')
+  assert.deepEqual(attempts, ['missing', 'available'])
+  assert.deepEqual(selected, ['available'])
+  assert.equal(events.some(event => event.type === 'error'), false)
+})

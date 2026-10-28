@@ -9,7 +9,7 @@ import { addUser, applyEvent, EMPTY_CHAT, keyArgs, resolveApproval, summarizeRes
 import { AI_ERROR_CODES, AiError, parseEvent, REFRESH_FAILED_CODES, unwrap, type Account, type AiEvent } from "./protocol";
 
 const gpt = (over: Partial<Account> = {}): Account => ({ id: "g1", provider: "chatgpt", label: "a@example.com (g1)", authenticated: true, planEnabled: true, ...over });
-const chatOf = (sessionId = "s1"): ChatState => ({ ...EMPTY_CHAT, session: { id: sessionId, provider: "chatgpt", model: "gpt-5.4", workspace: "/w" } });
+const chatOf = (sessionId = "s1"): ChatState => ({ ...EMPTY_CHAT, session: { id: sessionId, provider: "chatgpt", model: "gpt-6.1-sol", workspace: "/w" } });
 const ev = (e: Record<string, unknown>) => parseEvent({ provider: "chatgpt", sessionId: "s1", turnId: "t1", ...e }) as AiEvent;
 const run = (s: ChatState, ...events: Record<string, unknown>[]) => events.reduce((acc, e) => applyEvent(acc, ev(e)), s);
 

@@ -31,7 +31,7 @@ export class Bridge {
     Object.assign(this.auth, { chatgpt, claude, kiro: new KiroAuth() }, auth)
     this.create = Object.fromEntries(PROVIDERS.map(p => [p.id, options => createProvider({ ...options, provider: p })]))
     Object.assign(this.create, { chatgpt: createChatGPT, claude: createClaude })
-    this.sessions = new Map(); this.approvals = new Map()
+    this.sessions = new Map(); this.approvals = new Map(); this.chatgptModel = undefined
   }
 
   event(provider, fields) { this.notify({ jsonrpc: '2.0', method: 'event', params: { provider, ...fields } }) }
@@ -39,7 +39,8 @@ export class Bridge {
     const accounts = await this.auth[p].accounts()
     const info = providerById(p)
     return { provider: p, authenticated: accounts.some(a => a.authenticated), accounts,
-      models: this.auth[p].models ? await this.auth[p].models() : info.models,
+      models: p === 'chatgpt' && this.chatgptModel ? [this.chatgptModel, ...info.models.filter(m => m !== this.chatgptModel)]
+        : this.auth[p].models ? await this.auth[p].models() : info.models,
       toolCalling: info.toolCalling, ...(info.unsupportedReason && { message: info.unsupportedReason }) }
   }
 
@@ -127,15 +128,22 @@ export class Bridge {
         if (p === 'chatgpt' && !account.planEnabled) throw new BridgeError('PLAN_PERMISSION_REQUIRED', 'Enable ChatGPT plan use before starting a chat.')
         if (params.model !== undefined) required(params.model, 'model')
         const models = this.auth[p].models ? await this.auth[p].models() : info.models
-        const model = params.model || models[0] || info.defaultModel
+        const override = p === 'chatgpt' ? process.env.SIMREP_AI_CHATGPT_MODEL?.trim() : undefined
+        const model = params.model || override || (p === 'chatgpt' && this.chatgptModel) || models[0] || info.defaultModel
         if (!model || (p === 'github-copilot' && !models.includes(model))) throw new BridgeError('PROVIDER_UNSUPPORTED', 'No enabled tool-capable model is available. Enable a model with the provider first.')
         const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, turn: undefined, client: undefined, harness: undefined }
         if (params.language !== undefined && (typeof params.language !== 'string' || !/^[a-zA-Z-]{2,35}$/.test(params.language))) throw new BridgeError('INVALID_PARAMS', 'language must be a language tag.')
         const harness = await createHarness({ workspace, language: params.language, emit: fields => this.emitChat(session, fields) })
-        const emit = fields => harness.emit(fields)
+        const emit = fields => {
+          if (['tool_call', 'tool_result', 'delta'].includes(fields.type)) session.turnOutput = true
+          harness.emit(fields)
+        }
         const gate = await toolGate(workspace, (name, args) => this.approve(session, name, args), emit)
         try {
-          session.client = this.create[p]({ auth: this.auth[p], account: account.id, workspace, model, gate, emit, systemPrompt: harness.systemPrompt })
+          session.client = this.create[p]({ auth: this.auth[p], account: account.id, workspace, model, gate, emit, systemPrompt: harness.systemPrompt,
+            ...(p === 'chatgpt' && { fallbackModels: params.model || override ? [] : models.filter(m => m !== model),
+              canRetryModel: () => !session.turnOutput,
+              onModel: selected => { session.model = selected; this.chatgptModel = selected } }) })
           session.harness = harness
           this.sessions.set(session.id, session)
         } catch (error) { gate.close(); throw error }
@@ -149,6 +157,7 @@ export class Bridge {
         if (session.turn) throw new BridgeError('BUSY', 'A turn is already running.')
         const turn = { id: randomUUID(), cancelled: false }
         session.turn = turn
+        session.turnOutput = false
         // Defer until the JSON-RPC acknowledgement is written; listeners are
         // still required before sending, since provider startup is asynchronous.
         setImmediate(() => {
