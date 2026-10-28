@@ -160,6 +160,33 @@ GPU 기능에는 WebGPU/Vulkan 또는 DX12를 지원하는 그래픽 카드가 �
 
 ---
 
+## AI 도우미
+
+데스크톱 앱 오른쪽의 **어시스턴트** 패널에서 ChatGPT, Claude 같은 AI와 한국어로 대화하며 SimRep을 움직일 수 있습니다.
+AI는 SimRep MCP 도구(`pa_info`, `refine`, `fly`, `summarize_results` 등)를 직접 불러 전기장을 풀고 이온을 날린 뒤 결과를 요약합니다.
+요금은 각자의 구독 계정으로 로그인해서 그 요금제로 처리합니다.
+
+![einzel 렌즈 3D 화면과 AI 패널: refine·fly 도구 카드와 한국어 답변](docs/images/ai/ai-panel.png)
+
+위 화면은 실제 ChatGPT 계정으로 "einzel 렌즈 전위 계산하고 이온 날려줘"라고 요청한 결과입니다.
+모델이 `simrep_plan`과 `pa_info`로 파일을 확인하고, 승인을 받아 `refine`과 `fly`를 실행한 뒤, 결과 CSV를 읽어 수렴 여부, 검출면 도달 수, TOF를 한국어로 정리했습니다.
+3D 뷰와 히스토그램은 앱이 템플릿 설정으로 날린 결과이고, AI는 같은 폴더에서 자기 설정으로 따로 날렸습니다.
+
+- **파일을 쓰는 도구는 항상 먼저 묻습니다.** `refine`, `fly`, 내보내기처럼 프로젝트 폴더에 쓰는 도구는 승인 카드에서 허용해야 실행되고, 답하지 않으면 2분 뒤 거부됩니다. 읽기 전용 도구만 바로 실행됩니다.
+
+  ![fly 도구 승인 카드](docs/images/ai/ai-approval.png)
+
+- **토큰은 PC 밖으로, 창 안으로 나가지 않습니다.** 로그인은 시스템 브라우저에서 하고, 토큰은 로컬 AI 브리지(`ai/`)만 갖습니다. 앱 창(WebView)에는 계정 표시 이름과 대화·도구 이벤트만 전달됩니다. AI는 셸이나 임의 파일 접근 없이, 프로젝트 폴더로 제한된 SimRep 도구만 씁니다.
+
+  ![AI 계정 화면 (계정 이름은 가림)](docs/images/ai/ai-accounts.png)
+
+- **제공자**: 구독 로그인(OAuth)은 ChatGPT, Claude, GitHub Copilot, xAI(Grok), Kimi Code, Devin, Meta, Kiro, OpenRouter를 지원합니다. Cursor와 Radius는 로그인만 되고 대화에는 아직 쓸 수 없습니다. OpenAI, Gemini, DeepSeek, Mistral 등은 환경 변수의 API 키로 쓸 수 있으며, 이때는 구독이 아니라 API 사용량으로 과금됩니다.
+- **하네스**: 모든 제공자가 같은 시스템 프롬프트(단위, 장치 규칙, PA 파일 구성, 검증 규칙)를 받습니다. einzel, ESA, 4중극, 자기장, CAD 같은 작업 레시피는 요청에 맞는 것만 그때 불러옵니다. 상위 도구 `analyzer_scan`, `grid_convergence`, `check_geometry`, `compare_runs`로 에너지 분석기 스캔, 격자 수렴(u_num), 형상 틈 검사, 결과 비교를 한 번에 맡길 수 있습니다. 답변의 속도 수치는 실제 도구 결과의 `compute_ms`와 맞는지 확인하고, 폴백·미수렴 같은 문제에는 `[verify]` 메모를 붙입니다.
+- **시작하기**: `ai/`에서 `npm ci`로 브리지를 설치하고 SimRep CLI를 빌드한 뒤 앱을 띄웁니다. 상단 바의 계정 버튼에서 로그인하고 **어시스턴트**를 엽니다. 자세한 설치와 제공자별 설명은 [`ai/README.md`](ai/README.md), 하네스 구조는 [`ai/harness/README.md`](ai/harness/README.md)에 있습니다.
+- **한계**: 자동 테스트는 가짜 서버로 로그인·도구 흐름을 검증할 뿐, 각 제공자의 실제 계정 로그인과 요금제 권한은 사용자가 직접 확인해야 합니다. 어떤 모델을 쓸 수 있는지는 제공자와 계정 요금제가 정합니다. 제공자 약관과 과금 방식은 [`ai/README.md`](ai/README.md)의 "Providers, billing and availability" 절을 따릅니다.
+
+---
+
 ## 명령행 도구 `simrep`
 
 ```sh
