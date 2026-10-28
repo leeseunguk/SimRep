@@ -29,6 +29,7 @@ export interface Session {
   provider: Provider;
   model: string;
   workspace: string;
+  account?: string;
 }
 
 export interface ChatState {
@@ -59,7 +60,7 @@ export function resolveApproval(s: ChatState, approvalId: string, allow: boolean
 
 /** Applies one `ai-event` to the transcript. Events of other sessions (an older chat) are ignored. */
 export function applyEvent(s: ChatState, e: AiEvent): ChatState {
-  if (e.type === "auth") return s;
+  if (e.type === "auth" || e.type === "device_code") return s;
   if (!s.session || e.sessionId !== s.session.id) return s;
   if ("activeSkill" in e && e.activeSkill) s = { ...s, activeSkill: e.activeSkill };
   const items = s.items;

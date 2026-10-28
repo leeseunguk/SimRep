@@ -1,5 +1,5 @@
 import { emit } from "@tauri-apps/api/event";
-import { AI_EVENT, type Account, type AiEvent, type Method, type Methods, type Provider, type ProviderStatus, type RpcRequest, type RpcResponse } from "../ai/protocol";
+import { AI_EVENT, type Account, type AiEvent, type Method, type Methods, type Provider, type ProviderMetadata, type ProviderStatus, type RpcRequest, type RpcResponse } from "../ai/protocol";
 
 /**
  * Demo mode's AI bridge (ai/PROTOCOL.md): `ai_request` answers and `ai-event` notifications for
@@ -7,8 +7,9 @@ import { AI_EVENT, type Account, type AiEvent, type Method, type Methods, type P
  * chat turn streams text, runs a read-only tool, asks approval for `fly` and reports its summary.
  *
  * Address flags: `?ai=noplan` (ChatGPT sign-in without plan usage), `?ai=denied` (access_denied),
- * `?ai=apikey` (Claude through ANTHROPIC_API_KEY), `?ai=device` (adds a device-code provider whose
- * sign-in returns a code to confirm). With `?replay=manual` events wait for `step()`
+ * `?ai=apikey` (Claude through ANTHROPIC_API_KEY), `?ai=device` (adds the bridge's other sign-in
+ * kinds: GitHub Copilot and Kimi Code by device code, sent as a `device_code` event before the
+ * `auth`; Kimi with its region choice; Cursor, sign-in only). With `?replay=manual` events wait for `step()`
  * (e2e and captures), otherwise they follow on a timer.
  */
 export interface DemoAi {
@@ -17,6 +18,7 @@ export interface DemoAi {
   /** Types of the events sent so far, in order. */
   sent: string[];
   queued(): number;
+  started: { sessionId: string; provider: Provider; account?: string }[];
 }
 
 const EVENT_STEP_MS = 140;
@@ -55,21 +57,29 @@ const text = (value: unknown, isError = false) => ({ content: [{ type: "text", t
 export function createDemoAi(manual: boolean, flags: URLSearchParams) {
   const mode = flags.get("ai");
   const outbox: AiEvent[] = [];
-  const demo: DemoAi = { step: async () => null, sent: [], queued: () => outbox.length };
+  const demo: DemoAi = { step: async () => null, sent: [], queued: () => outbox.length, started: [] };
   const chatgpt: Account[] = [];
   let claude: Account = { id: "claude-local", provider: "claude", label: "Claude local login", authenticated: false, planEnabled: false };
   if (mode === "apikey") claude = { id: "claude-local", provider: "claude", label: "Anthropic API key (environment)", authenticated: true, planEnabled: false };
+  // `?ai=device`: providers the UI has no entry for, described only by the bridge's metadata (like ai/providers/table.mjs).
+  const extras: ProviderMetadata[] =
+    mode === "device"
+      ? [
+          { id: "github-copilot", label: "GitHub Copilot", authKind: "device-code", models: ["gpt-4.1"], toolCalling: true, withoutPlan: "apiKey" },
+          { id: "kimi-coding", label: "Kimi Code", authKind: "device-code", models: ["kimi-for-coding"], toolCalling: true, withoutPlan: "apiKey", regions: ["mainland-cn", "global"], planNote: "Kimi Code subscription. Select the region that hosts your account." },
+          { id: "cursor", label: "Cursor", authKind: "oauth", models: [], toolCalling: false, withoutPlan: "blocked", unsupportedReason: "Sign-in only: Cursor has no verified tool-calling path in SimRep yet." },
+        ]
+      : [];
+  const extraAccounts = new Map<Provider, Account>();
+  const providerIds: Provider[] = ["chatgpt", "claude", ...extras.map((p) => p.id)];
   const sessions = new Map<string, { provider: Provider; turn: number; turnId: string | null }>();
-  // `?ai=device`: a provider the UI has no entry for (generic texts, monogram), signed in by device code.
-  const deviceProvider = mode === "device" ? "copilot" : null;
-  let deviceAccount: Account | null = null;
-  const providers = (): Provider[] => ["chatgpt", "claude", ...(deviceProvider ? [deviceProvider] : [])];
   const approvals = new Map<string, { sessionId: string; callId: string }>();
   let ids = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const status = (p: Provider): ProviderStatus => {
-    const accounts = p === "chatgpt" ? chatgpt.map((a) => ({ ...a })) : p === deviceProvider ? (deviceAccount ? [{ ...deviceAccount }] : []) : [{ ...claude }];
+    const extra = extraAccounts.get(p);
+    const accounts = p === "chatgpt" ? chatgpt.map((a) => ({ ...a })) : p === "claude" ? [claude].filter((a) => a.authenticated).map((a) => ({ ...a })) : extra ? [{ ...extra }] : [];
     return { provider: p, authenticated: accounts.some((a) => a.authenticated), accounts };
   };
 
@@ -146,16 +156,25 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
 
   type Handler<M extends Method> = (params: Methods[M]["params"]) => Methods[M]["result"];
   const methods: { [M in Method]: Handler<M> } = {
-    "auth.status": (p) => ({ providers: (p.provider ? [p.provider] : providers()).map(status) }),
-    "auth.accounts": (p) => ({ accounts: (p.provider ? [p.provider] : providers()).flatMap((x) => status(x).accounts) }),
+    "auth.providers": () => ({
+      providers: [
+        { id: "chatgpt", label: "ChatGPT", authKind: "oauth", models: ["gpt-5.4"], toolCalling: true, withoutPlan: "blocked" },
+        { id: "claude", label: "Claude", authKind: "oauth", models: ["sonnet", "opus", "haiku"], toolCalling: true, withoutPlan: "apiKey" },
+        ...extras,
+      ],
+    }),
+    "auth.openUsage": () => ({ opened: true }),
+    "auth.status": (p) => ({ providers: (p.provider ? [p.provider] : providerIds).map(status) }),
+    "auth.accounts": (p) => ({ accounts: (p.provider ? [p.provider] : providerIds).flatMap((x) => status(x).accounts) }),
     "auth.login": (p) => {
-      if (p.provider === deviceProvider) {
-        // The code waits for the user; the `auth` event follows on the next step.
-        deviceAccount = { id: "copilot-demo", provider: deviceProvider, label: "researcher", authenticated: true, planEnabled: true };
-        queue({ type: "auth", provider: deviceProvider, status: status(deviceProvider) });
-        return { started: true, userCode: "WDJB-MJHT", expiresIn: 900 } as Methods["auth.login"]["result"];
-      }
-      if (mode === "denied") {
+      const extra = extras.find((x) => x.id === p.provider);
+      if (extra) {
+        extraAccounts.set(extra.id, { id: `${extra.id}-demo`, provider: extra.id, label: "researcher", authenticated: true, planEnabled: true });
+        // Device authorization: the code to confirm comes first, the `auth` event when the user has.
+        if (extra.authKind === "device-code")
+          queue({ type: "device_code", provider: extra.id, userCode: "ABCD-EFGH", verificationUri: extra.id === "kimi-coding" ? `https://www.kimi.${p.region === "global" ? "ai" : "com"}/device` : "https://github.com/login/device", expiresIn: 900 });
+        queue({ type: "auth", provider: extra.id, status: status(extra.id) });
+      } else if (mode === "denied") {
         queue({ type: "error", provider: p.provider, code: "AUTH_DENIED", message: "ChatGPT sign-in was declined. You can sign in again." });
       } else if (p.provider === "chatgpt") {
         const known = p.account ? chatgpt.find((a) => a.id === p.account) : undefined;
@@ -181,10 +200,11 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       return { signedOut: true, remoteRevocationConfirmed: true };
     },
     "chat.start": (p) => {
-      const ready = p.provider === "chatgpt" ? chatgpt.find((a) => a.authenticated && (!p.account || a.id === p.account)) : claude.authenticated ? claude : undefined;
+      const ready = p.provider === "chatgpt" ? chatgpt.find((a) => a.authenticated && (!p.account || a.id === p.account)) : p.provider === "claude" ? (claude.authenticated ? claude : undefined) : extraAccounts.get(p.provider);
       if (!ready) throw { code: "AUTH_REQUIRED", message: "Continue with ChatGPT to sign in." };
       if (p.provider === "chatgpt" && !ready.planEnabled) throw { code: "PLAN_PERMISSION_REQUIRED", message: "ChatGPT plan use is not enabled." };
       const sessionId = `session-${++ids}`;
+      demo.started.push({ sessionId, provider: p.provider, account: p.account });
       sessions.set(sessionId, { provider: p.provider, turn: 0, turnId: null });
       return { sessionId, provider: p.provider, model: p.model ?? (p.provider === "claude" ? "sonnet" : "gpt-5.4"), workspace: p.workspace };
     },

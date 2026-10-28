@@ -101,13 +101,19 @@ for (const [w, h] of sizes)
       while ((await aiStep(page)) !== null);
       await shot(page, "panel-done", w, h, theme, lang);
 
-      // Device-code sign-in (the demo's extra provider; only in builds whose demo bridge offers it).
+      // Bridge-described providers (demo `?ai=device`): a sign-in-only card, then a device-code sign-in.
       await page.goto(`${base}/?replay=manual&ai=device`);
       await page.getByTestId("ai-accounts-open").click();
-      const device = page.locator('[data-provider="copilot"] [data-testid^="ai-signin-"]').first();
+      const signInOnly = page.getByTestId("ai-sign-in-only").first();
+      if ((await signInOnly.count()) > 0) {
+        await signInOnly.scrollIntoViewIfNeeded();
+        await shot(page, "accounts-signin-only", w, h, theme, lang);
+      }
+      const device = page.locator('[data-provider="github-copilot"] [data-testid^="ai-signin-"]').first();
       if ((await device.count()) > 0) {
         await device.scrollIntoViewIfNeeded();
         await device.click();
+        await aiStep(page); // device_code
         await page.getByTestId("ai-device-code").waitFor();
         await page.getByTestId("ai-device-code").scrollIntoViewIfNeeded();
         await shot(page, "accounts-device", w, h, theme, lang);

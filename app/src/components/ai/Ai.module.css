@@ -142,6 +142,24 @@
   min-width: 0;
 }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+/* A labelled control above the sign-in button (e.g. the account region). */
+.field {
+  display: flex;
+  flex-basis: 100%;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .providerHead {
   display: flex;
   align-items: center;
@@ -244,6 +262,8 @@
 .cardActions {
   display: flex;
   flex-wrap: wrap;
+  /* A taller row (a neighbour's device code) must not spread a region field away from its button. */
+  align-content: flex-start;
   align-items: center;
   gap: var(--space-2) var(--space-4);
 }
@@ -297,6 +317,10 @@
 }
 
 .link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

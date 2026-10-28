@@ -72,7 +72,7 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   // Send: deltas stream into one bubble, then the pa_info tool card fills with its summary.
   await panel.getByRole("textbox", { name: "Message the assistant" }).fill("Fly the einzel ions and report the TOF");
   await panel.getByTestId("ai-send").click();
-  await answered(page, "ai_request", 4); // auth.status, auth.login, chat.start, chat.send
+  await answered(page, "ai_request", 5); // auth.providers, auth.status, auth.login, chat.start, chat.send
   await expect(panel.getByTestId("ai-stop")).toBeVisible();
   let type: string | null;
   // Text still arriving shows the caret on the streaming bubble; it goes once a tool card follows.
@@ -110,7 +110,7 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   // A second turn: allow the write tool, its result card shows the flight summary.
   await panel.getByRole("textbox", { name: "Message the assistant" }).fill("Try again and fly");
   await panel.getByTestId("ai-send").click();
-  await answered(page, "ai_request", 6); // chat.cancel, chat.send
+  await answered(page, "ai_request", 7); // chat.cancel, chat.send
   while ((type = await aiStep(page)) !== "approval") expect(type).not.toBeNull();
   await panel.getByTestId("ai-approval").last().getByRole("button", { name: "Allow" }).click();
   await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
@@ -126,6 +126,34 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   await page.screenshot({ path: test.info().outputPath("harness-mobile.png") });
 
   expect(errors).toEqual([]);
+});
+
+test("AI: changing the selected account starts a distinct billed session", async ({ page }) => {
+  await workspaceReady(page);
+  await page.getByTestId("ai-accounts-open").click();
+  const dialog = page.getByRole("dialog", { name: "AI accounts" });
+  await dialog.getByRole("button", { name: "Continue with ChatGPT" }).click();
+  expect(await aiStep(page)).toBe("auth");
+  await page.getByTestId("ai-welcome").getByRole("button", { name: "Got it" }).click();
+  await dialog.getByRole("button", { name: "Continue with ChatGPT" }).click();
+  expect(await aiStep(page)).toBe("auth");
+  await dialog.getByRole("button", { name: "Close" }).first().click();
+  await page.getByTestId("ai-toggle").click();
+  const panel = page.getByTestId("ai-panel");
+  await panel.getByRole("textbox", { name: "Message the assistant" }).fill("Read the first account");
+  await panel.getByTestId("ai-send").click();
+  await expect(panel.getByTestId("ai-stop")).toBeVisible();
+  await panel.getByTestId("ai-stop").click();
+  await answered(page, "ai_request", 7);
+  expect(await aiStep(page)).toBe("done");
+  await panel.getByLabel("Account", { exact: true }).selectOption("chatgpt-demo-2");
+  await panel.getByRole("textbox", { name: "Message the assistant" }).fill("Read the second account");
+  await panel.getByTestId("ai-send").click();
+  await expect(panel.getByTestId("ai-stop")).toBeVisible();
+  await answered(page, "ai_request", 9);
+  const started = await page.evaluate(() => (window as unknown as AiWindow).__simrepDemoAi.started);
+  expect(started.map((s) => s.account)).toEqual(["chatgpt-demo-1", "chatgpt-demo-2"]);
+  expect(started[0]!.sessionId).not.toBe(started[1]!.sessionId);
 });
 
 test("AI: denied sign-in, ChatGPT without plan usage, Claude through an API key", async ({ page }) => {
@@ -158,23 +186,31 @@ test("AI: denied sign-in, ChatGPT without plan usage, Claude through an API key"
   expect(errors).toEqual([]);
 });
 
-test("AI: a device-code provider shows its code to confirm, then signs in", async ({ page }) => {
+test("AI: a device-code provider shows its code to confirm, without a WebView link, then signs in", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
 
   await page.goto("/?replay=manual&ai=device");
   await page.getByTestId("ai-accounts-open").click();
-  const card = page.getByRole("dialog", { name: "AI accounts" }).locator('li[data-provider="copilot"]');
-  // A provider the UI has no entry for: generic texts and a neutral monogram.
-  await expect(card.getByRole("heading", { name: "Copilot" })).toBeVisible();
-  await card.getByRole("button", { name: "Sign in with Copilot" }).click();
-  const code = card.getByTestId("ai-device-code");
-  await expect(code.getByLabel("Device code")).toHaveText("WDJB-MJHT");
-  await expect(code).toContainText(/Expires in 1[45]:\d\d/);
+  const dialog = page.getByRole("dialog", { name: "AI accounts" });
+  const card = dialog.locator('li[data-provider="github-copilot"]');
+  // A provider the UI has no entry for: the bridge's label, generic texts and a neutral monogram.
+  await expect(card.getByRole("heading", { name: "GitHub Copilot" })).toBeVisible();
+  await card.getByRole("button", { name: "Sign in with GitHub Copilot" }).click();
   await expect(card.getByTestId("ai-status")).toHaveText("Signing in…");
+  expect(await aiStep(page)).toBe("device_code");
+  const code = card.getByTestId("ai-device-code");
+  await expect(code.getByLabel("Device code")).toHaveText("ABCD-EFGH");
+  await expect(code).toContainText(/Expires in 1[45]:\d\d/);
+  await expect(code).toContainText("https://github.com/login/device");
+  await expect(card.getByRole("link")).toHaveCount(0);
   expect(await aiStep(page)).toBe("auth");
   await expect(code).toHaveCount(0);
   await expect(card.getByTestId("ai-status")).toHaveText("Signed in");
+
+  // Bridge metadata: a sign-in-only provider says so; Kimi asks for its account region.
+  await expect(dialog.locator('li[data-provider="cursor"]').getByTestId("ai-sign-in-only")).toHaveText("Sign-in only");
+  await expect(dialog.locator('li[data-provider="kimi-coding"]').getByLabel("Account region")).toHaveValue("mainland-cn");
 
   expect(errors).toEqual([]);
 });

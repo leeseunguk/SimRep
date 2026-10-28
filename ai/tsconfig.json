@@ -9,5 +9,5 @@
     "strict": false,
     "skipLibCheck": true
   },
-  "include": ["*.mjs", "harness/**/*.mjs"]
+  "include": ["*.mjs", "auth/*.mjs", "providers/*.mjs", "harness/**/*.mjs"]
 }

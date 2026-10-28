@@ -5,17 +5,18 @@ import { EventEmitter, once } from 'node:events'
 import os from 'node:os'
 import path from 'node:path'
 import { Bridge } from '../bridge.mjs'
+import { providerById } from '../providers/table.mjs'
 
 test('real authenticated provider reads a CSV through SimRep MCP', {
-  skip: !process.env.SIMREP_AI_REAL_SMOKE ? 'Set SIMREP_AI_REAL_SMOKE=claude or chatgpt after a real login; may use subscription/API quota.' : false,
+  skip: !process.env.SIMREP_AI_REAL_SMOKE ? 'Set SIMREP_AI_REAL_SMOKE=<provider> after a real login; may consume subscription/API quota.' : false,
   timeout: 180_000,
 }, async t => {
   const provider = process.env.SIMREP_AI_REAL_SMOKE
-  assert.ok(['chatgpt', 'claude'].includes(provider))
+  assert.equal(providerById(provider)?.toolCalling, true)
   const events = new EventEmitter()
   const bridge = new Bridge({ notify: m => { if (m.method === 'event') events.emit('bridge:' + m.params.type, m.params) } })
   const status = await bridge.dispatch('auth.status', { provider })
-  const account = status.providers[0].accounts.find(a => a.authenticated && (provider === 'claude' || a.planEnabled))
+  const account = status.providers[0].accounts.find(a => a.authenticated && (provider !== 'chatgpt' || a.planEnabled))
   if (!account) { t.skip('No eligible saved credentials for selected provider.'); bridge.close(); return }
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'simrep-real-'))
   t.after(async () => { bridge.close(); await rm(workspace, { recursive: true, force: true }) })

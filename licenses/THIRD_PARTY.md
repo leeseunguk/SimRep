@@ -20,6 +20,95 @@ Meteo Simulation Co., Ltd. Source: https://github.com/using76/Iteration-CFD.
 The complete licence text is reproduced below. The selector's tests,
 CLI wiring, solver profiling and study measurements are original SimRep code.
 
+## AI authentication and provider adapters (October 27, 2026)
+
+The following files adapt the MIT provider package installed as
+`@earendil-works/pi-ai`, whose package identity is
+`@code-yeongyu/senpi-ai` version `2026.10.25-2`
+([source repository](https://github.com/code-yeongyu/senpi/tree/main/packages/ai)).
+Every adapted file includes the MIT notice below and “modified for SimRep”.
+SimRep's credential storage, RPC/UI integration and test fixtures are original.
+
+| SimRep file | Installed source paths under `dist/` |
+| --- | --- |
+| `ai/auth/providers.mjs` | `auth/oauth/anthropic.js`, `anthropic-callback-listener.js`, `github-copilot.js`, `xai.js`, `openrouter.js`, `kimi-coding.js`, `kimi-region.js`, `kimi-identity.js`, `devin.js`, `devin-token.js`, `devin-callback.js`, `meta.js`, `cursor.js`, `radius.js`, `device-code.js`, `pkce.js`, `callback-server.js`; `api/github-copilot-endpoint.js` |
+| `ai/auth/chatgpt.mjs` | `auth/oauth/chatgpt-subscription.js`, `chatgpt-subscription-callback.js`; `utils/chatgpt-subscription-auth.js` |
+| `ai/providers/table.mjs` | `providers/*.js` and `auth/oauth/*.js` endpoint/catalog metadata |
+| `ai/providers/client.mjs` | `types.js`, `providers/devin.js`, `api/devin-agent.js` provider context/tool mapping; native Devin wire implementation is the pinned MIT dependency, not copied |
+
+The installed README's `## License` section says only `MIT`; it has no copyright
+line. Its published file list excludes a LICENSE file. The canonical
+[senpi root LICENSE](https://github.com/code-yeongyu/senpi/blob/main/LICENSE)
+was read separately and supplies the two copyright lines reproduced below.
+The [badlogic/pi-mono root LICENSE](https://github.com/badlogic/pi-mono/blob/main/LICENSE)
+read on the same date says `Copyright (c) 2025 Mario Zechner`.
+No auth/inference code from the differently licensed omo top-level plugin is
+copied. These notices do not relicense the Anthropic Agent SDK or its bundled
+native executables; their commercial terms must remain in redistributed
+`node_modules`. `@bufbuild/protobuf` retains its Apache-2.0 AND BSD-3-Clause
+notices. Exact direct and transitive versions are in `ai/package-lock.json`.
+
+```text
+MIT License
+
+Copyright (c) 2025 Mario Zechner (upstream pi-mono)
+Copyright (c) 2026 Yeongyu Kim and senpi contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Kiro community adapter
+
+`ai/auth/kiro.mjs` and `ai/providers/kiro.mjs` adapt
+[`eddieparc/omo-accounts`](https://github.com/eddieparc/omo-accounts) at commit
+`3df128a51458c829e61a4da62d6545ed55bcc1c6`:
+`src/providers/kiro/config.ts`, `oauth.ts`, `vendor/kiro.ts`, and
+`vendor/eventstream.ts`. The source's MIT LICENSE was read at that exact commit.
+SimRep removes account-pool failover and debug logging, binds the auth listener
+to IPv4 loopback, validates callback host/state/path, checks event CRCs strictly,
+and routes all tools through the workspace MCP approval proxy. No existing omo
+credential file is read or imported.
+
+```text
+MIT License
+
+Copyright (c) 2026 eddieparc
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Numerical verification and verdict registry
 
 `crates/simrep-core/src/uncertainty.rs` adapts `rust/src/vv.rs` from

@@ -8,6 +8,7 @@ import path from 'node:path'
 import { generateKeyPair, SignJWT, exportJWK, createRemoteJWKSet } from 'jose'
 import { ChatGPTAuth, ISSUER, RESOURCE, SCOPE, attemptValues, validateCallback, validateIdentity } from '../oauth.mjs'
 import { Store, accountId } from '../store.mjs'
+import { SUBSCRIPTION } from '../auth/chatgpt.mjs'
 
 const { privateKey, publicKey } = await generateKeyPair('RS256')
 const jwk = { ...await exportJWK(publicKey), kid: 'local', alg: 'RS256', use: 'sig' }
@@ -190,4 +191,60 @@ test('logout during a pending token exchange cannot resurrect credentials', asyn
     refresh_token: 'never-save', token_type: 'Bearer', expires_in: 3600, scope: SCOPE }))
   assert.equal((await callbackResponse).status, 400)
   assert.equal((await store.accounts()).length, 0)
+})
+
+test('maintained ChatGPT subscription lane binds PKCE, verifies nonce and returns Codex account routing', async t => {
+  const { store, jwks } = await fixtures(t)
+  let authorization, refreshes = 0
+  const access = suffix => ['eyJhbGciOiJub25lIn0', Buffer.from(JSON.stringify({
+    'https://api.openai.com/auth': { chatgpt_account_id: 'account-local' }, suffix,
+  })).toString('base64url'), 'opaque'].join('.')
+  const auth = new ChatGPTAuth({ store, jwks, flow: 'subscription', callbackPorts: [0], fetcher: async (url, options) => {
+    assert.equal(url, SUBSCRIPTION.token)
+    assert.equal(options.body.has('resource'), false)
+    assert.equal(options.body.get('client_id'), SUBSCRIPTION.clientId)
+    if (options.body.get('grant_type') === 'refresh_token') {
+      refreshes++; assert.equal(options.body.get('refresh_token'), 'rotate-one')
+      return Response.json({ access_token: access('two'), refresh_token: 'rotate-two', expires_in: 3600, token_type: 'bearer' })
+    }
+    assert.equal(createHash('sha256').update(options.body.get('code_verifier')).digest('base64url'), authorization.searchParams.get('code_challenge'))
+    return Response.json({ access_token: access('one'), refresh_token: 'rotate-one', expires_in: 3600, token_type: 'bearer',
+      id_token: await token({ audience: SUBSCRIPTION.clientId, nonce: authorization.searchParams.get('nonce') }) })
+  } })
+  t.after(() => auth.close())
+  const login = await auth.begin()
+  authorization = new URL(login.url)
+  assert.equal(authorization.origin + authorization.pathname, SUBSCRIPTION.authorize)
+  assert.equal(authorization.searchParams.get('client_id'), SUBSCRIPTION.clientId)
+  assert.equal(authorization.searchParams.get('scope'), SUBSCRIPTION.scope)
+  assert.equal(authorization.searchParams.has('resource'), false)
+  const cb = new URL(authorization.searchParams.get('redirect_uri'))
+  assert.equal(cb.hostname, 'localhost')
+  cb.search = new URLSearchParams({ code: 'bound-code', state: authorization.searchParams.get('state') }).toString()
+  const { request } = await import('node:http')
+  const response = await new Promise((resolve, reject) => {
+    const outgoing = request({ host: '127.0.0.1', port: cb.port, path: cb.pathname + cb.search, headers: { host: cb.host } }, res => {
+      res.resume(); res.on('end', () => resolve(res.statusCode))
+    })
+    outgoing.once('error', reject); outgoing.end()
+  })
+  assert.equal(response, 200)
+  const id = await login.completed
+  const record = await auth.access(id)
+  assert.equal(id, accountId(SUBSCRIPTION.clientId, JSON.stringify(['subject', 'account-local'])))
+  assert.equal(record.apiBaseUrl, 'https://chatgpt.com/backend-api/codex')
+  assert.equal(record.chatgptAccountId, 'account-local')
+  assert.equal((await auth.accounts())[0].planEnabled, true)
+  await store.locked(() => store.write('account-' + id, { ...record, expiresAt: 0 }))
+  await Promise.all([auth.access(id), auth.access(id)])
+  assert.equal(refreshes, 1)
+  assert.equal((await store.credential(id)).refresh_token, 'rotate-two')
+  assert.equal((await new ChatGPTAuth({ store }).accounts()).length, 0)
+  await store.locked(() => store.write('account-' + id, { ...record, expiresAt: 0 }))
+  const alien = ['eyJhbGciOiJub25lIn0', Buffer.from(JSON.stringify({
+    'https://api.openai.com/auth': { chatgpt_account_id: 'other-workspace' },
+  })).toString('base64url'), 'opaque'].join('.')
+  auth.fetcher = async () => Response.json({ access_token: alien, refresh_token: 'do-not-save', expires_in: 3600, token_type: 'bearer' })
+  await assert.rejects(auth.access(id), e => e.code === 'AUTH_EXPIRED')
+  assert.equal(await store.credential(id), undefined)
 })

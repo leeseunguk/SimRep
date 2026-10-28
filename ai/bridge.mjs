@@ -7,6 +7,10 @@ import { ClaudeAuth, ClaudeSession } from './claude.mjs'
 import { ChatGPTSession } from './chatgpt.mjs'
 import { toolGate } from './tools.mjs'
 import { BridgeError, publicError } from './errors.mjs'
+import { createProviderAuth } from './auth/providers.mjs'
+import { KiroAuth } from './auth/kiro.mjs'
+import { ProviderSession } from './providers/client.mjs'
+import { PROVIDERS, providerById, providerMetadata } from './providers/table.mjs'
 import { createHarness } from './harness/index.mjs'
 
 function required(value, name) {
@@ -14,21 +18,29 @@ function required(value, name) {
   return value
 }
 function provider(value) {
-  if (!['chatgpt', 'claude'].includes(value)) throw new BridgeError('INVALID_PARAMS', 'provider must be chatgpt or claude.')
+  if (!providerById(value)) throw new BridgeError('INVALID_PARAMS', 'Unknown provider.')
   return value
 }
 
 export class Bridge {
-  constructor({ notify = (_message) => {}, chatgpt = new ChatGPTAuth(), claude = new ClaudeAuth(),
+  constructor({ notify = (_message) => {}, chatgpt = new ChatGPTAuth({ flow: process.env.SIMREP_CHATGPT_AUTH_FLOW || 'subscription' }), claude = new ClaudeAuth(),
+    auth = {}, createProvider = options => new ProviderSession(options),
     createChatGPT = options => new ChatGPTSession(options), createClaude = options => new ClaudeSession(options) } = {}) {
-    this.notify = notify; this.auth = { chatgpt, claude }; this.create = { chatgpt: createChatGPT, claude: createClaude }
+    this.notify = notify
+    this.auth = Object.fromEntries(PROVIDERS.map(p => [p.id, createProviderAuth(p.id)]))
+    Object.assign(this.auth, { chatgpt, claude, kiro: new KiroAuth() }, auth)
+    this.create = Object.fromEntries(PROVIDERS.map(p => [p.id, options => createProvider({ ...options, provider: p })]))
+    Object.assign(this.create, { chatgpt: createChatGPT, claude: createClaude })
     this.sessions = new Map(); this.approvals = new Map()
   }
 
   event(provider, fields) { this.notify({ jsonrpc: '2.0', method: 'event', params: { provider, ...fields } }) }
   async status(p) {
     const accounts = await this.auth[p].accounts()
-    return { provider: p, authenticated: accounts.some(a => a.authenticated), accounts }
+    const info = providerById(p)
+    return { provider: p, authenticated: accounts.some(a => a.authenticated), accounts,
+      models: this.auth[p].models ? await this.auth[p].models() : info.models,
+      toolCalling: info.toolCalling, ...(info.unsupportedReason && { message: info.unsupportedReason }) }
   }
 
   approve(session, name, args) {
@@ -51,27 +63,30 @@ export class Bridge {
   }
 
   /** @param {string} method
-   * @param {{provider?: string, account?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean}} params */
+   * @param {{provider?: string, account?: string, region?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean}} params */
   async dispatch(method, params = {}) {
     if (!params || typeof params !== 'object' || Array.isArray(params)) throw new BridgeError('INVALID_PARAMS', 'params must be an object.')
     switch (method) {
+      case 'auth.providers': return { providers: PROVIDERS.map(providerMetadata) }
+      case 'auth.openUsage': {
+        const p = providerById(provider(params.provider))
+        if (!p.usageUrl) throw new BridgeError('INVALID_PARAMS', 'No usage page is configured for this provider.')
+        this.notify({ jsonrpc: '2.0', method: 'host.open_url', params: { url: p.usageUrl } })
+        return { opened: true }
+      }
       case 'auth.status':
       case 'auth.accounts': {
-        const providers = params.provider ? [provider(params.provider)] : ['chatgpt', 'claude']
+        const providers = params.provider ? [provider(params.provider)] : PROVIDERS.map(p => p.id)
         const statuses = await Promise.all(providers.map(p => this.status(p)))
         return method === 'auth.status' ? { providers: statuses } : { accounts: statuses.flatMap(s => s.accounts) }
       }
       case 'auth.login': {
         const p = provider(params.provider)
-        if (p === 'chatgpt') {
-          const login = await this.auth.chatgpt.begin(params.account)
-          this.notify({ jsonrpc: '2.0', method: 'host.open_url', params: { url: login.url } })
-          void login.completed.then(async () => this.event(p, { type: 'auth', status: await this.status(p) }))
-            .catch(error => this.event(p, { type: 'error', ...publicError(error) }))
-        } else {
-          void this.auth.claude.login().then(async () => this.event(p, { type: 'auth', status: await this.status(p) }))
-            .catch(error => this.event(p, { type: 'error', ...publicError(error) }))
-        }
+        const login = await this.auth[p].begin(params.account, { region: params.region })
+        if (login.url) this.notify({ jsonrpc: '2.0', method: 'host.open_url', params: { url: login.url } })
+        if (login.deviceCode) this.event(p, { type: 'device_code', ...login.deviceCode })
+        void login.completed.then(async () => this.event(p, { type: 'auth', status: await this.status(p) }))
+          .catch(error => this.event(p, { type: 'error', ...publicError(error) }))
         return { started: true }
       }
       case 'auth.logout': {
@@ -82,7 +97,7 @@ export class Bridge {
           this.auth.chatgpt.close()
           return { signedOut: true, remoteRevocationConfirmed: true }
         }
-        for (const session of this.sessions.values()) if (session.provider === p && (p === 'claude' || session.account === account)) {
+        for (const session of this.sessions.values()) if (session.provider === p && (p !== 'chatgpt' || session.account === account)) {
           await this.stop(session); session.client.close(); this.sessions.delete(session.id)
         }
         const result = await this.auth[p].logout(account)
@@ -91,13 +106,16 @@ export class Bridge {
       }
       case 'chat.start': {
         const p = provider(params.provider)
+        const info = providerById(p)
+        if (!info.toolCalling) throw new BridgeError('PROVIDER_UNSUPPORTED', info.unsupportedReason)
         required(params.workspace, 'workspace')
         if (!path.isAbsolute(params.workspace)) throw new BridgeError('INVALID_PARAMS', 'workspace must be an absolute directory.')
         const workspace = await realpath(params.workspace)
         if (!(await stat(workspace)).isDirectory()) throw new BridgeError('INVALID_PARAMS', 'workspace must be a directory.')
         // A workspace may not encompass credential stores, even if chosen as
         // the home directory. Symlinks in MCP paths are independently resolved.
-        const protectedDirs = [this.auth.chatgpt.store?.directory, path.join(os.homedir(), '.claude'), path.join(os.homedir(), '.codex')].filter(Boolean)
+        const protectedDirs = [...Object.values(this.auth).map(a => a.store?.directory),
+          ...['.claude', '.codex', '.omo', '.senpi'].map(d => path.join(os.homedir(), d))].filter(Boolean)
         for (const directory of protectedDirs) {
           const canonical = await realpath(directory).catch(() => path.resolve(directory))
           if (canonical === workspace || canonical.startsWith(workspace + path.sep)) throw new BridgeError('WORKSPACE_UNSAFE', 'Choose a project directory that does not contain AI credentials.')
@@ -107,7 +125,9 @@ export class Bridge {
         if (!account) throw new BridgeError('AUTH_REQUIRED', 'Sign in with the selected provider first.')
         if (p === 'chatgpt' && !account.planEnabled) throw new BridgeError('PLAN_PERMISSION_REQUIRED', 'Enable ChatGPT plan use before starting a chat.')
         if (params.model !== undefined) required(params.model, 'model')
-        const model = params.model || (p === 'claude' ? 'sonnet' : 'gpt-5.4')
+        const models = this.auth[p].models ? await this.auth[p].models() : info.models
+        const model = params.model || models[0] || info.defaultModel
+        if (!model || (p === 'github-copilot' && !models.includes(model))) throw new BridgeError('PROVIDER_UNSUPPORTED', 'No enabled tool-capable model is available. Enable a model with the provider first.')
         const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, turn: undefined, client: undefined, harness: undefined }
         if (params.language !== undefined && (typeof params.language !== 'string' || !/^[a-zA-Z-]{2,35}$/.test(params.language))) throw new BridgeError('INVALID_PARAMS', 'language must be a language tag.')
         const harness = await createHarness({ workspace, language: params.language, emit: fields => this.emitChat(session, fields) })
@@ -181,6 +201,6 @@ export class Bridge {
   close() {
     for (const entry of this.approvals.values()) entry.settle(false)
     for (const session of this.sessions.values()) session.client.close()
-    this.auth.chatgpt.close(); this.auth.claude.close()
+    for (const auth of Object.values(this.auth)) auth.close()
   }
 }

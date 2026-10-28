@@ -6,9 +6,10 @@ import { HERE } from './tools.mjs'
 import { BridgeError, providerDiagnostic } from './errors.mjs'
 
 export class ChatGPTSession {
-  constructor({ auth, account, workspace, model, gate, emit, rpcFactory = (command, args, options) => new RpcProcess(command, args, options) }) {
+  constructor({ auth, account, workspace, model, gate, emit, systemPrompt = undefined, rpcFactory = (command, args, options) => new RpcProcess(command, args, options) }) {
     this.auth = auth; this.account = account; this.workspace = workspace; this.model = model
     this.gate = gate; this.emit = emit; this.rpcFactory = rpcFactory
+    this.systemPrompt = systemPrompt
     this.rpc = undefined; this.threadId = undefined; this.token = undefined; this.turnId = undefined
     this.completion = undefined
     this.catalog = 'catalog-' + randomUUID()
@@ -44,7 +45,10 @@ export class ChatGPTSession {
       model_provider: 'openai_chatgpt_plan',
       model_catalog_json: path.join(this.auth.store.directory, this.catalog + '.json'),
       'model_providers.openai_chatgpt_plan.name': 'ChatGPT plan',
-      'model_providers.openai_chatgpt_plan.base_url': 'https://api.openai.com/v1',
+      'model_providers.openai_chatgpt_plan.base_url': record.apiBaseUrl || 'https://api.openai.com/v1',
+      ...(record.chatgptAccountId && { 'model_providers.openai_chatgpt_plan.http_headers': {
+        'ChatGPT-Account-Id': record.chatgptAccountId, originator: 'codex_cli_rs',
+      } }),
       'model_providers.openai_chatgpt_plan.env_key': 'ACCESS_TOKEN',
       'model_providers.openai_chatgpt_plan.wire_api': 'responses',
       'model_providers.openai_chatgpt_plan.requires_openai_auth': false,
@@ -98,7 +102,7 @@ export class ChatGPTSession {
     // Do not load project-local .codex configuration (which can launch other
     // MCP executables). The simulator workspace is conveyed only to our proxy.
     const params = { model: this.model, cwd: home, sandbox: 'read-only', approvalPolicy: 'never',
-      baseInstructions: 'Use only the SimRep MCP tools to operate the ion optics simulator. Units are mm, us, V, gauss, amu and eV.' }
+      baseInstructions: this.systemPrompt || 'Use only the SimRep MCP tools to operate the ion optics simulator. Units are mm, us, V, gauss, amu and eV.' }
     const result = await rpc.request(this.threadId ? 'thread/resume' : 'thread/start',
       this.threadId ? { ...params, threadId: this.threadId } : params)
     this.threadId = result.thread.id

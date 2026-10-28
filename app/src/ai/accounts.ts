@@ -20,12 +20,15 @@ export interface DeviceCode {
   userCode: string;
   /** Epoch ms; null when the provider gave no lifetime. */
   expiresAt: number | null;
+  /** Display only (Rust opens the validated page); absent when the code came without one. */
+  verificationUri?: string;
 }
 
 /**
  * The device code of an `auth.login` result, if the bridge sent one (`userCode`, optional
  * `expiresIn` seconds). Anything else in the result is ignored, so the plain `{started: true}`
- * of a browser sign-in gives null.
+ * of a browser sign-in gives null. The protocol's usual path is the `device_code` event
+ * (`applyAuthEvent`); this covers a bridge that returns the code with the login instead.
  */
 export function deviceCodeOf(result: unknown, now = Date.now()): DeviceCode | null {
   if (typeof result !== "object" || result === null) return null;
@@ -78,7 +81,7 @@ export function accountKind(a: Account): AccountKind {
 export const usableAccounts = (s: ProviderState = NONE) => (s.status?.accounts ?? []).filter((a) => accountKind(a) === "ready" || accountKind(a) === "apiKey");
 
 /** A token-endpoint refusal of a refresh, or an expired session: the user must sign in again. */
-export const isExpired = (code: string) => code === "AUTH_REQUIRED" || code === "AUTH_TIMEOUT" || (REFRESH_FAILED_CODES as readonly string[]).includes(code);
+export const isExpired = (code: string) => code === "AUTH_EXPIRED" || code === "AUTH_REQUIRED" || code === "AUTH_TIMEOUT" || (REFRESH_FAILED_CODES as readonly string[]).includes(code);
 
 export function setStatus(s: AccountsState, status: ProviderStatus): AccountsState {
   return { ...s, [status.provider]: { ...providerState(s, status.provider), status } };
@@ -97,7 +100,9 @@ export function setNotice(s: AccountsState, provider: Provider, notice: Notice |
  * account its provider cannot use without the plan grant (ChatGPT) is "not eligible", else a success. `error` events of a
  * provider without a chat session end a waiting sign-in (denied, timed out, CLI missing...).
  */
-export function applyAuthEvent(s: AccountsState, e: AiEvent): AccountsState {
+export function applyAuthEvent(s: AccountsState, e: AiEvent, now = Date.now()): AccountsState {
+  if (e.type === "device_code")
+    return setNotice(s, e.provider, { kind: "signingIn", device: { userCode: e.userCode, expiresAt: now + e.expiresIn * 1000, verificationUri: e.verificationUri } });
   if (e.type === "auth") {
     const p = e.provider;
     const next = setStatus(s, e.status);

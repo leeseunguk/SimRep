@@ -5,7 +5,7 @@ import { applyAuthEvent, deviceCodeOf, EMPTY_ACCOUNTS, providerState, setNotice,
 import { addError, addUser, applyEvent, EMPTY_CHAT, resolveApproval, type ChatState } from "./chat";
 import { onAiEvent, request } from "./client";
 import { AiError, type Provider } from "./protocol";
-import { PROVIDER_LIST, providerIds, providerInfo } from "./providers";
+import { PROVIDER_LIST, installProviderMetadata, providerIds, providerInfo } from "./providers";
 
 const STORAGE_WELCOMED = "simrep.ai.chatgptWelcomed";
 const STORAGE_PROVIDER = "simrep.ai.provider";
@@ -65,6 +65,8 @@ export function workspaceOf(project = useApp.getState().project): string | null 
 
 export async function loadAccounts(): Promise<void> {
   try {
+    const catalog = await request("auth.providers", {});
+    installProviderMetadata(catalog.providers);
     const { providers } = await request("auth.status", {});
     let accounts = get().accounts;
     for (const p of providers) accounts = setStatus(accounts, p);
@@ -77,18 +79,26 @@ export async function loadAccounts(): Promise<void> {
 }
 
 /** Starts a sign-in; it finishes with an `auth` or `error` event. `account` reauthorizes a saved ChatGPT registration. */
-export async function signIn(provider: Provider, account?: string): Promise<void> {
+export async function signIn(provider: Provider, account?: string, region?: string): Promise<void> {
   set({ accounts: startSignIn(get().accounts, provider), pending: { ...get().pending, [provider]: true } });
   try {
-    const started = await request("auth.login", { provider, ...(account && { account }) });
-    // Device authorization: show the code to confirm, while the sign-in is still waiting.
+    const started = await request("auth.login", { provider, ...(account && { account }), ...(region && { region }) });
+    // Device authorization normally arrives as a `device_code` event; a code in the login result
+    // is shown too, unless the event already put one up while the sign-in is still waiting.
     const device = deviceCodeOf(started);
-    if (device && providerState(get().accounts, provider).notice?.kind === "signingIn") set({ accounts: setNotice(get().accounts, provider, { kind: "signingIn", device }) });
+    const notice = providerState(get().accounts, provider).notice;
+    if (device && notice?.kind === "signingIn" && !notice.device) set({ accounts: setNotice(get().accounts, provider, { kind: "signingIn", device }) });
   } catch (err) {
     set({ accounts: setNotice(get().accounts, provider, { kind: "failed", action: "signIn", code: code(err) }) });
   } finally {
     set({ pending: { ...get().pending, [provider]: false } });
   }
+}
+
+/** Only the Rust host opens the fixed provider URL, never a WebView-provided URL. */
+export async function openUsage(provider: Provider): Promise<void> {
+  try { await request("auth.openUsage", { provider }); }
+  catch (err) { set({ accounts: setNotice(get().accounts, provider, { kind: "failed", action: "signIn", code: code(err) }) }); }
 }
 
 export async function signOut(provider: Provider, account?: string): Promise<void> {
@@ -126,13 +136,13 @@ export async function send(text: string): Promise<void> {
   if (!text.trim() || s.chat.running || s.starting || !workspace) return;
   const account = s.account || usableAccounts(s.accounts[s.provider])[0]?.id;
   let session = s.chat.session;
-  const stale = !session || session.provider !== s.provider || session.workspace !== workspace || (s.model && session.model !== s.model);
+  const stale = !session || session.provider !== s.provider || session.account !== account || session.workspace !== workspace || (s.model && session.model !== s.model);
   set({ chat: addUser(stale ? { ...EMPTY_CHAT, nextId: s.chat.nextId, items: s.chat.items } : s.chat, text) });
   try {
     if (stale) {
       set({ starting: true });
       const started = await request("chat.start", { provider: s.provider, workspace, language: useApp.getState().lang, ...(s.model && { model: s.model }), ...(account && { account }) });
-      session = { id: started.sessionId, provider: started.provider, model: started.model, workspace: started.workspace };
+      session = { id: started.sessionId, provider: started.provider, model: started.model, workspace: started.workspace, account };
       set({ chat: { ...get().chat, session } });
     }
     await request("chat.send", { sessionId: session!.id, text });

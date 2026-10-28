@@ -37,14 +37,33 @@ export interface ProviderStatus {
   authenticated: boolean;
   accounts: Account[];
   message?: string;
+  models?: string[];
+  toolCalling?: boolean;
+}
+export interface ProviderMetadata {
+  id: Provider;
+  label: string;
+  authKind: "oauth" | "cli-login" | "device-code" | "api-key";
+  planNote?: string;
+  planEnabledMeaning?: string;
+  models?: string[];
+  toolCalling?: boolean;
+  unsupportedReason?: string;
+  withoutPlan?: "blocked" | "apiKey";
+  apiKeyEnv?: string;
+  usageUrl?: string;
+  regions?: string[];
+  signInSupported?: boolean;
 }
 
 /** Request params and results per method. */
 export interface Methods {
+  "auth.providers": { params: Record<string, never>; result: { providers: ProviderMetadata[] } };
   "auth.status": { params: { provider?: Provider }; result: { providers: ProviderStatus[] } };
   "auth.accounts": { params: { provider?: Provider }; result: { accounts: Account[] } };
-  "auth.login": { params: { provider: Provider; account?: string }; result: { started: true } };
+  "auth.login": { params: { provider: Provider; account?: string; region?: string }; result: { started: true } };
   "auth.logout": { params: { provider: Provider; account?: string }; result: { signedOut: true; remoteRevocationConfirmed: boolean } };
+  "auth.openUsage": { params: { provider: Provider }; result: { opened: true } };
   "chat.start": {
     params: { provider: Provider; model?: string; workspace: string; account?: string; language?: string };
     result: { sessionId: string; provider: Provider; model: string; workspace: string };
@@ -85,6 +104,7 @@ interface ChatBase extends Base {
 
 export type AiEvent =
   | (Base & { type: "auth"; status: ProviderStatus })
+  | (Base & { type: "device_code"; userCode: string; verificationUri: string; expiresIn: number })
   | (ChatBase & { type: "delta"; text: string })
   | (ChatBase & { type: "tool_call"; callId: string; name: string; arguments: Record<string, unknown> })
   | (ChatBase & { type: "tool_result"; callId: string; name?: string; result: unknown })
@@ -99,6 +119,7 @@ export type AiEvent =
  */
 export const AI_ERROR_CODES = [
   "AUTH_REQUIRED",
+  "AUTH_EXPIRED",
   "PLAN_PERMISSION_REQUIRED",
   "AUTH_DENIED",
   "AUTH_TIMEOUT",
@@ -120,6 +141,10 @@ export const AI_ERROR_CODES = [
   "PROVIDER_CLOSED",
   "PROVIDER_TIMEOUT",
   "PROVIDER_RPC",
+  "PROVIDER_RESPONSE",
+  "PROVIDER_UNSUPPORTED",
+  "PROVIDER_TOOL_LIMIT",
+  "METHOD_NOT_FOUND",
   "BRIDGE_UNAVAILABLE",
 ] as const;
 export type AiErrorCode = (typeof AI_ERROR_CODES)[number];
@@ -157,7 +182,9 @@ export function parseAccount(v: unknown): Account | null {
 export function parseStatus(v: unknown): ProviderStatus | null {
   if (!isObject(v) || !isProvider(v.provider)) return null;
   const accounts = Array.isArray(v.accounts) ? v.accounts.map(parseAccount).filter((a): a is Account => a !== null) : [];
-  return { provider: v.provider, authenticated: v.authenticated === true, accounts, ...(typeof v.message === "string" && { message: v.message }) };
+  return { provider: v.provider, authenticated: v.authenticated === true, accounts, ...(typeof v.message === "string" && { message: v.message }),
+    ...(Array.isArray(v.models) && { models: v.models.filter((m): m is string => typeof m === "string") }),
+    ...(typeof v.toolCalling === "boolean" && { toolCalling: v.toolCalling }) };
 }
 
 /**
@@ -173,6 +200,15 @@ export function parseEvent(raw: unknown): AiEvent | null {
   const chat = sessionId ? { provider, sessionId, ...(turnId && { turnId }), ...(activeSkill && { activeSkill }) } : null;
   const args = (v: unknown) => (isObject(v) ? v : {});
   switch (raw.type) {
+    case "device_code": {
+      if (typeof raw.userCode !== "string" || raw.userCode.length > 128 || typeof raw.verificationUri !== "string" ||
+        typeof raw.expiresIn !== "number" || !Number.isFinite(raw.expiresIn) || raw.expiresIn <= 0) return null;
+      try {
+        const uri = new URL(raw.verificationUri);
+        if (uri.protocol !== "https:" || uri.username || uri.password) return null;
+      } catch { return null; }
+      return { type: "device_code", provider, userCode: raw.userCode, verificationUri: raw.verificationUri, expiresIn: raw.expiresIn };
+    }
     case "auth": {
       const status = parseStatus(raw.status);
       return status ? { type: "auth", provider, status } : null;

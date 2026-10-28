@@ -37,6 +37,10 @@ export function AiPanel() {
   const reported = Object.keys(useAi((s) => s.accounts));
   const listed = providerInfo(provider);
   const info = { ...listed, label: displayLabel(provider, listed.label) };
+  // Sign-in-only providers (no verified tool calling) stay in AI accounts, not in the chat picker.
+  const providers = providerIds(reported).filter((p) => providerInfo(p).toolCalling !== false);
+  // The bridge's live model list when it reported one, else the provider's catalog.
+  const models = ["", ...(state.status?.models ?? info.models).filter((m) => m !== "")];
   const loaded = useAi((s) => s.loaded);
   const chat = useAi((s) => s.chat);
   const starting = useAi((s) => s.starting);
@@ -56,7 +60,7 @@ export function AiPanel() {
   }, [chat.items]);
 
   const busy = chat.running || starting;
-  const ready = desktop && Boolean(active) && Boolean(workspace);
+  const ready = desktop && info.toolCalling !== false && Boolean(active) && Boolean(workspace);
   const canSend = ready && !busy && draft.trim().length > 0;
   const submit = () => {
     if (!canSend) return;
@@ -83,7 +87,6 @@ export function AiPanel() {
   };
   const blocked = refusals.aiDesktopOnly();
   const using = !active ? null : accountKind(active) === "apiKey" ? t("ai.panel.usingApiKey", { provider: info.label }) : info.usingLabel ? t(info.usingLabel) : t("ai.panel.usingAccount", { account: active.label });
-  const providers = providerIds(reported);
   const last = chat.items.at(-1);
   const streaming = chat.running && last?.kind === "assistant" ? last.id : null;
 
@@ -122,7 +125,7 @@ export function AiPanel() {
             </select>
           )}
           <select id="ai-model" aria-label={t("ai.panel.model")} title={t("ai.panel.model")} className={`${inputs.input} ${inputs.select} ${styles.select} ${styles.modelSelect} num`} value={model} disabled={busy} onChange={(e) => useAi.setState({ model: e.target.value })}>
-            {info.models.map((m) => (
+            {models.map((m) => (
               <option key={m} value={m}>
                 {m || t("ai.panel.modelDefault")}
               </option>
@@ -280,7 +283,7 @@ function Item({ item, provider, streaming }: { item: ChatItem; provider: Provide
           <div className={styles.noticeText}>
             <p className={styles.noticeTitle}>{tm(r.what)}</p>
             <p className={styles.noticeBody}>{tm(r.why)}</p>
-            {item.code === "PLAN_PERMISSION_REQUIRED" || item.code === "AUTH_REQUIRED" ? (
+            {item.code === "PLAN_PERMISSION_REQUIRED" || item.code === "AUTH_REQUIRED" || item.code === "AUTH_EXPIRED" ? (
               <div className={styles.row}>
                 <Button size="sm" onClick={() => openSettings(true)}>
                   {t("ai.panel.openAccounts")}

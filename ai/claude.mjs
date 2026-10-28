@@ -1,75 +1,42 @@
 import { query } from '@anthropic-ai/claude-agent-sdk'
-import { spawn } from 'node:child_process'
+import path from 'node:path'
 import { BridgeError } from './errors.mjs'
 import { READ_ONLY, TOOL_NAMES } from './tools.mjs'
+import { ProviderAuth } from './auth/providers.mjs'
+import { Store } from './store.mjs'
 
-// Credential storage belongs exclusively to Claude Code. accountInfo performs
-// the SDK initialize handshake without sending a user prompt or inference.
-export class ClaudeAuth {
-  constructor(queryFn = query) { this.queryFn = queryFn; this.loginChild = undefined }
-
-  async accounts() {
-    let client
-    try {
-      client = this.queryFn({ prompt: emptyInput(), options: { tools: [], settingSources: [], strictMcpConfig: true } })
-      const info = await client.accountInfo()
-      const hasSource = value => typeof value === 'string' && value.length > 0 && !['none', 'unknown'].includes(value.toLowerCase())
-      const authenticated = Boolean(process.env.ANTHROPIC_API_KEY || hasSource(info.tokenSource) || hasSource(info.apiKeySource))
-      return [{ id: 'claude-local', provider: 'claude', label: process.env.ANTHROPIC_API_KEY ? 'Anthropic API key (environment)' : info.email || 'Claude local login',
-        ...(info.email ? { email: info.email } : {}), authenticated, planEnabled: authenticated && !process.env.ANTHROPIC_API_KEY }]
-    } catch {
-      return [{ id: 'claude-local', provider: 'claude', label: 'Claude local login', authenticated: false, planEnabled: false }]
-    } finally { client?.close() }
-  }
-
-  login() {
-    if (this.loginChild) throw new BridgeError('BUSY', 'Claude login is already running.')
-    // Checked against the installed `claude auth --help`: login owns both the
-    // browser flow and credentials. Its stdout/stderr are never relayed.
-    const child = spawn(process.env.SIMREP_CLAUDE_BIN || 'claude', ['auth', 'login'], {
-      shell: false, windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'],
-    })
-    this.loginChild = child
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { child.kill(); reject(new BridgeError('AUTH_TIMEOUT', 'Claude login timed out. Run claude auth login in a terminal.')) }, 10 * 60_000)
-      const finish = () => { clearTimeout(timer); this.loginChild = undefined }
-      child.once('error', () => { finish(); reject(new BridgeError('CLAUDE_CLI_MISSING', 'Install Claude Code and run claude auth login.')) })
-      child.once('exit', code => {
-        finish()
-        if (code === 0) resolve(undefined)
-        else reject(new BridgeError('AUTH_FAILED', 'Claude login did not complete. Run claude auth login in a terminal.'))
-      })
-    })
-  }
-
-  async logout() {
-    this.close()
-    if (process.env.ANTHROPIC_API_KEY) throw new BridgeError('ENV_API_KEY', 'Remove ANTHROPIC_API_KEY from the app environment to sign out of API-key authentication.')
-    await new Promise((resolve, reject) => {
-      const child = spawn(process.env.SIMREP_CLAUDE_BIN || 'claude', ['auth', 'logout'], { shell: false, windowsHide: true, stdio: 'ignore' })
-      child.once('error', () => reject(new BridgeError('CLAUDE_CLI_MISSING', 'Claude Code is not installed.')))
-      child.once('exit', code => code === 0 ? resolve(undefined) : reject(new BridgeError('AUTH_FAILED', 'Claude logout failed.')))
-    })
-    return { signedOut: true, remoteRevocationConfirmed: false }
-  }
-
-  close() { this.loginChild?.kill(); this.loginChild = undefined }
+// Bridge-owned PKCE and refresh. The SDK never reads the host CLI login.
+export class ClaudeAuth extends ProviderAuth {
+  constructor(options = {}) { super('claude', options) }
 }
 
-async function* emptyInput() { /* Initialize only; never submit a prompt. */ }
-
 export class ClaudeSession {
-  constructor({ workspace, model, gate, emit, queryFn = query }) {
+  constructor({ auth, account, workspace, model, gate, emit, systemPrompt = undefined, queryFn = query }) {
+    this.auth = auth; this.account = account
     this.workspace = workspace; this.model = model; this.gate = gate; this.emit = emit; this.queryFn = queryFn
+    this.systemPrompt = systemPrompt
     this.resume = undefined; this.client = undefined; this.controller = undefined
   }
 
   async send(text) {
     this.controller = new AbortController()
+    const credential = await this.auth.access(this.account)
+    const config = new Store(path.join(this.auth.store.directory, 'claude-sdk'))
+    await config.init()
+    const env = Object.fromEntries(['PATH', 'HOME', 'USERPROFILE', 'SystemRoot', 'WINDIR', 'COMSPEC', 'APPDATA',
+      'TMPDIR', 'TEMP', 'LANG', 'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'NODE_EXTRA_CA_CERTS']
+      .filter(k => process.env[k]).map(k => [k, process.env[k]]))
+    for (const name of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL', 'CLAUDE_CODE_OAUTH_TOKEN',
+      'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR', 'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'CLAUDE_CODE_USE_FOUNDRY']) env[name] = undefined
+    env.CLAUDE_CONFIG_DIR = config.directory
+    if (credential.apiKey) env.ANTHROPIC_API_KEY = credential.apiKey
+    else env.CLAUDE_CODE_OAUTH_TOKEN = credential.access_token
+    if (this.controller.signal.aborted) return 'interrupted'
     const client = this.queryFn({
       prompt: text,
       options: {
         cwd: this.workspace, model: this.model, resume: this.resume,
+        env,
         abortController: this.controller, includePartialMessages: true,
         tools: [], allowedTools: READ_ONLY.map(n => `mcp__simrep__${n}`),
         permissionMode: 'default', settingSources: [], strictMcpConfig: true,
@@ -77,7 +44,7 @@ export class ClaudeSession {
         canUseTool: async (name, input) => TOOL_NAMES.some(n => name === `mcp__simrep__${n}`)
           // The MCP proxy owns mandatory approval for every mutation.
           ? { behavior: 'allow', updatedInput: input } : { behavior: 'deny', message: 'Only workspace-restricted SimRep tools are available.' },
-        systemPrompt: 'You operate the SimRep ion optics simulator. Use only the provided SimRep MCP tools. Units are mm, us, V, gauss, amu and eV. Ask before changing the project.',
+        systemPrompt: this.systemPrompt || 'You operate the SimRep ion optics simulator. Use only the provided SimRep MCP tools. Units are mm, us, V, gauss, amu and eV. Ask before changing the project.',
       },
     })
     this.client = client

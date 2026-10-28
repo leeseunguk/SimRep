@@ -13,6 +13,7 @@ import { AiNotice, ManageUsageLink } from "./AiNotice";
 import { displayLabel, OpenAiMark, ProviderMark } from "./BrandMarks";
 import { clock, useNow } from "./time";
 import dialog from "../Dialog.module.css";
+import inputs from "../ui/inputs.module.css";
 import styles from "./Ai.module.css";
 
 /** Settings > AI accounts: one card per provider (sign-in, plan status, accounts), privacy line. */
@@ -123,6 +124,7 @@ function ProviderCard({ provider }: { provider: Provider }) {
   const { t } = useI18n();
   const listed = providerInfo(provider);
   const info = { ...listed, label: displayLabel(provider, listed.label) };
+  const [region, setRegion] = useState("mainland-cn");
   const state = useAi((s) => providerState(s.accounts, provider));
   const pending = useAi((s) => s.pending[provider] === true);
   const accounts = state.status?.accounts ?? [];
@@ -131,12 +133,19 @@ function ProviderCard({ provider }: { provider: Provider }) {
   // One shared login (cli-login) gives way once it, or its API key, is active; an API-key-only
   // provider has no sign-in at all. OAuth and device-code providers can add more accounts.
   const shared = info.authKind === "cli-login" && accounts.some((a) => a.authenticated);
-  const canSignIn = info.authKind !== "api-key" && !shared;
+  const canSignIn = info.authKind !== "api-key" && info.signInSupported !== false && !shared;
   const chip = CHIP[summary];
   const chipLabel = summary === "ready" && info.readyLabel ? t(info.readyLabel) : t(chip.key);
   // Accounts of one provider differ only when there are several; a single one shares the card's chip.
   const many = accounts.length > 1;
   const device = state.notice?.kind === "signingIn" ? state.notice.device : undefined;
+  // A provider the bridge can sign in to but not chat through (no verified tool calling).
+  const signInOnly = info.toolCalling === false;
+  // One line on what signing in gives: the listed note, else the bridge's (English) note or why chat is unavailable.
+  const bridgeText = info.planNote ? undefined : signInOnly ? info.unsupportedReason : info.bridgePlanNote;
+  const body = info.planNote
+    ? t(info.planNote.body)
+    : (bridgeText ?? (signInOnly ? t("ai.auth.signInOnly") : t(info.authKind === "api-key" ? "ai.auth.apiKeyOnly" : "ai.auth.generic", { provider: info.label, env: info.apiKeyEnv ?? "" })));
 
   return (
     <li className={styles.provider} aria-labelledby={`ai-${provider}-title`} data-provider={provider} data-auth={info.authKind} data-summary={summary}>
@@ -148,21 +157,40 @@ function ProviderCard({ provider }: { provider: Provider }) {
           <h3 id={`ai-${provider}-title`} className={styles.providerTitle} title={info.label}>
             {info.label}
           </h3>
-          <StatusChip tone={chip.tone} testId="ai-status">
-            {chipLabel}
-          </StatusChip>
+          <div className={styles.chips}>
+            <StatusChip tone={chip.tone} testId="ai-status">
+              {chipLabel}
+            </StatusChip>
+            {signInOnly && (
+              <StatusChip tone="neutral" testId="ai-sign-in-only">
+                {t("ai.status.signInOnly")}
+              </StatusChip>
+            )}
+          </div>
         </div>
       </div>
       <div className={styles.providerText}>
         {info.planNote && <p className={styles.planNote}>{t(info.planNote.title)}</p>}
-        <p className={styles.providerBody}>
-          {info.planNote ? t(info.planNote.body) : t(info.authKind === "api-key" ? "ai.auth.apiKeyOnly" : "ai.auth.generic", { provider: info.label, env: info.apiKeyEnv ?? "" })}
+        <p className={styles.providerBody} lang={bridgeText ? "en" : undefined}>
+          {body}
         </p>
       </div>
       {/* Fixed slots (head, text, actions, notices, footer) line up across the cards of one grid row. */}
       <div className={styles.cardActions}>
+        {canSignIn && !device && info.regions && (
+          <label className={styles.field}>
+            {t("ai.auth.region")}
+            <select className={`${inputs.input} ${inputs.select} ${styles.select}`} value={region} disabled={pending || signingIn} onChange={(e) => setRegion(e.target.value)} data-testid={`ai-region-${provider}`}>
+              {info.regions.map((r) => (
+                <option key={r} value={r}>
+                  {t(r === "global" ? "ai.auth.regionGlobal" : "ai.auth.regionMainland")}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {canSignIn && !device && (
-          <button type="button" className={styles.brandButton} disabled={pending || signingIn} onClick={() => void signIn(provider)} data-testid={`ai-signin-${provider}`}>
+          <button type="button" className={styles.brandButton} disabled={pending || signingIn} onClick={() => void signIn(provider, undefined, info.regions ? region : undefined)} data-testid={`ai-signin-${provider}`}>
             <ProviderMark provider={provider} label={info.label} className={styles.buttonMark} data-provider={provider} />
             {/* A brand-fixed label (e.g. "Continue with ChatGPT") is never translated. */}
             <span lang={info.signInLabel ? "en" : undefined}>{info.signInLabel ? t(info.signInLabel) : t("ai.auth.signIn", { provider: info.label })}</span>
@@ -172,7 +200,7 @@ function ProviderCard({ provider }: { provider: Provider }) {
       </div>
       <div className={styles.cardRest}>
         {state.notice && !device && <AiNotice provider={provider} notice={state.notice} />}
-        {device && <DeviceCodeBox provider={provider} code={device} />}
+        {device && <DeviceCodeBox provider={provider} code={device} onRetry={() => void signIn(provider, undefined, info.regions ? region : undefined)} />}
       </div>
       <div className={styles.cardFooter}>
         {accounts.length > 0 ? (
@@ -199,7 +227,7 @@ function ProviderCard({ provider }: { provider: Provider }) {
 }
 
 /** Device authorization: the code to enter at the provider, a copy button and its lifetime. */
-function DeviceCodeBox({ provider, code }: { provider: Provider; code: DeviceCode }) {
+function DeviceCodeBox({ provider, code, onRetry }: { provider: Provider; code: DeviceCode; onRetry(): void }) {
   const { t } = useI18n();
   const label = displayLabel(provider, providerInfo(provider).label);
   const now = useNow(code.expiresAt !== null);
@@ -233,12 +261,18 @@ function DeviceCodeBox({ provider, code }: { provider: Provider; code: DeviceCod
       {expired ? (
         <div className={styles.row}>
           <p className={styles.noticeBody}>{t("ai.device.expired")}</p>
-          <Button size="sm" icon={<RefreshCw />} onClick={() => void signIn(provider)}>
+          <Button size="sm" icon={<RefreshCw />} onClick={onRetry}>
             {t("ai.device.retry")}
           </Button>
         </div>
       ) : (
         <p className={styles.noticeBody}>{t("ai.device.body", { provider: label })}</p>
+      )}
+      {/* Display only, never a link: Rust opens the separately validated page. */}
+      {code.verificationUri && (
+        <p className={`${styles.noticeBody} num`} lang="en">
+          {code.verificationUri}
+        </p>
       )}
     </div>
   );
@@ -252,7 +286,8 @@ function AccountRow({ account: a, busy, showState }: { account: Account; busy: b
   const hint = kind === "apiKey" && info.apiKeyEnv ? t("ai.account.apiKeyHint", { env: info.apiKeyEnv }) : kind === "noPlan" ? t("ai.account.noPlanHint") : null;
   // Per-account providers (oauth, device-code) keep signed-out registrations: offer to sign in again.
   const perAccount = info.authKind === "oauth" || info.authKind === "device-code";
-  const reauthorize = perAccount && kind !== "ready";
+  // An API-key account (e.g. Claude through ANTHROPIC_API_KEY) has nothing to reauthorize or sign out of.
+  const reauthorize = perAccount && kind !== "ready" && kind !== "apiKey";
   const canSignOut = a.authenticated && kind !== "apiKey";
   return (
     <li className={styles.account} data-kind={kind} data-testid="ai-account">

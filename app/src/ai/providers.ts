@@ -1,4 +1,5 @@
 import type { MessageKey } from "../i18n/en";
+import type { ProviderMetadata } from "./protocol";
 
 /**
  * The AI providers the UI knows, as data: the accounts page, the panel's provider picker, the
@@ -43,6 +44,11 @@ export interface ProviderInfo {
   planWelcome?: boolean;
   /** Models offered; "" = the provider default. */
   models: readonly string[];
+  toolCalling?: boolean;
+  unsupportedReason?: string;
+  signInSupported?: boolean;
+  bridgePlanNote?: string;
+  regions?: readonly string[];
 }
 
 export const PROVIDER_LIST: readonly ProviderInfo[] = [
@@ -63,18 +69,42 @@ export const PROVIDER_LIST: readonly ProviderInfo[] = [
   {
     id: "claude",
     label: "Claude",
-    authKind: "cli-login",
+    authKind: "oauth",
     planNote: { title: "ai.claude.headline", body: "ai.claude.body" },
-    cli: "Claude Code",
     apiKeyEnv: "ANTHROPIC_API_KEY",
     withoutPlan: "apiKey",
     readyLabel: "ai.account.ready.claude",
     usingLabel: "ai.panel.usingClaude",
+    usageUrl: "https://claude.ai/settings/usage",
     models: ["", "sonnet", "opus", "haiku"],
   },
 ];
 
 const BY_ID = new Map(PROVIDER_LIST.map((p) => [p.id, p]));
+
+/** Merge only display metadata; the bridge never sends key or token material here. */
+export function installProviderMetadata(providers: readonly ProviderMetadata[]): void {
+  for (const p of providers) {
+    if (!/^[a-z][a-z0-9_-]{0,31}$/.test(p.id) || !["oauth", "cli-login", "device-code", "api-key"].includes(p.authKind)) continue;
+    const previous = BY_ID.get(p.id);
+    BY_ID.set(p.id, {
+      ...(previous ?? { id: p.id, label: p.id, models: [""], withoutPlan: "apiKey" as const }),
+      label: p.label,
+      authKind: p.authKind,
+      models: ["", ...(p.models ?? []).filter((m) => typeof m === "string" && m.length > 0)],
+      withoutPlan: p.withoutPlan === "blocked" ? "blocked" : "apiKey",
+      ...(typeof p.apiKeyEnv === "string" && { apiKeyEnv: p.apiKeyEnv }),
+      ...(typeof p.planNote === "string" && { bridgePlanNote: p.planNote }),
+      ...(typeof p.unsupportedReason === "string" && { unsupportedReason: p.unsupportedReason }),
+      ...(typeof p.toolCalling === "boolean" && { toolCalling: p.toolCalling }),
+      ...(typeof p.signInSupported === "boolean" && { signInSupported: p.signInSupported }),
+      ...(Array.isArray(p.regions) && { regions: p.regions.filter((r) => typeof r === "string") }),
+      // Usage URLs are display metadata only. Rust opens the provider's fixed
+      // URL on auth.openUsage; no WebView URL is passed to the operating system.
+      ...(typeof p.usageUrl === "string" && { usageUrl: p.usageUrl }),
+    });
+  }
+}
 
 /** The entry for `id`, or a generic one for a provider the bridge knows and this list does not. */
 export function providerInfo(id: string): ProviderInfo {

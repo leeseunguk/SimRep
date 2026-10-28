@@ -3,6 +3,7 @@ export class BridgeError extends Error {
     super(message)
     this.code = code
     this.details = details
+    this.oauthCode = undefined
   }
 }
 

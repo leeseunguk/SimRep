@@ -54,12 +54,30 @@ impl Drop for Bridge {
 fn authorize_url(value: &str) -> bool {
     tauri::Url::parse(value).is_ok_and(|url| {
         url.scheme() == "https"
-            && url.host_str() == Some("auth.openai.com")
             && url.port_or_known_default() == Some(443)
-            && url.path() == "/api/accounts/authorize"
             && url.username().is_empty()
             && url.password().is_none()
             && url.fragment().is_none()
+            && match url.host_str() {
+                Some("auth.openai.com") => {
+                    ["/api/accounts/authorize", "/oauth/authorize"].contains(&url.path())
+                }
+                Some("claude.ai") => ["/oauth/authorize", "/settings/usage"].contains(&url.path()),
+                Some("chatgpt.com") => url.path() == "/settings/usage",
+                Some("openrouter.ai") => url.path() == "/auth",
+                Some("app.devin.ai") => url.path() == "/auth/cli/continue",
+                Some("cursor.com") => url.path() == "/loginDeepControl",
+                Some("app.kiro.dev") => url.path() == "/signin",
+                Some("github.com") => url.path() == "/login/device",
+                // Device issuers choose the verification path. Only these
+                // fixed first-party HTTPS origins may open a browser.
+                Some(
+                    "auth.x.ai" | "accounts.x.ai" | "x.ai" | "auth.kimi.com" | "auth.kimi.ai"
+                    | "kimi.com" | "kimi.ai" | "www.kimi.com" | "www.kimi.ai" | "auth.meta.com"
+                    | "meta.com" | "www.meta.com" | "radius.pi.dev",
+                ) => true,
+                _ => false,
+            }
     })
 }
 
@@ -93,9 +111,34 @@ fn public_event(message: &Value) -> Option<&Value> {
     let params = message.get("params")?;
     let event = params.get("type")?.as_str()?;
     let provider = params.get("provider")?.as_str()?;
-    if !["chatgpt", "claude"].contains(&provider)
+    if ![
+        "chatgpt",
+        "claude",
+        "github-copilot",
+        "xai",
+        "openrouter",
+        "kimi-coding",
+        "devin",
+        "meta",
+        "cursor",
+        "radius",
+        "kiro",
+        "openai",
+        "gemini",
+        "deepseek",
+        "mistral",
+        "groq",
+        "zai",
+        "qwen",
+        "minimax",
+        "openrouter-key",
+        "xai-key",
+        "anthropic-key",
+    ]
+    .contains(&provider)
         || ![
             "auth",
+            "device_code",
             "delta",
             "tool_call",
             "tool_result",
@@ -154,7 +197,7 @@ impl Bridge {
         }
         let mut child = command
             .spawn()
-            .map_err(|_| "Cannot start AI bridge. Install Node.js 18.18+ and ai/ dependencies.")?;
+            .map_err(|_| "Cannot start AI bridge. Install Node.js 24+ and ai/ dependencies.")?;
         let stdin = child.stdin.take().ok_or("AI stdin unavailable")?;
         let stdout = child.stdout.take().ok_or("AI stdout unavailable")?;
         let pending: Pending = Arc::default();
@@ -203,10 +246,12 @@ fn valid_request(request: &Value) -> bool {
             .and_then(Value::as_str)
             .is_some_and(|method| {
                 [
+                    "auth.providers",
                     "auth.status",
                     "auth.accounts",
                     "auth.login",
                     "auth.logout",
+                    "auth.openUsage",
                     "chat.start",
                     "chat.send",
                     "chat.cancel",
@@ -277,16 +322,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn browser_is_only_the_openai_authorization_endpoint() {
+    fn browser_is_only_a_first_party_authorization_or_usage_endpoint() {
         assert!(authorize_url(
             "https://auth.openai.com/api/accounts/authorize?state=x"
         ));
+        for value in [
+            "https://claude.ai/oauth/authorize?state=x",
+            "https://claude.ai/settings/usage",
+            "https://chatgpt.com/settings/usage",
+            "https://github.com/login/device",
+            "https://openrouter.ai/auth",
+            "https://app.devin.ai/auth/cli/continue",
+            "https://cursor.com/loginDeepControl?uuid=x",
+            "https://auth.x.ai/activate",
+            "https://auth.kimi.ai/device",
+            "https://auth.meta.com/device",
+            "https://radius.pi.dev/device",
+        ] {
+            assert!(authorize_url(value), "{value}");
+        }
         for value in [
             "http://auth.openai.com/api/accounts/authorize",
             "https://auth.openai.com.evil.test/api/accounts/authorize",
             "https://auth.openai.com:444/api/accounts/authorize",
             "https://x@auth.openai.com/api/accounts/authorize",
             "https://auth.openai.com/api/accounts/oauth/token",
+            "https://claude.ai.evil.test/oauth/authorize",
+            "https://github.com/login/device#fragment",
+            "https://github.com/settings",
+            "https://example.com/login/device",
             "file:///tmp/x",
         ] {
             assert!(!authorize_url(value), "{value}");
@@ -311,5 +375,12 @@ mod tests {
         assert!(valid_request(
             &json!({"jsonrpc":"2.0","id":"a","method":"auth.status"})
         ));
+        assert!(valid_request(
+            &json!({"jsonrpc":"2.0","id":"a","method":"auth.providers"})
+        ));
+        assert!(valid_request(
+            &json!({"jsonrpc":"2.0","id":"a","method":"auth.openUsage","params":{"provider":"claude"}})
+        ));
+        assert!(public_event(&json!({"method":"event","params":{"type":"device_code","provider":"github-copilot","userCode":"ABCD","verificationUri":"https://github.com/login/device","expiresIn":900}})).is_some());
     }
 }

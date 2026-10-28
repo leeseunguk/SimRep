@@ -4,7 +4,7 @@ import { en } from "../i18n/en";
 import { translate } from "../i18n";
 import { aiReason, refusalLine, refusals } from "../refusals";
 import { accountKind, applyAuthEvent, deviceCodeOf, EMPTY_ACCOUNTS, providerState, providerSummary, setNotice, startSignIn, usableAccounts } from "./accounts";
-import { PROVIDER_LIST, providerIds, providerInfo } from "./providers";
+import { PROVIDER_LIST, installProviderMetadata, providerIds, providerInfo } from "./providers";
 import { addUser, applyEvent, EMPTY_CHAT, keyArgs, resolveApproval, summarizeResult, writesFiles, type ChatState } from "./chat";
 import { AI_ERROR_CODES, AiError, parseEvent, REFRESH_FAILED_CODES, unwrap, type Account, type AiEvent } from "./protocol";
 
@@ -161,7 +161,7 @@ describe("provider list", () => {
   it("describes each provider as data, with the fixed ChatGPT label", () => {
     expect(PROVIDER_LIST.map((p) => [p.id, p.authKind])).toEqual([
       ["chatgpt", "oauth"],
-      ["claude", "cli-login"],
+      ["claude", "oauth"],
     ]);
     expect(translate("ko", providerInfo("chatgpt").signInLabel!)).toBe("Continue with ChatGPT");
     expect(translate("en", "ai.auth.signIn", { provider: providerInfo("claude").label })).toBe("Sign in with Claude");
@@ -173,6 +173,21 @@ describe("provider list", () => {
     const s = applyAuthEvent(startSignIn(EMPTY_ACCOUNTS, "gemini"), parseEvent({ type: "auth", provider: "gemini", status: { provider: "gemini", authenticated: true, accounts: [{ id: "x", provider: "gemini", label: "me", authenticated: true, planEnabled: false }] } })!);
     expect(providerState(s, "gemini").notice).toEqual({ kind: "success", account: "me" });
     expect(parseEvent({ type: "delta", provider: "Bad Name!", sessionId: "s", text: "x" })).toBeNull();
+  });
+  it("merges bridge provider metadata without credentials and preserves the ChatGPT label", () => {
+    installProviderMetadata([{ id: "github-copilot", label: "GitHub Copilot", authKind: "device-code", models: ["gpt-4.1"], withoutPlan: "blocked", toolCalling: true }]);
+    expect(providerInfo("github-copilot")).toMatchObject({ authKind: "device-code", models: ["", "gpt-4.1"], withoutPlan: "blocked" });
+    expect(providerInfo("chatgpt").signInLabel).toBe("ai.chatgpt.continue");
+  });
+  it("displays a device code while keeping it out of the chat and dropping token fields", () => {
+    const event = parseEvent({ type: "device_code", provider: "github-copilot", userCode: "ABCD-EFGH",
+      verificationUri: "https://github.com/login/device", expiresIn: 900, access_token: "never-store" })!;
+    expect(event).not.toHaveProperty("access_token");
+    const next = applyAuthEvent(startSignIn(EMPTY_ACCOUNTS, "github-copilot"), event, 1000);
+    expect(providerState(next, "github-copilot").notice).toEqual({ kind: "signingIn", device: { userCode: "ABCD-EFGH", expiresAt: 901_000, verificationUri: "https://github.com/login/device" } });
+    expect(providerSummary(providerState(next, "github-copilot"))).toBe("signingIn");
+    const chat = chatOf(); expect(applyEvent(chat, event)).toBe(chat);
+    expect(parseEvent({ ...event, verificationUri: "javascript:alert(1)" })).toBeNull();
   });
 });
 

@@ -4,7 +4,7 @@ import type { Notice } from "../../ai/accounts";
 import type { Provider } from "../../ai/protocol";
 import { refusals } from "../../refusals";
 import { setNotice } from "../../ai/accounts";
-import { useAi } from "../../ai/store";
+import { openUsage, useAi } from "../../ai/store";
 import { providerInfo } from "../../ai/providers";
 import styles from "./Ai.module.css";
 
@@ -14,10 +14,10 @@ export function ManageUsageLink({ provider }: { provider: Provider }) {
   const url = providerInfo(provider).usageUrl;
   if (!url) return null;
   return (
-    <a className={styles.link} href={url} target="_blank" rel="noreferrer noopener" title={t("ai.chatgpt.manageUsageTitle")}>
+    <button type="button" className={styles.link} onClick={() => void openUsage(provider)} title={t("ai.chatgpt.manageUsageTitle")}>
       {t("ai.chatgpt.manageUsage")}
       <ExternalLink aria-hidden />
-    </a>
+    </button>
   );
 }
 

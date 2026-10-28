@@ -10,6 +10,7 @@ import { ChatGPTSession } from '../chatgpt.mjs'
 import { RpcProcess } from '../rpc.mjs'
 import { Store } from '../store.mjs'
 import { publicError, providerDiagnostic } from '../errors.mjs'
+import { PROVIDERS } from '../providers/table.mjs'
 
 async function setup(t, { tool = 'read_csv_summary', args = { path: 'results.csv' } } = {}) {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'simrep-chat-'))
@@ -41,7 +42,10 @@ async function setup(t, { tool = 'read_csv_summary', args = { path: 'results.csv
     return stream
   }
   const account = { id: 'claude-local', provider: 'claude', label: 'Test', authenticated: true, planEnabled: true }
-  const claude = { accounts: async () => [account], close() {}, logout: async () => ({ signedOut: true }) }
+  const credentialDir = await mkdtemp(path.join(os.tmpdir(), 'simrep-sdk-'))
+  t.after(() => rm(credentialDir, { recursive: true, force: true }))
+  const claude = { store: new Store(credentialDir), access: async () => ({ access_token: 'fake-sdk-token' }),
+    accounts: async () => [account], close() {}, logout: async () => ({ signedOut: true }) }
   const bridge = new Bridge({ claude, notify: message => events.emit('bridge:' + (message.params?.type || message.method), message.params),
     createClaude: opts => new ClaudeSession({ ...opts, queryFn }) })
   t.after(async () => { bridge.close(); await rm(workspace, { recursive: true, force: true }) })
@@ -146,4 +150,34 @@ test('ChatGPT app-server receives only child env token and restarts/resumes afte
   assert.equal(started[0].args.join(' ').includes('access-1'), false)
   assert.ok(methods.includes('thread/resume'))
   assert.equal(events.filter(e => e.type === 'delta').length, 2)
+})
+
+test('provider discovery, device-code events, fixed usage URLs and unsupported providers preserve the protocol', async t => {
+  const messages = []
+  let finish
+  const completed = new Promise(resolve => { finish = resolve })
+  const auth = { 'github-copilot': {
+    accounts: async () => [], models: async () => ['enabled-model'], close() {},
+    begin: async () => ({ url: 'https://github.com/login/device', deviceCode: { userCode: 'ABCD-EFGH',
+      verificationUri: 'https://github.com/login/device', expiresIn: 900 }, completed }),
+  } }
+  const bridge = new Bridge({ auth, notify: m => messages.push(m) })
+  t.after(() => bridge.close())
+  const metadata = await bridge.dispatch('auth.providers')
+  assert.equal(metadata.providers.length, PROVIDERS.length)
+  assert.equal(metadata.providers.find(p => p.id === 'claude').authKind, 'oauth')
+  assert.equal(metadata.providers.find(p => p.id === 'openai').authKind, 'api-key')
+  assert.equal(metadata.providers.find(p => p.id === 'cursor').toolCalling, false)
+  assert.equal(JSON.stringify(metadata).includes('access_token'), false)
+  const status = await bridge.dispatch('auth.status', { provider: 'github-copilot' })
+  assert.deepEqual(status.providers[0].models, ['enabled-model'])
+  await bridge.dispatch('auth.login', { provider: 'github-copilot' })
+  assert.equal(messages[0].method, 'host.open_url')
+  assert.deepEqual(messages[1].params, { provider: 'github-copilot', type: 'device_code', userCode: 'ABCD-EFGH',
+    verificationUri: 'https://github.com/login/device', expiresIn: 900 })
+  await bridge.dispatch('auth.openUsage', { provider: 'claude', url: 'https://evil.test' })
+  assert.equal(messages.at(-1).params.url, 'https://claude.ai/settings/usage')
+  await assert.rejects(bridge.dispatch('chat.start', { provider: 'cursor', workspace: '/tmp' }), e => e.code === 'PROVIDER_UNSUPPORTED')
+  await assert.rejects(bridge.dispatch('auth.setApiKey', { provider: 'openai', key: 'never-accepted' }), e => e.code === 'METHOD_NOT_FOUND')
+  finish()
 })

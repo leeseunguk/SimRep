@@ -30,6 +30,8 @@
     "active": true,
     "resources": {
       "../../ai/*.mjs": "ai/",
+      "../../ai/auth/": "ai/auth/",
+      "../../ai/providers/": "ai/providers/",
       "../../ai/package.json": "ai/package.json",
       "../../ai/node_modules/": "ai/node_modules/",
       "../../mcp/server.mjs": "mcp/server.mjs",
