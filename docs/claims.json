@@ -525,6 +525,342 @@
       "file": "bench/esa-application.md",
       "section": "Values",
       "pattern": "^\\| esa_capture_fail \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_n": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_n \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_same": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_same \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_common_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_common_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_only_simion": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_only_simion \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_only_stair": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_only_stair \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_hit_rms_mm": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_hit_rms_mm \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_pot_max_v": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_pot_max_v \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_simion_capture_rays": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_simion_capture_rays \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_simion_capture_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_simion_capture_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch1_simion_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch1_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch1_simion_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch1_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch1_stair_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch1_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch1_stair_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch1_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch1_exact_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch1_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch1_exact_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch1_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch16_simion_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch16_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch16_simion_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch16_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch16_stair_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch16_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch16_stair_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch16_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch16_exact_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch16_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch16_exact_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch16_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch32_simion_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch32_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch32_simion_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch32_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch32_stair_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch32_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch32_stair_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch32_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch32_exact_centroid_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch32_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_cmp_ch32_exact_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_cmp_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_h_mm": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_h_mm \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_n": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_n \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch1_stair_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch1_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch1_stair_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch1_stair_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch1_exact_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch1_exact_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch1_noins_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch1_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch1_noins_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch1_noins_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch16_stair_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch16_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch16_stair_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch16_stair_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch16_exact_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch16_exact_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch16_noins_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch16_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch16_noins_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch16_noins_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_stair_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_stair_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_stair_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_exact_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_exact_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_noins_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_noins_hits": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_noins_hits \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_exact_fwhm_bootstrap_sd_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_exact_fwhm_bootstrap_sd_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_simion_s": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_simion_s \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_simrep_1t_s": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_simrep_1t_s \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_simrep_16t_s": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_simrep_16t_s \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_threads_single": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_threads_single \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_threads_multi": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_threads_multi \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_runs": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_runs \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_simion_rms_mm": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_simion_rms_mm \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_fair_simrep_rms_mm": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_fair_simrep_rms_mm \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch1_exact_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch1_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch16_exact_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch16_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_g62_ch32_exact_fwhm_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "SIMION 2024 comparison",
+      "pattern": "^\\| esa_g62_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
     }
   },
   "readme": [
@@ -883,6 +1219,372 @@
       "number": "60",
       "derive": "esa_capture_rays",
       "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-h",
+      "fragment": "격자 0.125 mm 정규화본",
+      "number": "0.125",
+      "derive": "esa_h_mm",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-simion-n",
+      "fragment": "같은 전자 소스 4,096개",
+      "number": "4,096",
+      "derive": "esa_cmp_n",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-pot",
+      "fragment": "최대 20.3 µV",
+      "number": "20.3",
+      "derive": "esa_cmp_pot_max_v * 1000000",
+      "rounding": "0.1",
+      "relation": "upper_bound"
+    },
+    {
+      "id": "readme-esa-simion-cap-hits",
+      "fragment": "SIMION 검출 60개 전부",
+      "number": "60",
+      "derive": "esa_cmp_simion_capture_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-cap-miss",
+      "fragment": "비검출 60개를",
+      "number": "60",
+      "derive": "esa_cmp_simion_capture_rays - esa_cmp_simion_capture_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-n26",
+      "fragment": "채널 26에서 전자 4,096개",
+      "number": "4,096",
+      "derive": "esa_cmp_n",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-same",
+      "fragment": "4,092개가 SIMION과 같은",
+      "number": "4,092",
+      "derive": "esa_cmp_same",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-diff",
+      "fragment": "나머지 4개는",
+      "number": "4",
+      "derive": "esa_cmp_n - esa_cmp_same",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-only-sim",
+      "fragment": "SIMION만 검출 3개",
+      "number": "3",
+      "derive": "esa_cmp_only_simion",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-only-st",
+      "fragment": "SimRep만 검출 1개",
+      "number": "1",
+      "derive": "esa_cmp_only_stair",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-common",
+      "fragment": "둘 다 검출한 57개",
+      "number": "57",
+      "derive": "esa_cmp_common_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-hit-rms",
+      "fragment": "차이는 RMS 0.13 mm",
+      "number": "0.13",
+      "derive": "esa_cmp_hit_rms_mm",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-simion-cent-min",
+      "fragment": "0.3~0.5% 안에서",
+      "number": "0.3",
+      "derive": "min((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-simion-cent-max",
+      "fragment": "0.3~0.5% 안에서",
+      "number": "0.5",
+      "derive": "max((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)",
+      "rounding": "0.1",
+      "relation": "upper_bound"
+    },
+    {
+      "id": "readme-esa-simion-st-fwhm-min",
+      "fragment": "7.6~8.2% 좁습니다",
+      "number": "7.6",
+      "derive": "min((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-simion-st-fwhm-max",
+      "fragment": "7.6~8.2% 좁습니다",
+      "number": "8.2",
+      "derive": "max((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-simion-ex-fwhm-min",
+      "fragment": "19~35% 좁습니다",
+      "number": "19",
+      "derive": "min((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-ex-fwhm-max",
+      "fragment": "19~35% 좁습니다",
+      "number": "35",
+      "derive": "max((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-h",
+      "fragment": "격자 0.0625 mm에서",
+      "number": "0.0625",
+      "derive": "esa_g62_h_mm",
+      "rounding": "0.0001"
+    },
+    {
+      "id": "readme-esa-simion-g62-n",
+      "fragment": "전자 495,616개",
+      "number": "495,616",
+      "derive": "esa_g62_n",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch1-st-fwhm",
+      "fragment": "| 1 | 0.261 eV,",
+      "number": "0.261",
+      "derive": "esa_g62_ch1_stair_fwhm_ev",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch1-st-hits",
+      "fragment": "| 1 | 0.261 eV, 1,529개",
+      "number": "1,529",
+      "derive": "esa_g62_ch1_stair_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch1-ex-fwhm",
+      "fragment": "| 0.174 eV, 1,101개 |",
+      "number": "0.174",
+      "derive": "esa_g62_ch1_exact_fwhm_ev",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch1-ex-hits",
+      "fragment": "eV, 1,101개 | 0.258",
+      "number": "1,101",
+      "derive": "esa_g62_ch1_exact_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch1-ni-fwhm",
+      "fragment": "| 0.258 eV, 1,531개 |",
+      "number": "0.258",
+      "derive": "esa_g62_ch1_noins_fwhm_ev",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch1-ni-hits",
+      "fragment": "0.258 eV, 1,531개 |",
+      "number": "1,531",
+      "derive": "esa_g62_ch1_noins_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch16-st-fwhm",
+      "fragment": "| 16 | 38.2 eV,",
+      "number": "38.2",
+      "derive": "esa_g62_ch16_stair_fwhm_ev",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch16-st-hits",
+      "fragment": "| 16 | 38.2 eV, 1,527개",
+      "number": "1,527",
+      "derive": "esa_g62_ch16_stair_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch16-ex-fwhm",
+      "fragment": "| 25.8 eV, 1,114개 |",
+      "number": "25.8",
+      "derive": "esa_g62_ch16_exact_fwhm_ev",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch16-ex-hits",
+      "fragment": "eV, 1,114개 | 38.1",
+      "number": "1,114",
+      "derive": "esa_g62_ch16_exact_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch16-ni-fwhm",
+      "fragment": "| 38.1 eV, 1,537개 |",
+      "number": "38.1",
+      "derive": "esa_g62_ch16_noins_fwhm_ev",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch16-ni-hits",
+      "fragment": "38.1 eV, 1,537개 |",
+      "number": "1,537",
+      "derive": "esa_g62_ch16_noins_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch32-st-fwhm",
+      "fragment": "| 32 | 7,871 eV,",
+      "number": "7,871",
+      "derive": "esa_g62_ch32_stair_fwhm_ev",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch32-st-hits",
+      "fragment": "| 32 | 7,871 eV, 1,591개",
+      "number": "1,591",
+      "derive": "esa_g62_ch32_stair_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch32-ex-fwhm",
+      "fragment": "| 5,611 eV, 1,121개 |",
+      "number": "5,611",
+      "derive": "esa_g62_ch32_exact_fwhm_ev",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch32-ex-hits",
+      "fragment": "eV, 1,121개 | 7,980",
+      "number": "1,121",
+      "derive": "esa_g62_ch32_exact_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch32-ni-fwhm",
+      "fragment": "| 7,980 eV, 1,580개 |",
+      "number": "7,980",
+      "derive": "esa_g62_ch32_noins_fwhm_ev",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-g62-ch32-ni-hits",
+      "fragment": "7,980 eV, 1,580개 |",
+      "number": "1,580",
+      "derive": "esa_g62_ch32_noins_hits",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-ch32-bootstrap",
+      "fragment": "표준편차가 1,728 eV",
+      "number": "1,728",
+      "derive": "esa_g62_ch32_exact_fwhm_bootstrap_sd_ev",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-n",
+      "fragment": "(채널 26, 전자 4,096개)",
+      "number": "4,096",
+      "derive": "esa_cmp_n",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-runs",
+      "fragment": "계산 시간 (3회 중앙값)",
+      "number": "3",
+      "derive": "esa_fair_runs",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-sim-threads",
+      "fragment": "궤도 품질 9, 1스레드",
+      "number": "1",
+      "derive": "esa_fair_threads_single",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-sim-s",
+      "fragment": "| 8.08 s |",
+      "number": "8.08",
+      "derive": "esa_fair_simion_s",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-simion-fair-sim-ratio",
+      "fragment": "| 8.08 s | 1배 |",
+      "number": "1",
+      "derive": "esa_fair_simion_s / esa_fair_simion_s",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-1t-threads",
+      "fragment": "1e-3, 1스레드",
+      "number": "1",
+      "derive": "esa_fair_threads_single",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-1t-s",
+      "fragment": "| 0.475 s |",
+      "number": "0.475",
+      "derive": "esa_fair_simrep_1t_s",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-simion-fair-1t-ratio",
+      "fragment": "| 17배 |",
+      "number": "17",
+      "derive": "esa_fair_simion_s / esa_fair_simrep_1t_s",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-16t-threads",
+      "fragment": "1e-3, 16스레드",
+      "number": "16",
+      "derive": "esa_fair_threads_multi",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-16t-s",
+      "fragment": "| 0.040 s |",
+      "number": "0.040",
+      "derive": "esa_fair_simrep_16t_s",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-simion-fair-16t-ratio",
+      "fragment": "| 204배 |",
+      "number": "204",
+      "derive": "esa_fair_simion_s / esa_fair_simrep_16t_s",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-simion-fair-sim-rms",
+      "fragment": "RMS가 SIMION 0.13 mm",
+      "number": "0.13",
+      "derive": "esa_fair_simion_rms_mm",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-simion-fair-st-rms",
+      "fragment": "SimRep 0.12 mm로",
+      "number": "0.12",
+      "derive": "esa_fair_simrep_rms_mm",
+      "rounding": "0.01"
     }
   ],
   "report_table13": [
