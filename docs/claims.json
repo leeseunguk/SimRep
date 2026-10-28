@@ -495,6 +495,36 @@
       "file": "bench/esa-application.md",
       "section": "Values",
       "pattern": "^\\| esa_design_gap_mm \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_capture_u_v": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_capture_u_v \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_capture_e_ev": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_capture_e_ev \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_capture_rays": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_capture_rays \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_capture_pass": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_capture_pass \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_capture_fail": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_capture_fail \\| ([0-9.eE+-]+) \\|"
     }
   },
   "readme": [
@@ -811,6 +841,48 @@
       "number": "3.15",
       "derive": "esa_design_gap_mm",
       "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-capture-u",
+      "fragment": "판 전압차 376.6 V",
+      "number": "376.6",
+      "derive": "esa_capture_u_v",
+      "rounding": "0.1"
+    },
+    {
+      "id": "readme-esa-capture-e",
+      "fragment": "4.12 keV 전자",
+      "number": "4.12",
+      "derive": "esa_capture_e_ev / 1000",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-capture-rays",
+      "fragment": "궤도 60개",
+      "number": "60",
+      "derive": "esa_capture_rays",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-capture-pass",
+      "fragment": "초록 30개",
+      "number": "30",
+      "derive": "esa_capture_pass",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-capture-fail",
+      "fragment": "분홍 30개",
+      "number": "30",
+      "derive": "esa_capture_fail",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-capture-app-rays",
+      "fragment": "같은 전자 60개",
+      "number": "60",
+      "derive": "esa_capture_rays",
+      "rounding": "1"
     }
   ],
   "report_table13": [
