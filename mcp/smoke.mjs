@@ -124,7 +124,7 @@ try {
   const list = await call('tools/list', {})
   const names = (list.result?.tools ?? []).map((tool) => tool.name)
   const expected = [
-    'gpu_info', 'pa_info', 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'cad_measure', 'fly',
+    'gpu_info', 'pa_info', 'aperture_check', 'gem2pa', 'mesh_import', 'refine', 'refine_geometry', 'cad_measure', 'fly',
     'export_geometry', 'export_grid', 'export_isosurface', 'export_trajectories', 'read_csv_summary',
     'simrep_plan', 'analyzer_scan', 'grid_convergence', 'compare_runs', 'check_geometry', 'summarize_results',
     'load_skill', 'fetch_tool_output',
@@ -319,9 +319,11 @@ try {
   const platePacket = await call('tools/call', { name: 'check_geometry', arguments: {
     input: 'plates.gem',
     refine: { electrode: ['1=1:0', '2=2:10'], grid: [17,9,9], spacing: [0.25,0.25,0.25], device: 'cpu', out: 'out/plates' },
+    apertures: { pa: 'out/plates.pa#', lines: [[0,1,1,4,1,1]] },
   } })
   const plateCheck = jsonOf(platePacket)
   check('check_geometry runs certified exact refinement with mandatory gap gate', plateCheck?.refinement?.converged === true && plateCheck?.refinement?.gap_check?.mode === 'error', textOf(platePacket).slice(0, 240))
+  check('check_geometry measures aperture', Math.abs(plateCheck?.apertures?.[0]?.exact_mm - 2) < 1e-6 && plateCheck.apertures[0].staircase_mm === 1.75, textOf(platePacket).slice(0, 500))
   if (process.env.SIMREP_PYTHON) {
     const studyPacket = await call('tools/call', { name: 'grid_convergence', arguments: {
       input: 'plates.gem', electrode: ['1=1:0', '2=2:10'],

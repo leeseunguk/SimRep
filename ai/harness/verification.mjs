@@ -1,6 +1,7 @@
 /** Checks are independent of provider prose and survive output compaction. */
 export function verifyResult(value) {
   const issues = []
+  let fwhmUncertaintyAvailable = false
   function visit(node, location = '') {
     if (!node || typeof node !== 'object') return
     if (node.identical === false) issues.push(`${location}comparison reports differences`)
@@ -16,6 +17,8 @@ export function verifyResult(value) {
       if (gap.warnings?.length || gap.pairs?.some(pair => pair.status !== 'ok')) issues.push(`${location}gap check has unresolved or under-resolved gaps; refine spacing (target gap/10)`)
     }
     if (Array.isArray(node.warnings) && node.warnings.includes('voltage_convention not stated; k may differ by a factor of 2 from literature conventions')) issues.push(`${location}voltage_convention not stated; k may differ by a factor of 2 from literature conventions`)
+    if (Array.isArray(node.warnings) && Object.hasOwn(node, 'fwhm_v')) issues.push(...node.warnings.map(warning => `${location}${warning}`))
+    if (node.bootstrap?.fwhm_v?.sd != null) fwhmUncertaintyAvailable = true
     if (node.error) issues.push(`${location}tool failed: ${node.error.message ?? node.error}`)
     if (Object.hasOwn(node, 'u_num') && node.u_num === null) issues.push(`${location}numerical uncertainty is indeterminate; refine the grid study before claiming convergence`)
     for (const [key, child] of Object.entries(node)) {
@@ -25,7 +28,7 @@ export function verifyResult(value) {
   }
   visit(value)
   const unique = [...new Set(issues)]
-  return { ok: !unique.length, issues: unique.slice(0, 8), issue_count: unique.length, timing_metric: 'compute_ms' }
+  return { ok: !unique.length, issues: unique.slice(0, 8), issue_count: unique.length, timing_metric: 'compute_ms', fwhm_uncertainty_available: fwhmUncertaintyAvailable }
 }
 
 export function parseToolResult(result) {
@@ -34,7 +37,7 @@ export function parseToolResult(result) {
 }
 
 /** Preserve prose; annotate unsupported computational speed claims. */
-export function checkClaims(text, computeValues) {
+export function checkClaims(text, computeValues, fwhmUncertaintyAvailable = false) {
   const claims = text.split(/(?<=\n)|(?<=[.!?])\s+(?=[A-Z가-힣])/u)
   const unsupported = claims.some(sentence => {
     if (/\b(?:time of flight|tof)\b/i.test(sentence) && !/\b(?:faster|speedup|speed|runtime|elapsed)\b/i.test(sentence)) return false
@@ -45,5 +48,7 @@ export function checkClaims(text, computeValues) {
     const backed = metrics.length > 0 && metrics.every(([, value]) => computeValues.some(observed => Math.abs(observed - Number(value)) <= Math.max(1e-9, Math.abs(observed) * 0.00001)))
     return noncompute || ((ratio || timing || metrics.length > 0) && !backed) || (ratio && metrics.length < 2)
   })
-  return { text, notes: unsupported ? ['Speed or ratio claim is not verified by session compute_ms results.'] : [] }
+  const notes = unsupported ? ['Speed or ratio claim is not verified by session compute_ms results.'] : []
+  if (fwhmUncertaintyAvailable && claims.some(sentence => /\bFWHM\b/i.test(sentence) && /\d/.test(sentence) && !/(?:±|\+\s*\/\s*-|uncertainty|standard deviation|\bsd\b|confidence interval|\bCI\b|불확도|표준편차|신뢰구간)/i.test(sentence))) notes.push('FWHM was quoted without its available bootstrap uncertainty.')
+  return { text, notes }
 }

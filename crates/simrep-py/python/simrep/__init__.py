@@ -22,7 +22,7 @@ __all__ = [
     "particles_from_energy",
     "gem2pa", "mesh_import", "export_geometry", "export_grid", "export_isosurface",
     "export_trajectories", "pa_info", "gpu_info", "gpu_smoke", "fly_bench",
-    "refine_bench", "refine_sdf",
+    "refine_bench", "refine_sdf", "aperture_check",
 ]
 
 
@@ -555,6 +555,18 @@ def export_isosurface(source, output, *, potential, origin_mm=(0, 0, 0),
 def export_trajectories(source, output):
     """Convert numeric trajectory CSV to VTP polylines or normalized CSV."""
     return _command("export trajectories", source, output)
+
+
+def aperture_check(pa, lines, *, cuts=None, step_mm=None):
+    """Compare axis-aligned aperture probes; coordinates are source mm."""
+    arguments = ["--json", "aperture-check", "--pa", os.fspath(pa)]
+    if cuts is not None:
+        arguments += ["--cuts", os.fspath(cuts)]
+    if step_mm is not None:
+        arguments.append(f"--step-mm={step_mm}")
+    for line in lines:
+        arguments.append("--line=" + ",".join(map(str, np.asarray(line).ravel())))
+    return json.loads(_native.command(arguments))
 
 
 def pa_info(source):

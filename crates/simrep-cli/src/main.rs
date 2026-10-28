@@ -18,6 +18,7 @@ macro_rules! println {
     };
 }
 
+mod aperture_check;
 mod cad_measure;
 mod fly_bench;
 mod fly_cmd;
@@ -42,6 +43,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Compare staircase and continuous-surface aperture widths.
+    ApertureCheck(aperture_check::Options),
     /// Report the selected adapter and native compute features.
     GpuInfo(GpuOptions),
     /// Validate a 64^3 seven-point residual against CPU f64.
@@ -303,6 +306,7 @@ fn run(cli: Cli) -> GpuResult<()> {
         Command::GpuInfo(options) => (options, false),
         Command::GpuSmoke(options) => (options, true),
         Command::PaInfo { file } => return pa_info(&file),
+        Command::ApertureCheck(options) => return aperture_check::run(options),
         Command::Gem2pa { input, output } => {
             let gem = simrep_gem::read_gem(&input)?;
             let result = gem.rasterize()?;

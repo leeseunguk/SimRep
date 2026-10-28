@@ -37,7 +37,7 @@ export async function createHarness({ workspace, language = 'auto', emit = (_fie
     `Response language: ${language === 'auto' ? 'match the latest user message' : language}.`,
     `<available_skills>\n${JSON.stringify(skillCatalog())}\nLoad only a relevant skill, not the full catalog.\n</available_skills>`,
   ].join('\n\n')
-  let activeSkill, buffer = '', issues = [], compute = [], loaded = new Set(), recent = []
+  let activeSkill, buffer = '', issues = [], compute = [], fwhmUncertaintyAvailable = false, loaded = new Set(), recent = []
   const sendEvent = fields => emit({ ...fields, ...(activeSkill && { activeSkill }) })
   function record(value) {
     if (!value || typeof value !== 'object') return
@@ -71,13 +71,14 @@ export async function createHarness({ workspace, language = 'auto', emit = (_fie
           .filter(key => value[key] !== undefined).map(key => [key, value[key]])) }].slice(-5)
         const verification = value?.verification ?? verifyResult(value)
         issues.push(...(verification.issues ?? []))
+        fwhmUncertaintyAvailable ||= Boolean(verification.fwhm_uncertainty_available)
         if (fields.result?.isError && !(verification.issues?.length)) issues.push(`${fields.name} failed; no successful result was verified`)
         if (value?.skill) activeSkill = value.skill
       }
       sendEvent(fields)
     },
     finish(status) {
-      const checked = checkClaims(buffer, compute)
+      const checked = checkClaims(buffer, compute, fwhmUncertaintyAvailable)
       const notes = [...new Set([...issues, ...checked.notes])]
       if (checked.text) sendEvent({ type: 'delta', text: checked.text })
       if (notes.length && status === 'completed') sendEvent({ type: 'delta', text: `\n\n[verify] ${notes.join('; ')}` })

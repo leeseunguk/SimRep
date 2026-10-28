@@ -62,6 +62,7 @@ live in `examples/`.
 | Neutral gas collisions | `fly --collision hs1|sds --seed 1` | `fly(..., collision="hs1", seed=1)` |
 | Space charge | `fly --space-charge direct|pic` | `fly(..., space_charge="pic")` |
 | Export field/surfaces | `simrep export grid|geometry|isosurface|trajectories ...` | `simrep.export_grid(...)` etc. |
+| Compare aperture widths | `simrep aperture-check --pa lens.pa# --line x0,y0,z0,x1,y1,z1` | `simrep.aperture_check("lens.pa#", [line])` |
 | Inspect a PA | `simrep pa-info file.pa` | `simrep.pa_info(...)` |
 
 Particles come from `.ion` files (CSV rows: birth_us, mass_amu, charge_e,
@@ -124,6 +125,7 @@ Every object has `schema_version` (integer, currently 1) and
 | `gem2pa` | `output_paths`; `dims`: int[3]; `spacing_mm`: number[3]; `electrode_numbers`: int[]; `compute_ms` |
 | `mesh-import` | `output_paths`; `dims`; `spacing_mm`; `electrode_numbers` |
 | `export *` | `output_paths` |
+| `aperture-check` | `apertures`: [{`line`, `staircase_mm`, `effective_mm`, `exact_mm`, `diff_mm`, `diff_cells`, `vacuum_intervals`, `warnings`}] |
 | `pa-info` | `file`, `symmetry`, `field_type`: string; `mode`, `header_bytes`, `ng`, `points`, `electrode_points`, `non_electrode_points`: int; `dims`; `spacing_mm`; `mirrors`, `anti_mirrors`: bool[3]; `refinable`, `simion_compatible`: bool; `simion_issues`: string[]; `max_voltage`, `potential_min`, `potential_max`, `potential_mean`: number; `adjustable_electrodes`: int or null; `reference_voltage`: number or null |
 | `gpu-info` | `adapter_name`, `adapter_type`, `backend`, `driver`, `driver_info`: string; `f64_support`, `software_adapter`: bool |
 | `gpu-smoke` | `gpu-info` keys plus `checks`: [{`precision`, `kernel_ms` (or null), `submit_readback_ms`, `max_abs_error`, `tolerance`, `cells_checked`}] |

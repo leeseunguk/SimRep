@@ -13,6 +13,7 @@ CLI 이름은 `simrep`이다. 저장소에서는 `./target/release/simrep` (`car
 - 속도 숫자는 `compute_ms`만 비교한다. 파일 읽기, 파싱, GPU 초기화, 기저 로딩, 내보내기는 빠진다. `prep_ms`, `setup_ms`, `total_ms`는 참고용이다.
 - WSL과 CI에선 `--device cpu` (`device="cpu"`)를 쓴다. 하드웨어 Vulkan/DX12 장치가 보통 없고, `--device gpu`는 소프트웨어 어댑터를 거부한다.
 - 조용한 폴백을 믿지 않는다. 모든 명령에 `--json`을 붙이고 `requested`와 `executed`(장치, 정밀도, `surface_mode`)를 비교한 뒤 `fallback_reason`을 읽는다. 정확 표면을 원했는데 `executed.surface_mode`가 `staircase`면 `.cuts.json`이 안 붙은 것이다.
+- 개구는 `aperture-check`로 계단 폭과 정확 표면 폭을 비교한다. 샘플 간격보다 좁은 형상은 놓칠 수 있다.
 - 좁은 틈은 해상한다. 전극 사이 틈이 g이면 그 주변 격자 간격 h <= g/10을 맞춘다(전역 `--spacing` 또는 `--refine-region` 패치). 틈에 노드가 두세 개뿐이면 전위는 맞아 보여도 틈 안 전기장이 틀린다.
 - 값 하나는 반드시 `값 +/- u_num`으로 낸다. 격자 셋에서 구한 수치 불확도 없이 "수렴했다"고 쓰지 않는다. 솔버 잔차 수렴은 격자 수렴이 아니다.
 
@@ -142,6 +143,8 @@ def fwhm(x, y):
 `SOURCE_MM`, `PLANE`, `Y0`, `SLIT_MM`, `k0`는 그 분석기의 값으로 채운다.
 
 표본 주의:
+
+- `analyzer_scan`은 같은 입자를 전압별로 묶어 기본 200회 부트스트랩한다(시드 1). FWHM과 SD 또는 95% 구간을 함께 보고하고 경고를 확인한다. 격자 오차는 별도다.
 
 - FWHM 안에 스캔 점이 최소 8~10개 들어가야 한다. 거칠면 보간이 폭을 수십 % 흔든다. 처음 넓게 훑고, 피크 주변을 다시 곱게 스캔한다.
 - 빔 정의(각도 폭, 시작 위치 폭, 입자 수)가 dE/E를 정한다. 같은 분석기라도 `half_deg`를 두 배로 하면 dE/E가 크게 바뀐다. 보고할 땐 빔 정의를 같이 적는다.

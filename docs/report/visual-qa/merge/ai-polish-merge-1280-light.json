@@ -1,0 +1,861 @@
+{
+ "ai-accounts-empty-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 15,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+  ]
+ },
+ "ai-accounts-signing-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 15,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+  ]
+ },
+ "ai-accounts-signed-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 15,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "−",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "0",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "+",
+     11,
+     "div._voltage_wiyos_175>div._scale_wiyos_182>span.num"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33",
+   "div._scrim_ll12y_1>div._dialog_ll12y_13>div._accountsBody_ezwu7_10"
+  ]
+ },
+ "ai-panel-empty-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 8,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "Enter",
+     11,
+     "div._composerRow_ezwu7_1209>span._hint_ezwu7_1217>kbd._kbd_ejrj9_1"
+    ],
+    [
+     "Shift+Enter",
+     11,
+     "div._composerRow_ezwu7_1209>span._hint_ezwu7_1217>kbd._kbd_ejrj9_1"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": []
+ },
+ "ai-panel-streaming-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 8,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "einzel",
+     11,
+     "div._header_1onxq_10>span>span._badge_1vyzr_1"
+    ],
+    [
+     "Esc",
+     11,
+     "div._composerRow_ezwu7_1209>span._hint_ezwu7_1217>kbd._kbd_ejrj9_1"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": []
+ },
+ "ai-panel-approval-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 8,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "einzel",
+     11,
+     "div._header_1onxq_10>span>span._badge_1vyzr_1"
+    ],
+    [
+     "Esc",
+     11,
+     "div._composerRow_ezwu7_1209>span._hint_ezwu7_1217>kbd._kbd_ejrj9_1"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>ol._transcript_ezwu7_727"
+  ]
+ },
+ "ai-panel-done-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 9,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "Not saved",
+     11,
+     "div._project_105ya_42>span._projectLine_105ya_57>span._badge_1vyzr_1"
+    ],
+    [
+     "einzel.pa0",
+     11,
+     "div._groupBody_1lfsv_50>div._subgroup_1lfsv_143>p._subgroupLabel_1lfsv_153"
+    ],
+    [
+     "Live · GPU f32",
+     11,
+     "div._context_160qn_126>span._badge_1vyzr_1>span._unit_wiyos_467"
+    ],
+    [
+     "Mass resolving power m/Δm",
+     11,
+     "aside._side_160qn_217>div._headline_160qn_233>span._headlineLabel_160qn_243"
+    ],
+    [
+     "einzel",
+     11,
+     "div._header_1onxq_10>span>span._badge_1vyzr_1"
+    ],
+    [
+     "Enter",
+     11,
+     "div._composerRow_ezwu7_1209>span._hint_ezwu7_1217>kbd._kbd_ejrj9_1"
+    ],
+    [
+     "Shift+Enter",
+     11,
+     "div._composerRow_ezwu7_1209>span._hint_ezwu7_1217>kbd._kbd_ejrj9_1"
+    ],
+    [
+     "10",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": []
+ },
+ "ai-accounts-signin-only-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 2,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "4",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._scrim_ll12y_1>div._dialog_ll12y_13>div._accountsBody_ezwu7_10"
+  ]
+ },
+ "ai-accounts-device-1280x800-light-en-ai-polish.png": {
+  "small": {
+   "n": 2,
+   "items": [
+    [
+     "Project",
+     11,
+     "header._topbar_105ya_1>div._project_105ya_42>span._projectLabel_105ya_49"
+    ],
+    [
+     "4",
+     11,
+     "footer._statusbar_9ozxc_1>button._logButton_9ozxc_65>span._logCount_9ozxc_89"
+    ]
+   ]
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._scrim_ll12y_1>div._dialog_ll12y_13>div._accountsBody_ezwu7_10"
+  ]
+ },
+ "ai-accounts-empty-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+  ]
+ },
+ "ai-accounts-signing-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33"
+  ]
+ },
+ "ai-accounts-signed-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>div._body_1onxq_33",
+   "div._scrim_ll12y_1>div._dialog_ll12y_13>div._accountsBody_ezwu7_10"
+  ]
+ },
+ "ai-panel-empty-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": []
+ },
+ "ai-panel-streaming-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": []
+ },
+ "ai-panel-approval-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._right_10uw8_10>aside._panel_1onxq_1>ol._transcript_ezwu7_727"
+  ]
+ },
+ "ai-panel-done-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": []
+ },
+ "ai-accounts-signin-only-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._scrim_ll12y_1>div._dialog_ll12y_13>div._accountsBody_ezwu7_10"
+  ]
+ },
+ "ai-accounts-device-1280x800-light-ko-ai-polish.png": {
+  "small": {
+   "n": 0,
+   "items": []
+  },
+  "monoHangul": {
+   "n": 0,
+   "items": []
+  },
+  "lowContrast": {
+   "n": 0,
+   "items": []
+  },
+  "unnamed": {
+   "n": 0,
+   "items": []
+  },
+  "smallTargets": {
+   "n": 0,
+   "items": []
+  },
+  "scrollers": [
+   "div._scrim_ll12y_1>div._dialog_ll12y_13>div._accountsBody_ezwu7_10"
+  ]
+ }
+}

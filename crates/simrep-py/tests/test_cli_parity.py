@@ -552,3 +552,28 @@ def test_cuts_report_and_warning(cli, tmp_path, source):
         retained = simrep.fly(field, ions, **options)
         assert retained.report["cuts_source"] == "sibling"
         assert retained.report["cuts_path"] == str(sidecar)
+
+
+@pytest.mark.parametrize("cylindrical", [False, True])
+def test_aperture_check_cli_python_parity(cli, tmp_path, cylindrical):
+    gem = tmp_path / "slit.gem"
+    definition = ("pa_define{nx=11,ny=5,nz=1,symmetry='cylindrical',dx=0.5,dy=0.5,dz=0.5,surface='none'}\n"
+                  if cylindrical else "pa_define(11,5,3,planar)\n")
+    gem.write_text(definition +
+                   "e(1){fill{within{box3d(-1,-1,-1,1.35,3,3)}}}\n"
+                   "e(2){fill{within{box3d(3.65,-1,-1,6,3,3)}}}\n")
+    stem = tmp_path / "slit"
+    cli("refine-geometry", gem, "--electrode", "1=1:0", "--electrode", "2=2:10",
+        "--grid", "11,5,1" if cylindrical else "11,5,3", "--spacing", "0.5,0.5,0.5", "--gap-check", "off",
+        "--out", stem, "--device", "cpu")
+    pa = stem.with_suffix(".pa#")
+    line = [0, 1, 0 if cylindrical else 0.5, 5, 1, 0 if cylindrical else 0.5]
+    expected = json.loads(cli("--json", "aperture-check", "--pa", pa,
+                              "--line", ",".join(map(str, line))).stdout)
+    result = simrep.aperture_check(pa, [line])
+    assert result == expected
+    assert result["schema_version"] == 1
+    aperture = result["apertures"][0]
+    assert aperture["staircase_mm"] == 2.5
+    assert aperture["exact_mm"] == pytest.approx(2.3, abs=1e-6)
+    assert aperture["diff_cells"] == pytest.approx(0.4, abs=2e-6)

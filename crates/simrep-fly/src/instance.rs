@@ -174,6 +174,18 @@ impl InstanceField {
         Ok(self)
     }
 
+    /// Add exact collisions without changing the PA field or its electrode mask.
+    pub fn with_collision_surface(mut self, surface: Arc<SurfaceModel>) -> Result<Self, FlyError> {
+        if self.surface_domain.is_some() {
+            return Err(FlyError(
+                "collision-only surface requires a staircase field",
+            ));
+        }
+        surface.validate_array(self.grid.array())?;
+        self.surface = Some(surface);
+        Ok(self)
+    }
+
     /// Preparation counts summed over the background and unit-voltage bases.
     pub fn ghost_fill_report(&self) -> Option<crate::GhostFillReport> {
         let mut report = if let Some(adaptive) = &self.adaptive {
@@ -197,7 +209,9 @@ impl InstanceField {
         if bases.iter().any(|(grid, _)| !self.grid.compatible(grid)) {
             return Err(FlyError("voltage bases must share the instance geometry"));
         }
-        if let Some(surface) = &self.surface {
+        if let Some(surface) = &self.surface
+            && self.surface_domain.is_some()
+        {
             for (basis, _) in &mut bases {
                 *basis = basis.clone().with_surface(surface)?;
             }
@@ -207,7 +221,9 @@ impl InstanceField {
     }
 
     pub fn with_adaptive(mut self, field: crate::AdaptiveField) -> Self {
-        let field = if let Some(surface) = &self.surface {
+        let field = if let Some(surface) = &self.surface
+            && self.surface_domain.is_some()
+        {
             // AdaptiveField owns validated GridFields; patch domains are made
             // from those same grids, so this does not introduce new validation.
             field
@@ -319,7 +335,7 @@ impl InstanceField {
         let grid = self.surface_domain.as_ref().unwrap_or(&self.grid);
         let local_from = self.local(from);
         let local_to = self.local(to);
-        let mut first = if self.surface.is_some()
+        let mut first = if self.surface_domain.is_some()
             && (self.bounds_mm.is_some() || grid.contains(local_from) && grid.contains(local_to))
         {
             // The surface domain has no electrodes. With workbench bounds
@@ -378,6 +394,43 @@ mod tests {
     use simrep_core::PotentialArray;
 
     const IDENTITY: [Vector; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
+
+    #[test]
+    fn collision_surface_preserves_grid_field_and_staircase_hits() {
+        let mut array = PotentialArray::new(9, 5, 1);
+        array.electrodes[6 + 2 * 9] = true;
+        let grid = GridField::new(array)
+            .unwrap()
+            .with_nearest_node_collisions();
+        let base = InstanceField::new(grid, [0.0; 3], IDENTITY, 1.0, None, None).unwrap();
+        let surface = SurfaceModel::from_sdfs(
+            vec![(4, Arc::new(|p: Vector| (p[0] - 3.0).abs() - 0.25))],
+            1e-10,
+        )
+        .unwrap();
+        let hybrid = base
+            .clone()
+            .with_collision_surface(Arc::new(surface))
+            .unwrap();
+        assert_eq!(
+            base.sample([1.0, 2.0, 0.0], 0.0),
+            hybrid.sample([1.0, 2.0, 0.0], 0.0)
+        );
+        assert!(matches!(
+            hybrid
+                .intersection([1.0, 2.0, 0.0], [8.0, 2.0, 0.0])
+                .unwrap()
+                .1,
+            SplatReason::SurfaceElectrode { number: 4 }
+        ));
+        assert!(matches!(
+            hybrid
+                .intersection([4.0, 2.0, 0.0], [8.0, 2.0, 0.0])
+                .unwrap()
+                .1,
+            SplatReason::Electrode { .. }
+        ));
+    }
 
     #[test]
     fn scaled_rotated_field_and_field_free_workbench() {

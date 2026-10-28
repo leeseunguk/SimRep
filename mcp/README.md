@@ -216,3 +216,26 @@ SimRep 도구 정의와 이 문서는 그 저장소에서 복사한 것이 아�
 it does not rescale them. The result echoes the convention and `k_definition`.
 Omitting it adds a warning because literature conventions can differ by a factor
 of two; the harness verification includes that warning.
+
+
+`analyzer_scan` pairs ion IDs across voltages and bootstraps particles jointly
+(default `{resamples: 200, seed: 1}`; set `bootstrap: false` to disable, or
+supply either setting). Each channel reports `bootstrap` statistics for
+`centroid_v`, `fwhm_v`, and `dE_over_E`: sample standard deviation `sd` and
+2.5/97.5 percentile `ci95`. Invalid unbracketed or empty resamples are counted
+and excluded; fewer than two valid resamples produce null statistics and a
+warning. `binomial_noise_at_half` is sqrt(p(1-p)/n), with p equal to half the
+peak transmission. `peak_transmission_count` and `points_above_half` describe
+sampling. Warnings flag fewer than eight half-height points, FWHM bootstrap SD
+above 10%, crossings within one scan step of an edge, and peak counts below 30.
+Bootstrap quantifies particle sampling only, not scan spacing or grid error.
+
+### Aperture comparison
+
+`check_geometry` accepts an optional `apertures` object with `pa`, `lines`
+(array of six-number axis-aligned probes), optional `cuts`, and optional
+`step_mm`. It returns the `apertures` measurements after the geometry check.
+The same object can be sent to the standalone `aperture_check` tool. Fixed
+probe coordinates must lie on grid nodes; cylindrical probes use x/r and
+z=0. The default surface sampling step is spacing/64; narrower features may
+be missed. The midpoint vacuum interval must be bounded by two surfaces.

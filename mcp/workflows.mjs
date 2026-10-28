@@ -53,6 +53,48 @@ export function passband(x, y) {
     warnings: right - left + 1 < 8 ? ['Fewer than 8 scan points above half height; refine the passband scan before reporting resolution.'] : [] }
 }
 
+// Each column is aligned by ion ID, so one bootstrap draw is shared across voltages.
+export function particlePassband(x, outcomes, bootstrap = { resamples: 200, seed: 1 }) {
+  const n = outcomes[0].length
+  requireCondition(n > 0 && outcomes.length === x.length && outcomes.every(row => row.length === n), 'particle outcomes must align across scan points')
+  const counts = outcomes.map(row => row.reduce((sum, hit) => sum + hit, 0))
+  const result = passband(x, counts.map(count => count / n))
+  const peakCount = Math.max(...counts)
+  const half = result.peak_transmission / 2
+  result.peak_transmission_count = peakCount
+  result.binomial_noise_at_half = Math.sqrt(half * (1 - half) / n)
+  if (peakCount < 30) result.warnings.push('Peak transmission count is fewer than 30 particles; increase beam sampling.')
+  if (result.half_height_crossings_v[0] <= x[1] || result.half_height_crossings_v[1] >= x[x.length - 2]) result.warnings.push('A half-height crossing is within one scan step of an edge; widen the scan.')
+  if (bootstrap === false) return { ...result, bootstrap: false }
+  let state = bootstrap.seed >>> 0
+  const random = () => { state = (state + 0x6D2B79F5) >>> 0; let t = state; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
+  const samples = { centroid_v: [], fwhm_v: [], dE_over_E: [] }
+  for (let b = 0; b < bootstrap.resamples; b++) {
+    const weights = new Uint32Array(n)
+    for (let j = 0; j < n; j++) weights[Math.floor(random() * n)]++
+    const curve = outcomes.map(row => row.reduce((sum, hit, j) => sum + hit * weights[j], 0) / n)
+    let estimate
+    try { estimate = passband(x, curve) } catch (error) {
+      if (!/no transmitted particles|peak is not bracketed|passband centroid must be nonzero/.test(error.message)) throw error
+      continue
+    }
+    for (const key of Object.keys(samples)) samples[key].push(estimate[key])
+  }
+  const valid = samples.fwhm_v.length
+  const statistics = values => {
+    if (values.length < 2) return null
+    values.sort((a, b) => a - b)
+    const mean = values.reduce((a, b) => a + b, 0) / values.length
+    const percentile = p => { const i = (values.length - 1) * p, lo = Math.floor(i); return values[lo] + (values[Math.ceil(i)] - values[lo]) * (i - lo) }
+    return { sd: Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (values.length - 1)), ci95: [percentile(0.025), percentile(0.975)] }
+  }
+  result.bootstrap = { ...bootstrap, valid_resamples: valid, invalid_resamples: bootstrap.resamples - valid,
+    centroid_v: statistics(samples.centroid_v), fwhm_v: statistics(samples.fwhm_v), dE_over_E: statistics(samples.dE_over_E) }
+  if (valid < bootstrap.resamples) result.warnings.push('Some bootstrap resamples have no valid bracketed passband; intervals use only valid resamples.')
+  if (result.bootstrap.fwhm_v && result.bootstrap.fwhm_v.sd / result.fwhm_v > 0.1) result.warnings.push('Bootstrap FWHM standard deviation exceeds 10% of FWHM; increase beam sampling.')
+  return result
+}
+
 async function csvRows(file) {
   const info = await lstat(file)
   requireCondition(info.size <= 64_000_000, 'CSV exceeds 64 MB; summarize or split the scan first')
@@ -142,9 +184,9 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
       return json(JSON.parse(result.out))
     }),
     tool('check_geometry', 'Check geometry before flight. STEP/IGES first uses exact cad_measure; supplied refine object then runs refine_geometry with gap_check error (cannot disable). This can write a PA family and requires approval. GEM/mesh need refine settings; CAD-only measurement is allowed without refine.', {
-      input: string, gap: array(string), spacing_mm: array(number), refine: { type: 'object', description: 'refine_geometry arguments except input/gap_check; electrode and out required.' },
+      input: string, gap: array(string), spacing_mm: array(number), apertures: { ...object({ pa: string, cuts: string, lines: { ...array({ ...array(number), minItems: 6, maxItems: 6 }), minItems: 1 }, step_mm: { type: 'number', exclusiveMinimum: 0 } }), required: ['pa', 'lines'], description: 'Axis-aligned aperture probes and PA/cuts paths.' }, refine: { type: 'object', description: 'refine_geometry arguments except input/gap_check; electrode and out required.' },
     }, ['input'], false, async args => {
-      only(args, ['input', 'gap', 'spacing_mm', 'refine'])
+      only(args, ['input', 'gap', 'spacing_mm', 'refine', 'apertures'])
       inputFile(args.input, 'input')
       const cad = /\.(step|stp|iges|igs)$/i.test(args.input)
       const result = { schema_version: 1, measurement: undefined, refinement: undefined, gap_check: undefined }
@@ -167,6 +209,7 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
         requireCondition(args.refine.gap_check === undefined, 'check_geometry enforces gap_check error')
         result.refinement = parse(await runTool('refine_geometry', { ...args.refine, input: args.input, ...(args.spacing_mm && { spacing: args.spacing_mm }), gap_check: 'error' }))
       }
+      if (args.apertures !== undefined) result.apertures = parse(await runTool('aperture_check', args.apertures)).apertures
       return json(result)
     }),
     tool('analyzer_scan', 'Run validated ESA voltage scans through a PA0 fast-adjust family on CPU. For each energy, generate the same beam and scan absolute electrode volts. Count plane hits only inside every aperture, return connected half-height centroid/FWHM/dE/E and origin-fit k. Both crossings must be bracketed. Width assumes linear analyzer and is beam-dependent; no invented intrinsic resolution.', {
@@ -175,9 +218,19 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
       plane: array(number), aperture: array(object({ axis: { type: 'string', enum: ['x', 'y', 'z'] }, center_mm: number, width_mm: number })),
       bounds: array(number), origin: array(number), duration_us: number, out: string,
       voltage_convention: { type: 'string', enum: ['absolute_electrode', 'plate_difference', 'single_plate'] },
+      bootstrap: { anyOf: [{ type: 'boolean', enum: [false] }, object({ resamples: { type: 'integer', minimum: 2, maximum: 10000 }, seed: { type: 'integer', minimum: 0, maximum: 4294967295 } })] },
     }, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'beam', 'plane', 'aperture', 'duration_us', 'out'], false, async args => {
-      only(args, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'fixed_voltage', 'beam', 'plane', 'aperture', 'bounds', 'origin', 'duration_us', 'out', 'voltage_convention'])
+      only(args, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'fixed_voltage', 'beam', 'plane', 'aperture', 'bounds', 'origin', 'duration_us', 'out', 'voltage_convention', 'bootstrap'])
       requireCondition(args.voltage_convention === undefined || ['absolute_electrode', 'plate_difference', 'single_plate'].includes(args.voltage_convention), 'invalid voltage_convention')
+      let bootstrap = false
+      if (args.bootstrap !== false) {
+        requireCondition(args.bootstrap === undefined || (args.bootstrap !== null && typeof args.bootstrap === 'object' && !Array.isArray(args.bootstrap)), 'bootstrap must be false or an object')
+        const config = args.bootstrap ?? {}
+        only(config, ['resamples', 'seed'])
+        bootstrap = { resamples: config.resamples ?? 200, seed: config.seed ?? 1 }
+        requireCondition(Number.isInteger(bootstrap.resamples) && bootstrap.resamples >= 2 && bootstrap.resamples <= 10000, 'bootstrap.resamples must be an integer from 2 to 10000')
+        requireCondition(Number.isInteger(bootstrap.seed) && bootstrap.seed >= 0 && bootstrap.seed <= 4294967295, 'bootstrap.seed must be a 32-bit unsigned integer')
+      }
       inputFile(args.pa, 'pa')
       requireCondition(Array.isArray(args.energies_ev) && args.energies_ev.length >= 1 && args.energies_ev.length <= 64, 'energies_ev needs 1..64 energies')
       args.energies_ev.forEach(value => positive(value, 'energy_ev'))
@@ -196,7 +249,8 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
       const out = prepareOutput(args.out, 'out')
       const channels = [], runs = []
       for (const [ei, energy] of args.energies_ev.entries()) {
-        const transmission = []
+        const transmission = [], outcomes = []
+        let ionIds
         for (const [vi, voltage] of args.channel_voltages.entries()) {
           const output = `${out}-${ei}-${vi}.csv`
           const fixed = args.fixed_voltage ?? []
@@ -207,15 +261,24 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
             ...(args.bounds && { bounds: args.bounds }), ...(args.origin && { origin: args.origin }), output }))
           const rows = await csvRows(inputFile(output, 'output'))
           requireCondition(rows.length === run.ion_count && rows.length > 0, 'flight CSV row count must match ion_count')
-          const hits = rows.filter(row => row.reason === 'plane' && args.aperture.every(a => {
-            const position = Number(row[`${a.axis}_mm`])
-            requireCondition(Number.isFinite(position), `CSV is missing numeric ${a.axis}_mm`)
-            return Math.abs(position - a.center_mm) <= a.width_mm / 2
-          })).length
-          transmission.push(hits / rows.length)
+          const byIon = new Map()
+          for (const row of rows) {
+            requireCondition(row.ion !== undefined && /^\d+$/.test(row.ion) && !byIon.has(row.ion), 'flight CSV must have unique ion IDs')
+            const hit = row.reason === 'plane' && args.aperture.every(a => {
+              const position = Number(row[`${a.axis}_mm`])
+              requireCondition(Number.isFinite(position), `CSV is missing numeric ${a.axis}_mm`)
+              return Math.abs(position - a.center_mm) <= a.width_mm / 2
+            })
+            byIon.set(row.ion, Number(hit))
+          }
+          if (!ionIds) ionIds = [...byIon.keys()]
+          requireCondition(byIon.size === ionIds.length && ionIds.every(id => byIon.has(id)), 'flight CSV ion IDs must match across scan points')
+          const hits = ionIds.map(id => byIon.get(id))
+          outcomes.push(hits)
+          transmission.push(hits.reduce((sum, hit) => sum + hit, 0) / hits.length)
           runs.push(run)
         }
-        channels.push({ energy_ev: energy, voltages_v: args.channel_voltages, transmission, ...passband(args.channel_voltages, transmission) })
+        channels.push({ energy_ev: energy, voltages_v: args.channel_voltages, transmission, ...particlePassband(args.channel_voltages, outcomes, bootstrap) })
       }
       return json({ schema_version: 1, channels, k_v_per_ev: channels.reduce((sum, channel) => sum + channel.centroid_v * channel.energy_ev, 0) / channels.reduce((sum, channel) => sum + channel.energy_ev ** 2, 0),
         voltage_convention: args.voltage_convention ?? 'absolute_electrode',

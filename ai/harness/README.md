@@ -117,3 +117,11 @@ in this harness and the new workflow module are original SimRep code; no code
 or prose was copied from senpi, pi-ai or the omo top-level package. Their MIT
 and Sustainable Use licences therefore add no copied-code obligations here.
 The pre-existing MCP transport retains its notices in `licenses/THIRD_PARTY.md`.
+
+
+Analyzer channel sampling warnings generate `[verify]` notes. When bootstrap
+FWHM uncertainty is available, a numerical FWHM claim without an uncertainty
+also receives a note; the original reply is preserved. The default paired
+particle bootstrap uses 200 resamples and seed 1; `bootstrap: false` disables it.
+Report the SD or 95% percentile interval alongside the FWHM. This does not
+replace grid convergence or beam-sampling checks.

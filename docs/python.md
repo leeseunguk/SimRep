@@ -39,6 +39,7 @@ Native errors still raise `ValueError`, rather than returning error dictionaries
 
 | CLI command / option | Python function / argument | Status |
 | --- | --- | --- |
+| `aperture-check --pa PA --line X0,Y0,Z0,X1,Y1,Z1` | `aperture_check(pa, lines, cuts=None, step_mm=None)` | Shared; source-coordinate axis-aligned grid-node probes |
 | `pa-info FILE` | `pa_info(source)`; `read_pa(source)` for arrays/metadata | Shared |
 | `gpu-info --backend auto` | `gpu_info(backend="auto")` | Shared |
 | `gpu-smoke --backend auto` | `gpu_smoke(backend="auto")` | Shared |
@@ -427,3 +428,15 @@ vector arithmetic plus native integration; no field reconstruction) and
 `total_ms` (the complete Python iteration). Initial refinement compute time
 is printed separately. Native reports also separate setup/reconstruction
 from compute. Timings are observations, not assertions or benchmark thresholds.
+
+### Aperture checks
+
+`simrep.aperture_check("lens.pa#", [[0, 1, 0, 5, 1, 0]], cuts=None, step_mm=None)`
+returns the CLI JSON summary. The sidecar defaults to the PA sibling. Each
+line must be axis-aligned, grid-aligned on its fixed axes, and bounded by
+electrodes around its midpoint. The exact interval uses sampled membership
+(default step axis spacing / 64) and bisection to 1e-6 mm; features narrower
+than the sampling step can be missed. `diff_mm` is staircase minus exact.
+Warnings report deviations over half a cell and staircase widths under 2.5
+cells. Nodes on the surface are electrode (see `SignedDistance::conductor_mask`
+and `SurfaceModel::membership`). Cylindrical probes use the stored x/r plane.

@@ -458,6 +458,23 @@ const TOOLS = [
     },
   },
   {
+    name: 'aperture_check',
+    title: 'Compare aperture widths',
+    description: 'Measure axis-aligned aperture probes using a PA and exact cuts sidecar.',
+    inputSchema: { type: 'object', properties: { pa: { type: 'string' }, cuts: { type: 'string' }, lines: { type: 'array', items: { type: 'array', items: { type: 'number' }, minItems: 6, maxItems: 6 }, minItems: 1 }, step_mm: { type: 'number', exclusiveMinimum: 0 } }, required: ['pa', 'lines'], additionalProperties: false },
+    readOnly: true,
+    async run(args) {
+      only(args, ['pa', 'cuts', 'lines', 'step_mm'])
+      const pa = inputFile(reqString(args, 'pa'), 'pa')
+      const cuts = args.cuts === undefined ? args.pa.replace(/\.[^/.]+$/, '.cuts.json') : reqString(args, 'cuts')
+      const argv = ['aperture-check', '--pa', pa, '--cuts', inputFile(cuts, 'cuts')]
+      if (!Array.isArray(args.lines) || !args.lines.length) throw new Error('lines must contain at least one line')
+      for (const line of args.lines) argv.push('--line=' + numbers(line, 6, 'line'))
+      if (args.step_mm !== undefined) { const step = finite(args.step_mm, 'step_mm'); if (step <= 0) throw new Error('step_mm must be positive'); argv.push('--step-mm', String(step)) }
+      return simrep(argv)
+    },
+  },
+  {
     name: 'pa_info',
     title: 'Inspect a potential array',
     description:

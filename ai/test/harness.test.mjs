@@ -7,7 +7,7 @@ import { runEvals } from '../harness/evals/run.mjs'
 import { createHarness } from '../harness/index.mjs'
 import { OutputStore } from '../harness/context.mjs'
 import { verifyResult, checkClaims } from '../harness/verification.mjs'
-import { passband, workflowTools } from '../../mcp/workflows.mjs'
+import { passband, particlePassband, workflowTools } from '../../mcp/workflows.mjs'
 
 test('deterministic mock models exercise harness, bridge approval proxy and MCP workflows', { timeout: 120_000 }, async () => {
   const results = await runEvals()
@@ -120,4 +120,69 @@ test('analyzer voltage convention is echoed and omission is verified', async t =
     assert.equal(verifyResult(result).issues.some(issue => issue.includes('factor of 2')), convention === undefined)
   }
   await assert.rejects(tool.run({ ...args, voltage_convention: 'other' }), /voltage_convention/)
+})
+
+
+test('particle bootstrap reports reproducible uncertainty and sampling warnings', () => {
+  const x = Array.from({ length: 41 }, (_, i) => i + 1)
+  const outcomes = x.map(v => Array.from({ length: 1000 }, (_, i) => Number(i < Math.round(800 * Math.max(0, 1 - Math.abs(v - 21) / 12)))))
+  const config = { resamples: 200, seed: 73 }
+  const result = particlePassband(x, outcomes, config)
+  assert.deepEqual(result, particlePassband(x, outcomes, config))
+  assert.notDeepEqual(result.bootstrap, particlePassband(x, outcomes, { ...config, seed: 74 }).bootstrap)
+  assert.deepEqual(result.warnings, [])
+  assert.equal(result.bootstrap.valid_resamples, 200)
+  for (const key of ['centroid_v', 'fwhm_v', 'dE_over_E']) {
+    assert.ok(result.bootstrap[key].sd >= 0)
+    assert.equal(result.bootstrap[key].ci95.length, 2)
+  }
+  assert.ok(result.binomial_noise_at_half > 0)
+  assert.equal(particlePassband(x, outcomes, false).bootstrap, false)
+  const coarse = particlePassband([1, 2, 3, 4, 5], [0, 20, 40, 20, 0].map(n => Array.from({ length: 100 }, (_, i) => Number(i < n))), false)
+  assert.ok(coarse.warnings.some(w => w.includes('Fewer than 8')))
+  const tiny = particlePassband([1, 2, 3], [[0,0], [1,0], [0,0]], { resamples: 200, seed: 1 })
+  assert.ok(tiny.warnings.some(w => w.includes('fewer than 30')))
+  assert.ok(tiny.warnings.some(w => w.includes('edge')))
+  assert.ok(tiny.bootstrap.invalid_resamples > 0)
+  let state = 42
+  const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32)
+  const noisyX = Array.from({ length: 21 }, (_, i) => i + 1)
+  const noisy = noisyX.map(v => Array.from({ length: 40 }, () => Number(random() < 0.8 * Math.max(0, 1 - Math.abs(v - 11) / 6))))
+  const noisyResult = particlePassband(noisyX, noisy, { resamples: 200, seed: 9 })
+  assert.ok(noisyResult.bootstrap.fwhm_v.sd / noisyResult.fwhm_v > 0.1)
+  assert.ok(noisyResult.warnings.some(w => w.includes('exceeds 10%')))
+})
+
+test('analyzer warning and omitted FWHM uncertainty reach harness notes', async () => {
+  const events = []
+  const harness = await createHarness({ workspace: os.tmpdir(), emit: event => events.push(event) })
+  const value = { channels: [{ fwhm_v: 10, warnings: ['Fewer than 8 scan points'], bootstrap: { fwhm_v: { sd: 2 } } }] }
+  harness.emit({ type: 'tool_result', name: 'analyzer_scan', result: { content: [{ type: 'text', text: JSON.stringify(value) }] } })
+  harness.emit({ type: 'delta', text: 'FWHM = 10 V.' })
+  harness.finish('completed')
+  const answer = events.filter(event => event.type === 'delta').map(event => event.text).join('')
+  assert.match(answer, /\[verify\].*Fewer than 8/)
+  assert.match(answer, /without its available bootstrap uncertainty/)
+  assert.equal(checkClaims('FWHM = 10 ± 2 V.', [], true).notes.length, 0)
+})
+
+test('analyzer aligns shuffled ion IDs and validates bootstrap configuration', async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simrep-aligned-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  let mismatch = false
+  const runTool = async (name, args) => {
+    const voltage = Number(args.voltage.at(-1).split('=')[1])
+    const rows = Array.from({ length: 40 }, (_, i) => `${mismatch && voltage === 3 && i === 0 ? 41 : i + 1},0,0,0,${voltage === 2 && i < 35 ? 'plane' : 'outside'}`)
+    if (voltage === 2) rows.reverse()
+    await writeFile(args.output, 'ion,x_mm,y_mm,z_mm,reason\n' + rows.join('\n') + '\n')
+    return { text: JSON.stringify({ ion_count: 40, compute_ms: 1 }) }
+  }
+  const tool = workflowTools({ inputFile: value => value, prepareOutput: value => value, runTool }).find(item => item.name === 'analyzer_scan')
+  const args = { pa: 'a.pa0', energies_ev: [1], channel_voltages: [1,2,3], electrode: 1, beam: {}, plane: [1,0,0,1], aperture: [{ axis: 'y', center_mm: 0, width_mm: 1 }], duration_us: 1, out: path.join(dir, 'out'), bootstrap: { resamples: 10, seed: 7 } }
+  const first = JSON.parse((await tool.run(args)).text)
+  assert.equal(first.channels[0].peak_transmission_count, 35)
+  assert.deepEqual(first.channels[0].bootstrap, JSON.parse((await tool.run(args)).text).channels[0].bootstrap)
+  await assert.rejects(tool.run({ ...args, bootstrap: { resamples: 1 } }), /bootstrap.resamples/)
+  mismatch = true
+  await assert.rejects(tool.run(args), /ion IDs must match/)
 })
