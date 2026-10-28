@@ -1,5 +1,5 @@
 import { emit } from "@tauri-apps/api/event";
-import { AI_EVENT, type Account, type AiEvent, type Method, type Methods, type Provider, type ProviderMetadata, type ProviderStatus, type RpcRequest, type RpcResponse } from "../ai/protocol";
+import { AI_EVENT, type Account, type ApprovalMode, type AiEvent, type Method, type Methods, type Provider, type ProviderMetadata, type ProviderStatus, type RpcRequest, type RpcResponse } from "../ai/protocol";
 
 /**
  * Demo mode's AI bridge (ai/PROTOCOL.md): `ai_request` answers and `ai-event` notifications for
@@ -18,7 +18,9 @@ export interface DemoAi {
   /** Types of the events sent so far, in order. */
   sent: string[];
   queued(): number;
-  started: { sessionId: string; provider: Provider; account?: string }[];
+  started: { sessionId: string; provider: Provider; account?: string; approvalMode?: ApprovalMode }[];
+  /** Every chat.setApprovalMode mode, in order. */
+  modes: ApprovalMode[];
 }
 
 const EVENT_STEP_MS = 140;
@@ -57,7 +59,7 @@ const text = (value: unknown, isError = false) => ({ content: [{ type: "text", t
 export function createDemoAi(manual: boolean, flags: URLSearchParams) {
   const mode = flags.get("ai");
   const outbox: AiEvent[] = [];
-  const demo: DemoAi = { step: async () => null, sent: [], queued: () => outbox.length, started: [] };
+  const demo: DemoAi = { step: async () => null, sent: [], queued: () => outbox.length, started: [], modes: [] };
   const chatgpt: Account[] = [];
   let claude: Account = { id: "claude-local", provider: "claude", label: "Claude local login", authenticated: false, planEnabled: false };
   if (mode === "apikey") claude = { id: "claude-local", provider: "claude", label: "Anthropic API key (environment)", authenticated: true, planEnabled: false };
@@ -72,7 +74,7 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       : [];
   const extraAccounts = new Map<Provider, Account>();
   const providerIds: Provider[] = ["chatgpt", "claude", ...extras.map((p) => p.id)];
-  const sessions = new Map<string, { provider: Provider; turn: number; turnId: string | null }>();
+  const sessions = new Map<string, { provider: Provider; turn: number; turnId: string | null; approvalMode: ApprovalMode }>();
   const approvals = new Map<string, { sessionId: string; callId: string }>();
   let ids = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -117,6 +119,9 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
     const approvalId = `approval-${++ids}`;
     approvals.set(approvalId, { sessionId, callId: callB });
     const ask = /fly|비행|tof/i.test(prompt) || sessions.get(sessionId)!.turn === 1;
+    // Like the bridge: outside "ask" the approval is an audit event (`auto: true`) and the tool runs.
+    const auto = sessions.get(sessionId)!.approvalMode !== "ask";
+    const flyArgs = { pa: "einzel.pa0", particles: "einzel.ion", output: "einzel-results.csv" };
     queue(
       ...deltas(sessionId, "I'll check the refined array first, then fly the ions."),
       { type: "tool_call", ...c, callId: callA, name: "pa_info", arguments: { pa: "einzel.pa0" } },
@@ -124,10 +129,11 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       ...(ask
         ? [
             { type: "tool_call", ...c, callId: callB, name: "fly", arguments: { pa: "einzel.pa0", particles: "einzel.ion", voltage: { "1": 0, "2": 110, "3": 0 }, device: "cpu", output: "einzel-results.csv" } } as AiEvent,
-            { type: "approval", ...c, approvalId, name: "fly", arguments: { pa: "einzel.pa0", particles: "einzel.ion", output: "einzel-results.csv" } } as AiEvent,
+            (auto ? { type: "approval", ...c, approvalId, name: "fly", arguments: flyArgs, auto: true } : { type: "approval", ...c, approvalId, name: "fly", arguments: flyArgs }) as AiEvent,
           ]
         : [{ type: "done", ...c, status: "completed" } as AiEvent]),
     );
+    if (ask && auto) resolve(approvalId, true);
   }
 
   function resolve(approvalId: string, allow: boolean) {
@@ -204,9 +210,10 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       if (!ready) throw { code: "AUTH_REQUIRED", message: "Continue with ChatGPT to sign in." };
       if (p.provider === "chatgpt" && !ready.planEnabled) throw { code: "PLAN_PERMISSION_REQUIRED", message: "ChatGPT plan use is not enabled." };
       const sessionId = `session-${++ids}`;
-      demo.started.push({ sessionId, provider: p.provider, account: p.account });
-      sessions.set(sessionId, { provider: p.provider, turn: 0, turnId: null });
-      return { sessionId, provider: p.provider, model: p.model ?? (p.provider === "claude" ? "sonnet" : "gpt-6.1-sol"), workspace: p.workspace };
+      demo.started.push({ sessionId, provider: p.provider, account: p.account, approvalMode: p.approvalMode });
+      const approvalMode = p.approvalMode ?? "ask";
+      sessions.set(sessionId, { provider: p.provider, turn: 0, turnId: null, approvalMode });
+      return { sessionId, provider: p.provider, model: p.model ?? (p.provider === "claude" ? "sonnet" : "gpt-6.1-sol"), workspace: p.workspace, approvalMode };
     },
     "chat.send": (p) => {
       const s = sessions.get(p.sessionId);
@@ -216,6 +223,13 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
       s.turnId = `turn-${++ids}`;
       turn(p.sessionId, p.text);
       return { turnId: s.turnId };
+    },
+    "chat.setApprovalMode": (p) => {
+      const s = sessions.get(p.sessionId);
+      if (!s) throw { code: "INVALID_PARAMS", message: "Unknown chat session." };
+      s.approvalMode = p.mode;
+      demo.modes.push(p.mode);
+      return { sessionId: p.sessionId, approvalMode: p.mode };
     },
     "chat.cancel": (p) => {
       cancel(p.sessionId);

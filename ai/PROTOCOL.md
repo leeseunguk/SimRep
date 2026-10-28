@@ -22,7 +22,8 @@ the sidecar/process group. Node.js 24+ is required.
 | `auth.login` | `{provider, account?, region?}` | `{started: true}` |
 | `auth.logout` | `{provider, account?}` | `{signedOut: true, remoteRevocationConfirmed: boolean}` |
 | `auth.openUsage` | `{provider}` | `{opened: true}` |
-| `chat.start` | `{provider, model?, workspace, account?, language?}` | `{sessionId, provider, model, workspace}` |
+| `chat.start` | `{provider, model?, workspace, account?, language?, approvalMode?}` | `{sessionId, provider, model, workspace, approvalMode}` |
+| `chat.setApprovalMode` | `{sessionId, mode}` | `{sessionId, approvalMode}` |
 | `chat.send` | `{sessionId, text}` | `{turnId}` |
 | `chat.cancel` | `{sessionId}` | `{cancelled: true}` |
 | `approval.resolve` | `{approvalId, allow: boolean}` | `{resolved: true}` |
@@ -114,7 +115,7 @@ verification, output handles and mock/real-provider evals.
 | `delta` | `text` (append to assistant message) |
 | `tool_call` | `callId, name, arguments` |
 | `tool_result` | `callId, name?, result` |
-| `approval` | `approvalId, name, arguments, expiresAt` (Unix epoch milliseconds; additive) |
+| `approval` | `approvalId, name, arguments, expiresAt` (Unix epoch milliseconds; additive), or `approvalId, name, arguments, auto: true` (audit record; no answer expected) |
 | `done` | `status: "completed" \| "interrupted" \| "failed"` |
 | `error` | `code, message, details?` (safe diagnostics, never credentials) |
 
@@ -125,7 +126,21 @@ host URL, which may include the public user code. No token or authorization URL
 is included in the event.
 
 Every mutating MCP tool requires approval before the real MCP server sees it.
-Denial, timeout (two minutes) and cancellation fail closed. Each accepted
+Denial, timeout (two minutes) and cancellation fail closed.
+
+### Approval modes
+
+`approvalMode` is `"ask" | "session" | "bypass"`. `chat.start` defaults to
+`"ask"` (the behaviour above), or `"bypass"` when the bridge runs with
+`SIMREP_AI_APPROVAL=bypass` (headless/MCP use); an explicit parameter wins.
+`chat.setApprovalMode` changes a live session; the UI uses `"session"` for
+"allow all in this chat". Outside `"ask"`, a mutating call is approved at once
+and the bridge still emits `approval` with `auto: true` and no `expiresAt` as
+the transcript's audit record; `approval.resolve` for that ID fails with
+`INVALID_PARAMS`. The harness system prompt and each prepared turn state that
+approvals are bypassed. No mode changes what can run: unknown tools are refused
+before the gate, no shell/file provider tools exist, and the MCP server still
+refuses paths outside the workspace. Invalid modes are `INVALID_PARAMS`. Each accepted
 `chat.send` ends with exactly one `done`; `error` may precede it.
 
 ## Host-only notification

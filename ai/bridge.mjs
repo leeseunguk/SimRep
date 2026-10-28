@@ -17,6 +17,13 @@ function required(value, name) {
   if (typeof value !== 'string' || !value.trim()) throw new BridgeError('INVALID_PARAMS', `${name} must be a non-empty string.`)
   return value
 }
+const APPROVAL_MODES = ['ask', 'session', 'bypass']
+function approvalMode(value) {
+  if (!APPROVAL_MODES.includes(value)) throw new BridgeError('INVALID_PARAMS', 'approvalMode must be "ask", "session" or "bypass".')
+  return value
+}
+/** Headless/MCP default: SIMREP_AI_APPROVAL=bypass; anything else keeps asking. */
+const defaultApprovalMode = () => process.env.SIMREP_AI_APPROVAL?.trim() === 'bypass' ? 'bypass' : 'ask'
 function provider(value) {
   if (!providerById(value)) throw new BridgeError('INVALID_PARAMS', 'Unknown provider.')
   return value
@@ -44,8 +51,14 @@ export class Bridge {
       toolCalling: info.toolCalling, ...(info.unsupportedReason && { message: info.unsupportedReason }) }
   }
 
+  // Only mutating, allow-listed tools reach this (tools.mjs); the MCP server still
+  // refuses paths outside the workspace. Session/bypass skips only the human click.
   approve(session, name, args) {
     const approvalId = randomUUID()
+    if (session.approvalMode !== 'ask') {
+      this.emitChat(session, { type: 'approval', approvalId, name, arguments: args, auto: true })
+      return Promise.resolve(true)
+    }
     return new Promise(resolve => {
       const settle = allow => { clearTimeout(timer); this.approvals.delete(approvalId); resolve(allow) }
       const expiresAt = Date.now() + 120_000
@@ -65,7 +78,7 @@ export class Bridge {
   }
 
   /** @param {string} method
-   * @param {{provider?: string, account?: string, region?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean}} params */
+   * @param {{provider?: string, account?: string, region?: string, workspace?: string, model?: string, language?: string, sessionId?: string, text?: string, approvalId?: string, allow?: boolean, approvalMode?: string, mode?: string}} params */
   async dispatch(method, params = {}) {
     if (!params || typeof params !== 'object' || Array.isArray(params)) throw new BridgeError('INVALID_PARAMS', 'params must be an object.')
     switch (method) {
@@ -111,6 +124,7 @@ export class Bridge {
         const info = providerById(p)
         if (!info.toolCalling) throw new BridgeError('PROVIDER_UNSUPPORTED', info.unsupportedReason)
         required(params.workspace, 'workspace')
+        const mode = params.approvalMode === undefined ? defaultApprovalMode() : approvalMode(params.approvalMode)
         if (!path.isAbsolute(params.workspace)) throw new BridgeError('INVALID_PARAMS', 'workspace must be an absolute directory.')
         const workspace = await realpath(params.workspace)
         if (!(await stat(workspace)).isDirectory()) throw new BridgeError('INVALID_PARAMS', 'workspace must be a directory.')
@@ -131,9 +145,9 @@ export class Bridge {
         const override = p === 'chatgpt' ? process.env.SIMREP_AI_CHATGPT_MODEL?.trim() : undefined
         const model = params.model || override || (p === 'chatgpt' && this.chatgptModel) || models[0] || info.defaultModel
         if (!model || (p === 'github-copilot' && !models.includes(model))) throw new BridgeError('PROVIDER_UNSUPPORTED', 'No enabled tool-capable model is available. Enable a model with the provider first.')
-        const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, turn: undefined, client: undefined, harness: undefined }
+        const session = { id: randomUUID(), provider: p, account: account.id, model, workspace, approvalMode: mode, turn: undefined, client: undefined, harness: undefined }
         if (params.language !== undefined && (typeof params.language !== 'string' || !/^[a-zA-Z-]{2,35}$/.test(params.language))) throw new BridgeError('INVALID_PARAMS', 'language must be a language tag.')
-        const harness = await createHarness({ workspace, language: params.language, emit: fields => this.emitChat(session, fields) })
+        const harness = await createHarness({ workspace, language: params.language, approvalMode: mode, emit: fields => this.emitChat(session, fields) })
         const emit = fields => {
           if (['tool_call', 'tool_result', 'delta'].includes(fields.type)) session.turnOutput = true
           harness.emit(fields)
@@ -147,7 +161,13 @@ export class Bridge {
           session.harness = harness
           this.sessions.set(session.id, session)
         } catch (error) { gate.close(); throw error }
-        return { sessionId: session.id, provider: p, model, workspace }
+        return { sessionId: session.id, provider: p, model, workspace, approvalMode: mode }
+      }
+      case 'chat.setApprovalMode': {
+        const session = this.sessions.get(required(params.sessionId, 'sessionId'))
+        if (!session) throw new BridgeError('INVALID_PARAMS', 'Unknown chat session.')
+        session.approvalMode = approvalMode(params.mode)
+        return { sessionId: session.id, approvalMode: session.approvalMode }
       }
       case 'chat.send': {
         const session = this.sessions.get(required(params.sessionId, 'sessionId'))
@@ -165,7 +185,7 @@ export class Bridge {
             let status = 'failed'
             try {
               if (!turn.cancelled) {
-                const prepared = await session.harness.prepare(text)
+                const prepared = await session.harness.prepare(text, session.approvalMode)
                 if (!turn.cancelled) status = await session.client.send(prepared)
               }
             } catch (error) {

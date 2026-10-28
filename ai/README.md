@@ -217,6 +217,13 @@ omo 자체 문서의 위 문구는 **제3자 하네스 사용이 Claude 요금�
   Generic, native Devin and Kiro tool calls all execute through the existing
   MCP proxy. Mutations need UI approval; denial, timeout and cancellation fail
   closed. Workspaces containing known credential stores are refused.
+- Approval mode per chat: `ask` (default), `session` ("allow all in this
+  chat") or `bypass` (`chat.start.approvalMode`, `chat.setApprovalMode`;
+  `SIMREP_AI_APPROVAL=bypass` sets the headless/MCP default). Outside `ask` a
+  mutating call runs without waiting but still emits an `approval` event with
+  `auto: true`, and the model is told approvals are bypassed. Bypass skips
+  only the human click: the tool allow-list, the missing shell/file tools and
+  the workspace path restriction are unchanged.
 - Sign-out cancels authorization before deleting tokens. It does not assert
   remote revocation for providers without a confirmed revocation operation.
   Permanent OpenRouter keys can additionally be revoked in the provider account.
@@ -224,7 +231,8 @@ omo 자체 문서의 위 문구는 **제3자 하네스 사용이 Claude 요금�
 로그인 정보는 앱 설정 폴더에만 보관하며 갱신 토큰 교체는 잠금으로 직렬화합니다.
 WebView에는 표시용 계정 정보와 기기 코드만 전달합니다. 인증 URL은 Rust만 열고,
 로그아웃은 진행 중인 로그인이 자격 증명을 다시 저장하지 못하도록 먼저 취소합니다.
-권한 승인 없이 파일을 바꾸는 MCP 호출은 실행하지 않습니다.
+권한 승인 없이 파일을 바꾸는 MCP 호출은 실행하지 않습니다. 사용자가 "이 대화에서는 모두 허용"이나
+"묻지 않기"를 고르면 승인 클릭만 생략하고, 도구 목록과 프로젝트 폴더 제한은 그대로입니다.
 
 ## Verification / 검증
 

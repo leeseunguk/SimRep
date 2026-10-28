@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { EventEmitter, once } from 'node:events'
-import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, writeFile, rm, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
 import { Bridge } from '../bridge.mjs'
@@ -11,8 +11,9 @@ import { RpcProcess } from '../rpc.mjs'
 import { Store } from '../store.mjs'
 import { publicError, providerDiagnostic } from '../errors.mjs'
 import { PROVIDERS } from '../providers/table.mjs'
+import { toolGate } from '../tools.mjs'
 
-async function setup(t, { tool = 'read_csv_summary', args = { path: 'results.csv' } } = {}) {
+async function setup(t, { tool = 'read_csv_summary', args = { path: 'results.csv' }, start = {} } = {}) {
   const workspace = await mkdtemp(path.join(os.tmpdir(), 'simrep-chat-'))
   await writeFile(path.join(workspace, 'results.csv'), 'reason,time_us\nplane,2\nplane,4\n')
   const events = new EventEmitter()
@@ -49,7 +50,7 @@ async function setup(t, { tool = 'read_csv_summary', args = { path: 'results.csv
   const bridge = new Bridge({ claude, notify: message => events.emit('bridge:' + (message.params?.type || message.method), message.params),
     createClaude: opts => new ClaudeSession({ ...opts, queryFn }) })
   t.after(async () => { bridge.close(); await rm(workspace, { recursive: true, force: true }) })
-  const session = await bridge.dispatch('chat.start', { provider: 'claude', workspace })
+  const session = await bridge.dispatch('chat.start', { provider: 'claude', workspace, ...start })
   return { bridge, session, events, workspace, options: () => optionsSeen }
 }
 function event(events, type) {
@@ -213,4 +214,112 @@ test('ChatGPT retries model_not_found only and reports the successful model', as
   assert.deepEqual(attempts, ['missing', 'available'])
   assert.deepEqual(selected, ['available'])
   assert.equal(events.some(event => event.type === 'error'), false)
+})
+
+test('ask mode waits for the human decision before the MCP server sees a mutating call', async t => {
+  const { bridge, session, events } = await setup(t, { tool: 'gem2pa', args: { input: 'missing.gem' } })
+  assert.equal(session.approvalMode, 'ask')
+  const seen = []
+  events.on('bridge:tool_result', e => seen.push(e))
+  const approval = event(events, 'approval'), done = event(events, 'done')
+  await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'compile' })
+  const request = await approval
+  assert.equal(request.auto, undefined)
+  assert.equal(seen.length, 0)
+  await bridge.dispatch('approval.resolve', { approvalId: request.approvalId, allow: false })
+  await done
+  assert.equal(seen[0].result.content[0].text, 'User declined tool execution.')
+})
+
+for (const mode of ['session', 'bypass']) {
+  test(`${mode} mode auto-approves a mutating tool without waiting and still emits an audit approval event`, async t => {
+    const { bridge, session, events } = await setup(t, { tool: 'gem2pa', args: { input: 'missing.gem' }, start: { approvalMode: mode } })
+    assert.equal(session.approvalMode, mode)
+    const approval = event(events, 'approval'), result = event(events, 'tool_result'), done = event(events, 'done')
+    await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'compile' })
+    const audit = await approval
+    assert.equal(audit.auto, true)
+    assert.equal(audit.name, 'gem2pa')
+    assert.deepEqual(audit.arguments, { input: 'missing.gem' })
+    assert.equal(typeof audit.approvalId, 'string')
+    assert.equal(audit.expiresAt, undefined)
+    // The real MCP server ran the call (it failed on the missing input, not on a denial).
+    assert.notEqual((await result).result.content[0].text, 'User declined tool execution.')
+    await done
+    assert.equal(bridge.approvals.size, 0)
+    await assert.rejects(bridge.dispatch('approval.resolve', { approvalId: audit.approvalId, allow: false }), e => e.code === 'INVALID_PARAMS')
+  })
+}
+
+test('chat.setApprovalMode switches a live session and rejects invalid modes and sessions', async t => {
+  const { bridge, session, events, workspace } = await setup(t, { tool: 'gem2pa', args: { input: 'missing.gem' } })
+  assert.deepEqual(await bridge.dispatch('chat.setApprovalMode', { sessionId: session.sessionId, mode: 'session' }), { sessionId: session.sessionId, approvalMode: 'session' })
+  const approval = event(events, 'approval'), done = event(events, 'done')
+  await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'compile' })
+  assert.equal((await approval).auto, true)
+  await done
+  await bridge.dispatch('chat.setApprovalMode', { sessionId: session.sessionId, mode: 'ask' })
+  const asked = event(events, 'approval')
+  await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'compile again' })
+  assert.equal((await asked).auto, undefined)
+  await bridge.dispatch('chat.cancel', { sessionId: session.sessionId })
+  await assert.rejects(bridge.dispatch('chat.setApprovalMode', { sessionId: session.sessionId, mode: 'always' }), e => e.code === 'INVALID_PARAMS')
+  await assert.rejects(bridge.dispatch('chat.setApprovalMode', { sessionId: 'nope', mode: 'ask' }), e => e.code === 'INVALID_PARAMS')
+  await assert.rejects(bridge.dispatch('chat.start', { provider: 'claude', workspace, approvalMode: 'yolo' }), e => e.code === 'INVALID_PARAMS')
+})
+
+test('SIMREP_AI_APPROVAL=bypass sets the default, an explicit approvalMode wins, and the harness prompt says so', async t => {
+  const previous = process.env.SIMREP_AI_APPROVAL
+  process.env.SIMREP_AI_APPROVAL = 'bypass'
+  t.after(() => { if (previous === undefined) delete process.env.SIMREP_AI_APPROVAL; else process.env.SIMREP_AI_APPROVAL = previous })
+  const { bridge, session, workspace, events, options } = await setup(t)
+  assert.equal(session.approvalMode, 'bypass')
+  const done = event(events, 'done')
+  await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'summarize' })
+  await done
+  assert.match(options().systemPrompt, /Tool approvals are bypassed/)
+  const asked = await bridge.dispatch('chat.start', { provider: 'claude', workspace, approvalMode: 'ask' })
+  assert.equal(asked.approvalMode, 'ask')
+  process.env.SIMREP_AI_APPROVAL = 'yes'
+  assert.equal((await bridge.dispatch('chat.start', { provider: 'claude', workspace })).approvalMode, 'ask')
+})
+
+test('bypass never runs a path outside the workspace', async t => {
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'simrep-outside-'))
+  t.after(() => rm(outside, { recursive: true, force: true }))
+  await writeFile(path.join(outside, 'lens.gem'), 'pa_define(10,10,1,planar)\n')
+  const { bridge, session, events, workspace } = await setup(t, { tool: 'gem2pa',
+    args: { input: '../' + path.relative(os.tmpdir(), path.join(outside, 'lens.gem')), output: '../escaped.pa#' }, start: { approvalMode: 'bypass' } })
+  const approval = event(events, 'approval'), result = event(events, 'tool_result'), done = event(events, 'done')
+  await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'escape' })
+  assert.equal((await approval).auto, true)
+  const r = (await result).result
+  assert.equal(r.isError, true)
+  assert.match(r.content[0].text, /workspace/)
+  await done
+  await assert.rejects(readFile(path.join(path.dirname(workspace), 'escaped.pa#')))
+})
+
+test('bypass never approves a tool outside the allow-list', async t => {
+  const approved = []
+  const gate = await toolGate(os.tmpdir(), async name => { approved.push(name); return true }, () => {})
+  t.after(() => gate.close())
+  const { SIMREP_AI_GATE: url, SIMREP_AI_GATE_KEY: key } = gate.config.env
+  for (const name of ['Bash', 'shell', 'write_file']) {
+    const response = await fetch(url, { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'call', callId: 'c', name, arguments: {} }) })
+    assert.equal(response.status, 400)
+  }
+  assert.deepEqual(approved, [])
+  // Through a bypass chat the proxy refuses the unknown tool before the gate, and the provider gets no shell.
+  const { bridge, session, events, options } = await setup(t, { tool: 'Bash', args: { command: 'id' }, start: { approvalMode: 'bypass' } })
+  const seen = []
+  events.on('bridge:approval', e => seen.push(e))
+  const done = event(events, 'done'), error = event(events, 'error')
+  await bridge.dispatch('chat.send', { sessionId: session.sessionId, text: 'run a shell' })
+  await error
+  assert.equal((await done).status, 'failed')
+  assert.deepEqual(seen, [])
+  assert.deepEqual(options().tools, [])
+  assert.equal((await options().canUseTool('Bash', {})).behavior, 'deny')
 })

@@ -94,7 +94,7 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   expect(await aiStep(page)).toBe("approval");
   const approval = panel.getByTestId("ai-approval");
   await expect(approval).toContainText("Allow fly?");
-  await expect(approval.getByRole("button", { name: "Allow" })).toBeVisible();
+  await expect(approval.getByRole("button", { name: "Allow", exact: true })).toBeVisible();
   await expect(approval).toContainText(/[12]:\d\d left/);
   // Escape in the panel stops the running reply.
   await panel.getByRole("textbox", { name: "Message the assistant" }).focus();
@@ -112,7 +112,7 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   await panel.getByTestId("ai-send").click();
   await answered(page, "ai_request", 7); // chat.cancel, chat.send
   while ((type = await aiStep(page)) !== "approval") expect(type).not.toBeNull();
-  await panel.getByTestId("ai-approval").last().getByRole("button", { name: "Allow" }).click();
+  await panel.getByTestId("ai-approval").last().getByRole("button", { name: "Allow", exact: true }).click();
   await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
   while ((await aiStep(page)) !== null);
   const fly = panel.locator('[data-testid="ai-tool-card"][data-tool="fly"]').last();
@@ -213,4 +213,107 @@ test("AI: a device-code provider shows its code to confirm, without a WebView li
   await expect(dialog.locator('li[data-provider="kimi-coding"]').getByLabel("Account region")).toHaveValue("mainland-cn");
 
   expect(errors).toEqual([]);
+});
+
+/** Signs in with ChatGPT in the demo bridge and opens the assistant panel. */
+async function signedInPanel(page: Page) {
+  await page.getByTestId("ai-accounts-open").click();
+  const dialog = page.getByRole("dialog", { name: "AI accounts" });
+  await dialog.getByRole("button", { name: "Continue with ChatGPT" }).click();
+  expect(await aiStep(page)).toBe("auth");
+  await page.getByTestId("ai-welcome").getByRole("button", { name: "Got it" }).click();
+  await dialog.getByRole("button", { name: "Close" }).first().click();
+  await page.getByTestId("ai-toggle").click();
+  return page.getByTestId("ai-panel");
+}
+
+test("AI: allow all in this chat, the Bypass confirmation, warning chip and auto-approved cards", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await workspaceReady(page);
+  const panel = await signedInPanel(page);
+  const box = panel.getByRole("textbox", { name: "Message the assistant" });
+  const mode = panel.getByLabel("Approval", { exact: true });
+  await expect(mode).toHaveValue("ask");
+  await expect(panel.getByTestId("ai-approval-skipping")).toHaveCount(0);
+
+  // Turn 1 asks; "Allow all in this chat" allows it and switches the session.
+  await box.fill("Fly the einzel ions");
+  await panel.getByTestId("ai-send").click();
+  let type: string | null;
+  while ((type = await aiStep(page)) !== "approval") expect(type).not.toBeNull();
+  const approval = panel.getByTestId("ai-approval");
+  await expect(approval.getByRole("button", { name: "Allow all in this chat" })).toBeVisible();
+  await approval.getByRole("button", { name: "Allow all in this chat" }).click();
+  await expect(approval).toContainText("Allowed");
+  await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
+  while ((await aiStep(page)) !== null);
+  const skipping = panel.getByTestId("ai-approval-skipping");
+  await expect(skipping).toContainText("Approvals skipped");
+  await expect(skipping).toHaveAttribute("data-mode", "session");
+  await expect(panel.locator('[data-testid="ai-tool-card"][data-tool="fly"] [data-testid="ai-auto"]')).toHaveCount(0);
+
+  // Turn 2 runs fly without asking: no new approval card, the fly card carries the auto marker.
+  await box.fill("Fly again");
+  await panel.getByTestId("ai-send").click();
+  await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
+  while ((await aiStep(page)) !== null);
+  await expect(panel.getByTestId("ai-approval")).toHaveCount(1);
+  const autoFly = panel.locator('[data-testid="ai-tool-card"][data-tool="fly"]').last();
+  await expect(autoFly.getByTestId("ai-auto").locator("[aria-hidden]")).toHaveText("auto");
+  await expect(autoFly.getByTestId("ai-auto")).toContainText("Approved automatically, without asking");
+  await expect(autoFly).toContainText("Done");
+
+  // "Ask again" (keyboard) ends it; the next chat.start asks.
+  await skipping.getByRole("button", { name: "Ask again" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(panel.getByTestId("ai-approval-skipping")).toHaveCount(0);
+
+  // Bypass: the confirmation explains it; Escape keeps asking, confirming turns it on.
+  await mode.selectOption("bypass");
+  const confirm = page.getByRole("alertdialog", { name: "Run write tools without asking?" });
+  await expect(confirm).toContainText("refine, fly, export");
+  await expect(confirm).toContainText("only inside the project folder");
+  await expect(confirm.getByRole("button", { name: "Keep asking" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(confirm).toHaveCount(0);
+  await expect(mode).toHaveValue("ask");
+  await mode.selectOption("bypass");
+  await confirm.getByRole("button", { name: "Run without asking" }).click();
+  await expect(mode).toHaveValue("bypass");
+  await expect(skipping).toHaveAttribute("data-mode", "bypass");
+  await expect(skipping).toContainText("Write tools run without asking, inside the project folder only.");
+  const modes = await page.evaluate(() => (window as unknown as AiWindow).__simrepDemoAi.modes);
+  expect(modes).toEqual(["session", "ask", "bypass"]);
+
+  // A new chat starts in bypass; its fly is auto-approved.
+  await panel.getByRole("button", { name: "New chat" }).click();
+  await box.fill("Fly the ions");
+  await panel.getByTestId("ai-send").click();
+  await expect.poll(() => aiQueued(page)).toBeGreaterThan(0);
+  while ((await aiStep(page)) !== null);
+  const started = await page.evaluate(() => (window as unknown as AiWindow).__simrepDemoAi.started);
+  expect(started.map((s) => s.approvalMode)).toEqual(["ask", "bypass"]);
+  await expect(panel.getByTestId("ai-approval")).toHaveCount(0);
+  await expect(panel.locator('[data-testid="ai-tool-card"][data-tool="fly"]').getByTestId("ai-auto")).toHaveCount(1);
+
+  // Not remembered: a new launch starts in Ask.
+  await workspaceReady(page);
+  await page.getByTestId("ai-toggle").click();
+  await expect(page.getByTestId("ai-panel").getByLabel("Approval", { exact: true })).toHaveValue("ask");
+  expect(errors).toEqual([]);
+});
+
+test("AI: a remembered Bypass survives a new launch", async ({ page }) => {
+  await workspaceReady(page);
+  await page.getByTestId("ai-toggle").click();
+  const panel = page.getByTestId("ai-panel");
+  await panel.getByLabel("Approval", { exact: true }).selectOption("bypass");
+  const confirm = page.getByRole("alertdialog", { name: "Run write tools without asking?" });
+  await confirm.getByRole("checkbox", { name: "Keep this after SimRep restarts" }).check();
+  await confirm.getByRole("button", { name: "Run without asking" }).click();
+  await workspaceReady(page);
+  await page.getByTestId("ai-toggle").click();
+  await expect(page.getByTestId("ai-panel").getByLabel("Approval", { exact: true })).toHaveValue("bypass");
+  await expect(page.getByTestId("ai-approval-skipping")).toContainText("Approvals skipped");
 });

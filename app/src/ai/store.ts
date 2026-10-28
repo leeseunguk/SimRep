@@ -4,11 +4,13 @@ import { useApp } from "../state/store";
 import { applyAuthEvent, deviceCodeOf, EMPTY_ACCOUNTS, providerState, setNotice, setStatus, startSignIn, usableAccounts, type AccountsState } from "./accounts";
 import { addError, addUser, applyEvent, EMPTY_CHAT, resolveApproval, type ChatState } from "./chat";
 import { onAiEvent, request } from "./client";
-import { AiError, type Provider } from "./protocol";
+import { AiError, type ApprovalMode, type Provider } from "./protocol";
 import { PROVIDER_LIST, installProviderMetadata, providerIds, providerInfo } from "./providers";
 
 const STORAGE_WELCOMED = "simrep.ai.chatgptWelcomed";
 const STORAGE_PROVIDER = "simrep.ai.provider";
+/** Set only when the user ticked "remember" in the bypass confirmation; otherwise a launch asks. */
+const STORAGE_BYPASS = "simrep.ai.approvalBypass";
 
 interface AiState {
   accounts: AccountsState;
@@ -27,6 +29,8 @@ interface AiState {
   /** The first sign-in with ChatGPT plan usage shows a welcome card once (SIWC UI guidelines). */
   welcome: boolean;
   loaded: boolean;
+  /** The panel's approval choice: ask for each write tool, or bypass (run without asking). */
+  approval: "ask" | "bypass";
 }
 
 export const useAi = create<AiState>()(() => ({
@@ -41,6 +45,7 @@ export const useAi = create<AiState>()(() => ({
   pending: {},
   welcome: false,
   loaded: false,
+  approval: localStorage.getItem(STORAGE_BYPASS) === "1" ? "bypass" : "ask",
 }));
 
 const set = useAi.setState;
@@ -129,6 +134,39 @@ export function setProvider(provider: Provider): void {
   set({ provider, model: providerInfo(provider).models[0] ?? "", account: "" });
 }
 
+/** The bridge mode for the current chat: bypass from the panel, else "allow all in this chat", else ask. */
+export function approvalModeOf(s: Pick<AiState, "approval" | "chat"> = get()): ApprovalMode {
+  return s.approval === "bypass" ? "bypass" : s.chat.allowAll ? "session" : "ask";
+}
+
+async function syncApprovalMode(): Promise<void> {
+  const session = get().chat.session;
+  if (!session) return;
+  try {
+    await request("chat.setApprovalMode", { sessionId: session.id, mode: approvalModeOf() });
+  } catch (err) {
+    set({ chat: addError(get().chat, session.provider, code(err)) });
+  }
+}
+
+/**
+ * The panel's approval switch. Bypass (after its confirmation) is remembered across launches only
+ * with `remember`; Ask also ends "allow all in this chat".
+ */
+export async function setApproval(approval: "ask" | "bypass", remember = false): Promise<void> {
+  if (approval === "bypass" && remember) localStorage.setItem(STORAGE_BYPASS, "1");
+  else localStorage.removeItem(STORAGE_BYPASS);
+  set({ approval, chat: approval === "ask" ? { ...get().chat, allowAll: false } : get().chat });
+  await syncApprovalMode();
+}
+
+/** "Allow all in this chat": this approval and every later one of the chat run without asking. */
+export async function allowAllInChat(approvalId: string): Promise<void> {
+  set({ chat: { ...get().chat, allowAll: true } });
+  await syncApprovalMode();
+  await answerApproval(approvalId, true);
+}
+
 /** Starts a chat (if the provider, model, account or workspace changed) and sends `text` as one turn. */
 export async function send(text: string): Promise<void> {
   const s = get();
@@ -141,7 +179,7 @@ export async function send(text: string): Promise<void> {
   try {
     if (stale) {
       set({ starting: true });
-      const started = await request("chat.start", { provider: s.provider, workspace, language: useApp.getState().lang, ...(s.model && { model: s.model }), ...(account && { account }) });
+      const started = await request("chat.start", { provider: s.provider, workspace, language: useApp.getState().lang, approvalMode: approvalModeOf(get()), ...(s.model && { model: s.model }), ...(account && { account }) });
       session = { id: started.sessionId, provider: started.provider, model: started.model, workspace: started.workspace, account };
       set({ chat: { ...get().chat, session } });
     }

@@ -16,6 +16,8 @@ export type ChatItem =
       /** Waiting for the result, finished, failed (isError), or never ran (denied / turn ended). */
       status: "running" | "done" | "error" | "skipped";
       result: ToolSummary | null;
+      /** The bridge approved it without asking (bypass, or "allow all in this chat"). */
+      auto?: true;
     }
   | { kind: "approval"; id: number; approvalId: string; name: string; args: Record<string, unknown>; expiresAt?: number; state: "pending" | "allowed" | "denied" | "expired" }
   | { kind: "error"; id: number; code: string; provider: Provider }
@@ -39,6 +41,8 @@ export interface ChatState {
   running: boolean;
   nextId: number;
   activeSkill?: string;
+  /** "Allow all in this chat" was chosen: the bridge session runs in `session` approval mode. */
+  allowAll?: boolean;
 }
 
 export const EMPTY_CHAT: ChatState = { session: null, items: [], running: false, nextId: 1 };
@@ -82,8 +86,16 @@ export function applyEvent(s: ChatState, e: AiEvent): ChatState {
         items: items.map((i) => (i.kind === "tool" && i.callId === e.callId ? { ...i, status: summary.isError ? "error" : "done", result: summary } : i)),
       };
     }
-    case "approval":
+    case "approval": {
+      // An auto-approval is an audit record, not a question: it marks the tool card it belongs to
+      // (the newest running call of that tool) instead of adding an approval card.
+      if (e.auto) {
+        const at = items.findLastIndex((i) => i.kind === "tool" && i.name === e.name && i.status === "running" && !i.auto);
+        if (at >= 0) return { ...s, items: items.map((i, n) => (n === at ? { ...i, auto: true } : i)) as ChatItem[] };
+        return push({ kind: "tool", callId: e.approvalId, name: e.name, args: e.arguments, status: "running", result: null, auto: true });
+      }
       return push({ kind: "approval", approvalId: e.approvalId, name: e.name, args: e.arguments, expiresAt: e.expiresAt, state: "pending" });
+    }
     case "error":
       return push({ kind: "error", code: e.code, provider: e.provider });
     case "done": {

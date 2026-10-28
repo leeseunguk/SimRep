@@ -108,6 +108,19 @@ describe("chat reducer", () => {
     expect(s.items.at(-1)).toMatchObject({ kind: "approval", expiresAt: 123456 });
   });
 
+  it("marks an auto-approved tool card instead of adding an approval card", () => {
+    expect(ev({ type: "approval", approvalId: "a1", name: "fly", arguments: {}, auto: true })).toMatchObject({ auto: true });
+    expect(ev({ type: "approval", approvalId: "a1", name: "fly", arguments: {}, auto: "yes" })).not.toHaveProperty("auto");
+    const s = run(chatOf(), { type: "tool_call", callId: "c1", name: "fly", arguments: { pa: "x.pa0" } }, { type: "approval", approvalId: "a1", name: "fly", arguments: { pa: "x.pa0" }, auto: true });
+    expect(s.items.map((i) => i.kind)).toEqual(["tool"]);
+    expect(s.items[0]).toMatchObject({ kind: "tool", callId: "c1", auto: true, status: "running" });
+    // No matching running card: the audit event still shows up, as an auto-marked card.
+    const lone = run(chatOf(), { type: "approval", approvalId: "a2", name: "refine", arguments: {}, auto: true });
+    expect(lone.items[0]).toMatchObject({ kind: "tool", name: "refine", auto: true });
+    // An asked approval still adds its card.
+    expect(run(chatOf(), { type: "approval", approvalId: "a3", name: "fly", arguments: {} }).items[0]).toMatchObject({ kind: "approval", state: "pending" });
+  });
+
   it("resolves approvals and closes open ones when the turn ends", () => {
     let s = run(addUser(chatOf(), "x"), { type: "approval", approvalId: "a1", name: "fly", arguments: {} }, { type: "approval", approvalId: "a2", name: "refine", arguments: {} });
     s = resolveApproval(s, "a1", true);

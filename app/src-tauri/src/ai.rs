@@ -255,6 +255,7 @@ fn valid_request(request: &Value) -> bool {
                     "chat.start",
                     "chat.send",
                     "chat.cancel",
+                    "chat.setApprovalMode",
                     "approval.resolve",
                 ]
                 .contains(&method)
@@ -380,6 +381,9 @@ mod tests {
         ));
         assert!(valid_request(
             &json!({"jsonrpc":"2.0","id":"a","method":"auth.openUsage","params":{"provider":"claude"}})
+        ));
+        assert!(valid_request(
+            &json!({"jsonrpc":"2.0","id":"a","method":"chat.setApprovalMode","params":{"sessionId":"s","mode":"bypass"}})
         ));
         assert!(public_event(&json!({"method":"event","params":{"type":"device_code","provider":"github-copilot","userCode":"ABCD","verificationUri":"https://github.com/login/device","expiresIn":900}})).is_some());
     }

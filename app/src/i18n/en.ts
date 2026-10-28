@@ -1186,6 +1186,21 @@ export const en = {
   "ai.panel.stopTitle": "Stop the reply (Esc)",
   "ai.approval.left": "{time} left",
   "ai.approval.expiresTitle": "Unanswered requests are denied after 2 minutes",
+  "ai.approval.allowAll": "Allow all in this chat",
+  "ai.approval.mode": "Approval",
+  "ai.approval.modeAsk": "Ask",
+  "ai.approval.modeBypass": "Bypass",
+  "ai.approval.skipping": "Approvals skipped",
+  "ai.approval.skippingBypass": "Write tools run without asking, inside the project folder only.",
+  "ai.approval.skippingChat": "Write tools in this chat run without asking, inside the project folder only.",
+  "ai.approval.askAgain": "Ask again",
+  "ai.approval.auto": "auto",
+  "ai.approval.autoTitle": "Approved automatically, without asking",
+  "ai.bypass.title": "Run write tools without asking?",
+  "ai.bypass.body": "The assistant will run tools that write files (refine, fly, export) without asking you first. They still work only inside the project folder; the assistant gets no shell or other file access.",
+  "ai.bypass.remember": "Keep this after SimRep restarts",
+  "ai.bypass.confirm": "Run without asking",
+  "ai.bypass.cancel": "Keep asking",
 } as const;
 
 export type MessageKey = keyof typeof en;

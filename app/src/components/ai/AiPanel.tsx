@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
-import { Bot, Check, ChevronRight, CircleAlert, CircleSlash, FolderOpen, Loader2, MessageSquarePlus, Pencil, Send, ShieldAlert, Square, UserRound, X } from "lucide-react";
+import { Bot, Check, CheckCheck, ChevronRight, CircleAlert, CircleSlash, FolderOpen, Loader2, MessageSquarePlus, Pencil, Send, ShieldAlert, ShieldOff, Square, UserRound, X } from "lucide-react";
 import { useI18n } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { accountKind, providerState, usableAccounts } from "../../ai/accounts";
 import { keyArgs, writesFiles, type ChatItem } from "../../ai/chat";
 import type { Provider } from "../../ai/protocol";
 import { providerIds, providerInfo } from "../../ai/providers";
-import { answerApproval, cancel, newChat, openPanel, openSettings, send, setProvider, useAi, workspaceOf } from "../../ai/store";
+import { allowAllInChat, answerApproval, approvalModeOf, cancel, newChat, openPanel, openSettings, send, setApproval, setProvider, useAi, workspaceOf } from "../../ai/store";
 import { refusals } from "../../refusals";
 import { useApp } from "../../state/store";
 import { Button } from "../ui/Button";
@@ -19,6 +19,7 @@ import { StatusChip } from "./AiAccountsDialog";
 import { displayLabel, ProviderMark } from "./BrandMarks";
 import { clock, useNow } from "./time";
 import inputs from "../ui/inputs.module.css";
+import dialog from "../Dialog.module.css";
 import panel from "../Panel.module.css";
 import styles from "./Ai.module.css";
 
@@ -44,6 +45,9 @@ export function AiPanel() {
   const loaded = useAi((s) => s.loaded);
   const chat = useAi((s) => s.chat);
   const starting = useAi((s) => s.starting);
+  const approval = useAi((s) => s.approval);
+  const mode = useAi(approvalModeOf);
+  const [confirming, setConfirming] = useState(false);
   const project = useApp((s) => s.project);
   const workspace = workspaceOf(project);
   const usable = usableAccounts(state);
@@ -98,6 +102,17 @@ export function AiPanel() {
           {t("ai.panel.title")}
         </h2>
         {chat.activeSkill && <span data-testid="ai-active-skill"><Badge>{chat.activeSkill}</Badge></span>}
+        <select
+          aria-label={t("ai.approval.mode")}
+          title={t("ai.approval.mode")}
+          className={`${inputs.input} ${inputs.select} ${styles.select} ${styles.approvalSelect}`}
+          value={approval}
+          onChange={(e) => (e.target.value === "bypass" ? setConfirming(true) : void setApproval("ask"))}
+          data-testid="ai-approval-mode"
+        >
+          <option value="ask">{`${t("ai.approval.mode")}: ${t("ai.approval.modeAsk")}`}</option>
+          <option value="bypass">{`${t("ai.approval.mode")}: ${t("ai.approval.modeBypass")}`}</option>
+        </select>
         <Button variant="ghost" size="sm" iconOnly icon={<MessageSquarePlus />} disabled={chat.running || chat.items.length === 0} aria-label={t("ai.panel.newChat")} title={t("ai.panel.newChat")} onClick={newChat} />
         <Button variant="ghost" size="sm" iconOnly icon={<X />} aria-label={t("ai.close")} title={t("ai.close")} onClick={() => openPanel(false)} />
       </div>
@@ -142,6 +157,21 @@ export function AiPanel() {
           </select>
         )}
       </div>
+
+      {mode !== "ask" && (
+        // Words, not only colour: the chip names the state and the line says what it means.
+        <div className={styles.skipping} role="status" data-testid="ai-approval-skipping" data-mode={mode}>
+          <span className={styles.chip} data-tone="warning">
+            <ShieldOff aria-hidden />
+            {t("ai.approval.skipping")}
+          </span>
+          <span className={styles.skippingText}>{t(mode === "bypass" ? "ai.approval.skippingBypass" : "ai.approval.skippingChat")}</span>
+          <Button size="sm" variant="ghost" onClick={() => void setApproval("ask")}>
+            {t("ai.approval.askAgain")}
+          </Button>
+        </div>
+      )}
+      {confirming && <BypassConfirm onClose={() => setConfirming(false)} />}
 
       <ol ref={list} className={styles.transcript} aria-live="polite" aria-label={t("ai.panel.transcript")}>
         {!desktop ? (
@@ -346,6 +376,12 @@ function ToolCard({ item }: { item: ToolItem }) {
               </span>
             )}
             <span className={styles.spacer} />
+            {item.auto && (
+              <span className={styles.autoMark} title={t("ai.approval.autoTitle")} data-testid="ai-auto">
+                <span aria-hidden>{t("ai.approval.auto")}</span>
+                <span className="visually-hidden">{t("ai.approval.autoTitle")}</span>
+              </span>
+            )}
             <StatusChip tone={status.tone}>{t(status.key)}</StatusChip>
             <ChevronRight className={styles.chevron} aria-hidden />
             {glance.length > 0 && (
@@ -442,11 +478,63 @@ function ApprovalCard({ item }: { item: Extract<ChatItem, { kind: "approval" }> 
           <Button size="sm" icon={<X />} onClick={() => void answerApproval(item.approvalId, false)}>
             {t("ai.approval.deny")}
           </Button>
+          <Button size="sm" icon={<CheckCheck />} onClick={() => void allowAllInChat(item.approvalId)} data-testid="ai-allow-all">
+            {t("ai.approval.allowAll")}
+          </Button>
           <Button size="sm" variant="primary" icon={<Check />} onClick={() => void answerApproval(item.approvalId, true)}>
             {t("ai.approval.allow")}
           </Button>
         </div>
       )}
     </li>
+  );
+}
+
+/** The one confirmation before Bypass: what runs without asking, and where. Escape or Keep asking cancels. */
+function BypassConfirm({ onClose }: { onClose(): void }) {
+  const { t } = useI18n();
+  const id = useId();
+  const [remember, setRemember] = useState(false);
+  const keep = useRef<HTMLButtonElement>(null);
+  useEffect(() => keep.current?.focus(), []);
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  const confirm = () => {
+    onClose();
+    void setApproval("bypass", remember);
+  };
+  return (
+    <div className={dialog.scrim} onClick={onClose}>
+      <div className={`${dialog.dialog} ${styles.bypassDialog}`} role="alertdialog" aria-modal="true" aria-labelledby={`${id}-title`} aria-describedby={`${id}-body`} onClick={(e) => e.stopPropagation()} data-testid="ai-bypass-confirm">
+        <header className={dialog.header}>
+          <ShieldOff className={dialog.headerIcon} aria-hidden />
+          <h2 id={`${id}-title`} className={dialog.title}>
+            {t("ai.bypass.title")}
+          </h2>
+        </header>
+        <p id={`${id}-body`} className={styles.intro}>
+          {t("ai.bypass.body")}
+        </p>
+        <label className={styles.remember}>
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          {t("ai.bypass.remember")}
+        </label>
+        <div className={styles.approvalActions}>
+          <Button ref={keep} size="sm" onClick={onClose}>
+            {t("ai.bypass.cancel")}
+          </Button>
+          <Button size="sm" variant="danger" icon={<ShieldOff />} onClick={confirm}>
+            {t("ai.bypass.confirm")}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

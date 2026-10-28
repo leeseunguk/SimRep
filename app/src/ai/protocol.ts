@@ -56,6 +56,12 @@ export interface ProviderMetadata {
   signInSupported?: boolean;
 }
 
+/**
+ * How the bridge treats mutating tools: ask every time, auto-approve for this chat ("allow all in
+ * this chat"), or bypass. Auto-approval still sends an `approval` event with `auto: true`.
+ */
+export type ApprovalMode = "ask" | "session" | "bypass";
+
 /** Request params and results per method. */
 export interface Methods {
   "auth.providers": { params: Record<string, never>; result: { providers: ProviderMetadata[] } };
@@ -65,9 +71,10 @@ export interface Methods {
   "auth.logout": { params: { provider: Provider; account?: string }; result: { signedOut: true; remoteRevocationConfirmed: boolean } };
   "auth.openUsage": { params: { provider: Provider }; result: { opened: true } };
   "chat.start": {
-    params: { provider: Provider; model?: string; workspace: string; account?: string; language?: string };
-    result: { sessionId: string; provider: Provider; model: string; workspace: string };
+    params: { provider: Provider; model?: string; workspace: string; account?: string; language?: string; approvalMode?: ApprovalMode };
+    result: { sessionId: string; provider: Provider; model: string; workspace: string; approvalMode?: ApprovalMode };
   };
+  "chat.setApprovalMode": { params: { sessionId: string; mode: ApprovalMode }; result: { sessionId: string; approvalMode: ApprovalMode } };
   "chat.send": { params: { sessionId: string; text: string }; result: { turnId: string } };
   "chat.cancel": { params: { sessionId: string }; result: { cancelled: true } };
   "approval.resolve": { params: { approvalId: string; allow: boolean }; result: { resolved: true } };
@@ -108,7 +115,7 @@ export type AiEvent =
   | (ChatBase & { type: "delta"; text: string })
   | (ChatBase & { type: "tool_call"; callId: string; name: string; arguments: Record<string, unknown> })
   | (ChatBase & { type: "tool_result"; callId: string; name?: string; result: unknown })
-  | (ChatBase & { type: "approval"; approvalId: string; name: string; arguments: Record<string, unknown>; expiresAt?: number })
+  | (ChatBase & { type: "approval"; approvalId: string; name: string; arguments: Record<string, unknown>; expiresAt?: number; auto?: true })
   | (ChatBase & { type: "done"; status: DoneStatus })
   | (Base & { type: "error"; code: string; message: string; details?: unknown; sessionId?: string; turnId?: string });
 
@@ -225,7 +232,7 @@ export function parseEvent(raw: unknown): AiEvent | null {
         : null;
     case "approval":
       return chat && typeof raw.approvalId === "string" && typeof raw.name === "string"
-        ? { type: "approval", ...chat, approvalId: raw.approvalId, name: raw.name, arguments: args(raw.arguments), ...(typeof raw.expiresAt === "number" && Number.isFinite(raw.expiresAt) && { expiresAt: raw.expiresAt }) }
+        ? { type: "approval", ...chat, approvalId: raw.approvalId, name: raw.name, arguments: args(raw.arguments), ...(typeof raw.expiresAt === "number" && Number.isFinite(raw.expiresAt) && { expiresAt: raw.expiresAt }), ...(raw.auto === true && { auto: true as const }) }
         : null;
     case "done":
       return chat && (raw.status === "completed" || raw.status === "interrupted" || raw.status === "failed")
