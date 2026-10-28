@@ -429,6 +429,72 @@
       "file": "docs/python.md",
       "section": "Python and NumPy API",
       "pattern": "Python ([0-9.]+) or newer"
+    },
+    "esa_channels": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_channels \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_h_mm": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_h_mm \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_n_per_point": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_n_per_point \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_k_fit": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_k_fit \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_k_geometric": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_k_geometric \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_de_min": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_de_min \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_de_max": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_de_max \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_k_fixed_code": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_k_fixed_code \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_k_design": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_k_design \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_k_target": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_k_target \\| ([0-9.eE+-]+) \\|"
+    },
+    "esa_design_gap_mm": {
+      "kind": "regex",
+      "file": "bench/esa-application.md",
+      "section": "Values",
+      "pattern": "^\\| esa_design_gap_mm \\| ([0-9.eE+-]+) \\|"
     }
   },
   "readme": [
@@ -661,6 +727,90 @@
       "number": "11",
       "derive": "crate_count",
       "rounding": "1"
+    },
+    {
+      "id": "readme-esa-channels",
+      "fragment": "32개 로그 채널",
+      "number": "32",
+      "derive": "esa_channels",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-h",
+      "fragment": "격자 간격은 0.125 mm",
+      "number": "0.125",
+      "derive": "esa_h_mm",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-n",
+      "fragment": "전자 4,096개",
+      "number": "4,096",
+      "derive": "esa_n_per_point",
+      "rounding": "1"
+    },
+    {
+      "id": "readme-esa-kfit",
+      "fragment": "k = 0.0923 V/eV",
+      "number": "0.0923",
+      "derive": "esa_k_fit",
+      "rounding": "0.0001"
+    },
+    {
+      "id": "readme-esa-kgeo",
+      "fragment": "0.100 V/eV입니다",
+      "number": "0.100",
+      "derive": "esa_k_geometric",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-de-min",
+      "fragment": "0.10~0.22",
+      "number": "0.10",
+      "derive": "esa_de_min",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-de-max",
+      "fragment": "0.10~0.22",
+      "number": "0.22",
+      "derive": "esa_de_max",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-kfix",
+      "fragment": "0.0928 V/eV로",
+      "number": "0.0928",
+      "derive": "esa_k_fixed_code",
+      "rounding": "0.0001"
+    },
+    {
+      "id": "readme-esa-kdesign",
+      "fragment": "k = 0.1243 V/eV",
+      "number": "0.1243",
+      "derive": "esa_k_design",
+      "rounding": "0.0001"
+    },
+    {
+      "id": "readme-esa-ktarget",
+      "fragment": "목표 0.124 V/eV",
+      "number": "0.124",
+      "derive": "esa_k_target",
+      "rounding": "0.001"
+    },
+    {
+      "id": "readme-esa-kdiff",
+      "fragment": "0.25% 차이",
+      "number": "0.25",
+      "derive": "(esa_k_design - esa_k_target) / esa_k_target * 100",
+      "rounding": "0.01"
+    },
+    {
+      "id": "readme-esa-gap",
+      "fragment": "약 3.15 mm",
+      "number": "3.15",
+      "derive": "esa_design_gap_mm",
+      "rounding": "0.01"
     }
   ],
   "report_table13": [
