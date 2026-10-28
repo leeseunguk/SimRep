@@ -7,13 +7,44 @@ import { REFRESH_FAILED_CODES, type Account, type AiEvent, type Provider, type P
  */
 export type Notice =
   /** The browser (ChatGPT) or Claude Code's login opened; waiting for the `auth` or `error` event. */
-  | { kind: "signingIn" }
+  | { kind: "signingIn"; device?: DeviceCode }
   | { kind: "success"; account: string }
   /** Signed in, but ChatGPT plan usage was not granted (planEnabled false / PLAN_PERMISSION_REQUIRED). */
   | { kind: "notEligible"; account: string | null }
   | { kind: "signedOut"; remoteConfirmed: boolean }
   /** A failed sign-in, sign-out or chat start: the bridge code, explained via refusals.ts. */
   | { kind: "failed"; action: "signIn" | "signOut"; code: string };
+
+/** A device authorization the user confirms at the provider: the code to enter and when it lapses. */
+export interface DeviceCode {
+  userCode: string;
+  /** Epoch ms; null when the provider gave no lifetime. */
+  expiresAt: number | null;
+}
+
+/**
+ * The device code of an `auth.login` result, if the bridge sent one (`userCode`, optional
+ * `expiresIn` seconds). Anything else in the result is ignored, so the plain `{started: true}`
+ * of a browser sign-in gives null.
+ */
+export function deviceCodeOf(result: unknown, now = Date.now()): DeviceCode | null {
+  if (typeof result !== "object" || result === null) return null;
+  const r = result as { userCode?: unknown; expiresIn?: unknown };
+  if (typeof r.userCode !== "string" || !/^[A-Za-z0-9-]{4,16}$/.test(r.userCode)) return null;
+  const ttl = typeof r.expiresIn === "number" && r.expiresIn > 0 ? r.expiresIn : null;
+  return { userCode: r.userCode, expiresAt: ttl === null ? null : now + ttl * 1000 };
+}
+
+/** What a provider card's status chip says, from its accounts and the latest sign-in. */
+export type ProviderSummary = AccountKind | "expired" | "signingIn" | "none";
+
+export function providerSummary(s: ProviderState): ProviderSummary {
+  if (s.notice?.kind === "signingIn") return "signingIn";
+  const kinds = new Set((s.status?.accounts ?? []).map(accountKind));
+  for (const k of ["ready", "apiKey", "noPlan"] as const) if (kinds.has(k)) return k;
+  if (s.notice?.kind === "failed" && isExpired(s.notice.code)) return "expired";
+  return kinds.has("signedOut") ? "signedOut" : "none";
+}
 
 export interface ProviderState {
   status: ProviderStatus | null;

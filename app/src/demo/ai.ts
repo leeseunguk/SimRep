@@ -7,7 +7,8 @@ import { AI_EVENT, type Account, type AiEvent, type Method, type Methods, type P
  * chat turn streams text, runs a read-only tool, asks approval for `fly` and reports its summary.
  *
  * Address flags: `?ai=noplan` (ChatGPT sign-in without plan usage), `?ai=denied` (access_denied),
- * `?ai=apikey` (Claude through ANTHROPIC_API_KEY). With `?replay=manual` events wait for `step()`
+ * `?ai=apikey` (Claude through ANTHROPIC_API_KEY), `?ai=device` (adds a device-code provider whose
+ * sign-in returns a code to confirm). With `?replay=manual` events wait for `step()`
  * (e2e and captures), otherwise they follow on a timer.
  */
 export interface DemoAi {
@@ -59,12 +60,16 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
   let claude: Account = { id: "claude-local", provider: "claude", label: "Claude local login", authenticated: false, planEnabled: false };
   if (mode === "apikey") claude = { id: "claude-local", provider: "claude", label: "Anthropic API key (environment)", authenticated: true, planEnabled: false };
   const sessions = new Map<string, { provider: Provider; turn: number; turnId: string | null }>();
+  // `?ai=device`: a provider the UI has no entry for (generic texts, monogram), signed in by device code.
+  const deviceProvider = mode === "device" ? "copilot" : null;
+  let deviceAccount: Account | null = null;
+  const providers = (): Provider[] => ["chatgpt", "claude", ...(deviceProvider ? [deviceProvider] : [])];
   const approvals = new Map<string, { sessionId: string; callId: string }>();
   let ids = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const status = (p: Provider): ProviderStatus => {
-    const accounts = p === "chatgpt" ? chatgpt.map((a) => ({ ...a })) : [{ ...claude }];
+    const accounts = p === "chatgpt" ? chatgpt.map((a) => ({ ...a })) : p === deviceProvider ? (deviceAccount ? [{ ...deviceAccount }] : []) : [{ ...claude }];
     return { provider: p, authenticated: accounts.some((a) => a.authenticated), accounts };
   };
 
@@ -141,9 +146,15 @@ export function createDemoAi(manual: boolean, flags: URLSearchParams) {
 
   type Handler<M extends Method> = (params: Methods[M]["params"]) => Methods[M]["result"];
   const methods: { [M in Method]: Handler<M> } = {
-    "auth.status": (p) => ({ providers: (p.provider ? [p.provider] : (["chatgpt", "claude"] as const)).map(status) }),
-    "auth.accounts": (p) => ({ accounts: (p.provider ? [p.provider] : (["chatgpt", "claude"] as const)).flatMap((x) => status(x).accounts) }),
+    "auth.status": (p) => ({ providers: (p.provider ? [p.provider] : providers()).map(status) }),
+    "auth.accounts": (p) => ({ accounts: (p.provider ? [p.provider] : providers()).flatMap((x) => status(x).accounts) }),
     "auth.login": (p) => {
+      if (p.provider === deviceProvider) {
+        // The code waits for the user; the `auth` event follows on the next step.
+        deviceAccount = { id: "copilot-demo", provider: deviceProvider, label: "researcher", authenticated: true, planEnabled: true };
+        queue({ type: "auth", provider: deviceProvider, status: status(deviceProvider) });
+        return { started: true, userCode: "WDJB-MJHT", expiresIn: 900 } as Methods["auth.login"]["result"];
+      }
       if (mode === "denied") {
         queue({ type: "error", provider: p.provider, code: "AUTH_DENIED", message: "ChatGPT sign-in was declined. You can sign in again." });
       } else if (p.provider === "chatgpt") {

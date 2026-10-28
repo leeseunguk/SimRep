@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { dirname } from "../state/project";
 import { useApp } from "../state/store";
-import { applyAuthEvent, EMPTY_ACCOUNTS, providerState, setNotice, setStatus, startSignIn, usableAccounts, type AccountsState } from "./accounts";
+import { applyAuthEvent, deviceCodeOf, EMPTY_ACCOUNTS, providerState, setNotice, setStatus, startSignIn, usableAccounts, type AccountsState } from "./accounts";
 import { addError, addUser, applyEvent, EMPTY_CHAT, resolveApproval, type ChatState } from "./chat";
 import { onAiEvent, request } from "./client";
 import { AiError, type Provider } from "./protocol";
@@ -80,7 +80,10 @@ export async function loadAccounts(): Promise<void> {
 export async function signIn(provider: Provider, account?: string): Promise<void> {
   set({ accounts: startSignIn(get().accounts, provider), pending: { ...get().pending, [provider]: true } });
   try {
-    await request("auth.login", { provider, ...(account && { account }) });
+    const started = await request("auth.login", { provider, ...(account && { account }) });
+    // Device authorization: show the code to confirm, while the sign-in is still waiting.
+    const device = deviceCodeOf(started);
+    if (device && providerState(get().accounts, provider).notice?.kind === "signingIn") set({ accounts: setNotice(get().accounts, provider, { kind: "signingIn", device }) });
   } catch (err) {
     set({ accounts: setNotice(get().accounts, provider, { kind: "failed", action: "signIn", code: code(err) }) });
   } finally {

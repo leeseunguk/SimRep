@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { en } from "../i18n/en";
 import { translate } from "../i18n";
 import { aiReason, refusalLine, refusals } from "../refusals";
-import { accountKind, applyAuthEvent, EMPTY_ACCOUNTS, providerState, startSignIn, usableAccounts } from "./accounts";
+import { accountKind, applyAuthEvent, deviceCodeOf, EMPTY_ACCOUNTS, providerState, providerSummary, setNotice, startSignIn, usableAccounts } from "./accounts";
 import { PROVIDER_LIST, providerIds, providerInfo } from "./providers";
 import { addUser, applyEvent, EMPTY_CHAT, keyArgs, resolveApproval, summarizeResult, writesFiles, type ChatState } from "./chat";
 import { AI_ERROR_CODES, AiError, parseEvent, REFRESH_FAILED_CODES, unwrap, type Account, type AiEvent } from "./protocol";
@@ -32,6 +32,27 @@ describe("protocol mapping", () => {
     } catch (e) {
       expect((e as AiError).code).toBe("PLAN_PERMISSION_REQUIRED");
     }
+  });
+});
+
+describe("provider card state", () => {
+  it("reads a device code from auth.login and ignores a plain browser start", () => {
+    expect(deviceCodeOf({ started: true })).toBeNull();
+    expect(deviceCodeOf({ started: true, userCode: "WDJB-MJHT", expiresIn: 900 }, 1000)).toEqual({ userCode: "WDJB-MJHT", expiresAt: 901_000 });
+    expect(deviceCodeOf({ started: true, userCode: "ABCD-1234" })).toEqual({ userCode: "ABCD-1234", expiresAt: null });
+    expect(deviceCodeOf({ started: true, userCode: "<b>no</b>" })).toBeNull();
+  });
+
+  it("summarizes a provider for its status chip", () => {
+    const status = (accounts: Account[]) => ({ status: { provider: "chatgpt", authenticated: accounts.some((a) => a.authenticated), accounts }, notice: null });
+    expect(providerSummary(providerState(EMPTY_ACCOUNTS, "chatgpt"))).toBe("none");
+    expect(providerSummary(status([gpt()]))).toBe("ready");
+    expect(providerSummary(status([gpt({ planEnabled: false })]))).toBe("noPlan");
+    expect(providerSummary(status([gpt({ authenticated: false, planEnabled: false })]))).toBe("signedOut");
+    expect(providerSummary(status([gpt({ authenticated: false, planEnabled: false }), gpt({ id: "g2" })]))).toBe("ready");
+    const expired = setNotice({ chatgpt: status([gpt({ authenticated: false, planEnabled: false })]) }, "chatgpt", { kind: "failed", action: "signIn", code: "invalid_grant" });
+    expect(providerSummary(providerState(expired, "chatgpt"))).toBe("expired");
+    expect(providerSummary(providerState(startSignIn(EMPTY_ACCOUNTS, "chatgpt"), "chatgpt"))).toBe("signingIn");
   });
 });
 

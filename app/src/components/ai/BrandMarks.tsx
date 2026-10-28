@@ -2,6 +2,7 @@ import type { SVGProps } from "react";
 
 // Provider marks for the sign-in buttons and account rows (24x24 single-path marks: the OpenAI
 // blossom and the Claude spark). Both are decorative next to their text label, so aria-hidden.
+// Every other provider gets a neutral monogram: no other brand's logo is drawn here.
 
 export function OpenAiMark(props: SVGProps<SVGSVGElement>) {
   return (
@@ -19,15 +20,34 @@ export function ClaudeMark(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-/** The mark of a provider; a provider without one gets its initial. */
-export function ProviderMark({ provider, ...props }: { provider: string } & SVGProps<SVGSVGElement>) {
+/**
+ * The name to show for a provider: its listed label, or for a provider the UI has no entry for
+ * (label = id), the id in words ("github-copilot" -> "Github Copilot").
+ */
+export function displayLabel(id: string, label: string): string {
+  if (label !== id) return label;
+  return id
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((w) => w.slice(0, 1).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** The provider's initials for a monogram: "GitHub Copilot" -> "GC", "xAI / Grok" -> "XG", "openrouter" -> "O". */
+export function monogram(label: string): string {
+  const words = label.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return (words.length > 1 ? words[0]!.slice(0, 1) + words[1]!.slice(0, 1) : (words[0] ?? "?").slice(0, 1)).toUpperCase();
+}
+
+/** The mark of a provider; a provider without an approved mark gets a neutral monogram of its name. */
+export function ProviderMark({ provider, label, ...props }: { provider: string; label?: string } & SVGProps<SVGSVGElement>) {
   if (provider === "chatgpt") return <OpenAiMark {...props} />;
   if (provider === "claude") return <ClaudeMark {...props} />;
+  const text = monogram(label ?? provider);
   return (
     <svg viewBox="0 0 24 24" aria-hidden focusable="false" {...props}>
-      <circle cx="12" cy="12" r="11" fill="currentColor" opacity="0.18" />
-      <text x="12" y="16.5" textAnchor="middle" fontSize="13" fontWeight="600" fill="currentColor">
-        {provider.slice(0, 1).toUpperCase()}
+      <text x="12" y="16.2" textAnchor="middle" fontSize={text.length > 1 ? 10.5 : 13} fontWeight="600" fill="currentColor" fontFamily="var(--font-sans)">
+        {text}
       </text>
     </svg>
   );

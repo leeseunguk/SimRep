@@ -97,7 +97,18 @@
   /* AI assistant panel (takes the properties column while open) and the AI accounts dialog. */
   --panel-ai-w: 400px;
   --ai-composer-max-h: 160px;
-  --dialog-ai-w: 600px;
+  --dialog-ai-w: 720px;
+  /* AI accounts provider cards: two columns in the dialog, one when it narrows. */
+  --ai-card-min-w: 280px;
+  --ai-mark-size: 40px;
+  --ai-brand-button-min-w: 200px;
+  /* Primary AI controls (sign-in, example prompts, account rows): a 40px target. */
+  --ai-target-h: 40px;
+  /* Provider sign-in pills: one height for every provider (the approved ChatGPT button size). */
+  --ai-brand-button-h: 44px;
+  --ai-empty-max-w: 320px;
+  --ai-caret-w: 7px;
+  --ai-code-tracking: 0.12em;
   /* Claude's mark colour on the provider sign-in button (non-text, 3:1 on black and white). */
   --brand-claude: #d97757;
 
@@ -192,6 +203,7 @@
     --panel-right-w: 392px;
     --results-side-w: 280px;
     --panel-ai-w: 440px;
+    --dialog-ai-w: 800px;
   }
 }
 
@@ -208,6 +220,8 @@
   --color-border-strong: #333a46;
   /* Edge of a form control (input, select, switch, segmented): 3:1 against the surfaces. */
   --color-border-control: #666c76;
+  /* Divider between rows and card regions where a hairline must stay visible (AI dialog, tables). */
+  --color-divider: #4a5361;
 
   --color-text: #e6e8ec;
   --color-text-muted: #a0a7b4;
@@ -301,6 +315,7 @@
   --color-border: #dcd9d1;
   --color-border-strong: #c4c0b6;
   --color-border-control: #86827a;
+  --color-divider: #cfcbc2;
 
   --color-text: #17191d;
   --color-text-muted: #525862;

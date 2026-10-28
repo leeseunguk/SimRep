@@ -31,6 +31,8 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   const chatgpt = dialog.getByRole("button", { name: "Continue with ChatGPT" });
   await expect(chatgpt).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Sign in with Claude" })).toBeVisible();
+  await expect(dialog.getByText("Tokens stay on this computer. The app window never sees them.")).toBeVisible();
+  await expect(dialog.locator('[data-provider="chatgpt"] [data-testid="ai-status"]')).toHaveText("Not signed in");
 
   // Sign in: "finish in your browser" until the auth event, then success + the one-time welcome.
   await chatgpt.click();
@@ -41,8 +43,15 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   await expect(page.getByTestId("ai-welcome")).toContainText("You're using your ChatGPT plan");
   await page.getByTestId("ai-welcome").getByRole("button", { name: "Got it" }).click();
   await expect(page.getByTestId("ai-welcome")).toHaveCount(0);
-  const account = dialog.locator('section[data-provider="chatgpt"]').getByTestId("ai-account");
-  await expect(account).toContainText("Plan usage granted");
+  await expect(dialog.locator('[data-provider="chatgpt"] [data-testid="ai-status"]')).toHaveText("Plan usage granted");
+  const account = dialog.locator('li[data-provider="chatgpt"]').getByTestId("ai-account");
+  await expect(account).toContainText("researcher@example.com");
+  // Sign-out sits in the account's menu; Escape closes the menu first, not the dialog.
+  await account.getByRole("button", { name: /^More for researcher@example\.com/ }).click();
+  await expect(account.getByRole("menuitem", { name: "Sign out" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(account.getByRole("menu")).toHaveCount(0);
+  await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Close" }).first().click();
   await expect(dialog).toBeHidden();
 
@@ -54,16 +63,26 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   await expect(panel.getByText("C:\\Users\\demo\\Documents\\SimRep\\einzel")).toBeVisible();
   await expect(panel.getByTestId("ai-using")).toContainText("Using ChatGPT plan");
 
+  // Empty chat: an example request fills the composer.
+  await expect(panel.getByTestId("ai-example")).toHaveCount(3);
+  await panel.getByTestId("ai-example").first().click();
+  await expect(panel.getByRole("textbox", { name: "Message the assistant" })).toHaveValue("Refine the einzel lens potentials and fly the ions");
+  await expect(panel.getByRole("textbox", { name: "Message the assistant" })).toBeFocused();
+
   // Send: deltas stream into one bubble, then the pa_info tool card fills with its summary.
   await panel.getByRole("textbox", { name: "Message the assistant" }).fill("Fly the einzel ions and report the TOF");
   await panel.getByTestId("ai-send").click();
   await answered(page, "ai_request", 4); // auth.status, auth.login, chat.start, chat.send
   await expect(panel.getByTestId("ai-stop")).toBeVisible();
   let type: string | null;
+  // Text still arriving shows the caret on the streaming bubble; it goes once a tool card follows.
+  expect(await aiStep(page)).toBe("delta");
+  await expect(panel.locator("[data-streaming]")).toHaveCount(1);
   while ((type = await aiStep(page)) === "delta");
   expect(type).toBe("tool_call");
   await expect(panel.getByTestId("ai-active-skill")).toHaveText("einzel");
   await expect(panel.getByText("I'll check the refined array first, then fly the ions.")).toBeVisible();
+  await expect(panel.locator("[data-streaming]")).toHaveCount(0);
   const card = panel.locator('[data-testid="ai-tool-card"][data-tool="pa_info"]');
   await expect(card).toContainText("Running");
   await expect(card).toContainText("einzel.pa0");
@@ -76,7 +95,10 @@ test("AI: sign in with ChatGPT, chat, a tool card and approval appear, cancel en
   const approval = panel.getByTestId("ai-approval");
   await expect(approval).toContainText("Allow fly?");
   await expect(approval.getByRole("button", { name: "Allow" })).toBeVisible();
-  await panel.getByTestId("ai-stop").click();
+  await expect(approval).toContainText(/[12]:\d\d left/);
+  // Escape in the panel stops the running reply.
+  await panel.getByRole("textbox", { name: "Message the assistant" }).focus();
+  await page.keyboard.press("Escape");
   await expect.poll(() => aiQueued(page)).toBe(1);
   expect(await aiStep(page)).toBe("done");
   expect(await aiStep(page)).toBeNull();
@@ -122,16 +144,37 @@ test("AI: denied sign-in, ChatGPT without plan usage, Claude through an API key"
   await dialog.getByRole("button", { name: "Continue with ChatGPT" }).click();
   expect(await aiStep(page)).toBe("auth");
   await expect(dialog.getByText("ChatGPT plan usage isn't enabled")).toBeVisible();
-  await expect(dialog.locator('section[data-provider="chatgpt"]').getByTestId("ai-account")).toContainText("Plan usage not granted");
+  await expect(dialog.locator('[data-provider="chatgpt"] [data-testid="ai-status"]')).toHaveText("Plan usage not granted");
   await expect(dialog.getByRole("button", { name: "Reauthorize" })).toBeVisible();
   await expect(page.getByTestId("ai-welcome")).toHaveCount(0);
 
   await page.goto("/?replay=manual&ai=apikey");
   await page.getByTestId("ai-accounts-open").click();
-  const claude = dialog.locator('section[data-provider="claude"]');
-  await expect(claude.getByTestId("ai-account")).toContainText("API key (environment)");
+  const claude = dialog.locator('li[data-provider="claude"]');
+  await expect(claude.getByTestId("ai-status")).toHaveText("API key (environment)");
   await expect(claude.getByText(/Sign-out can't remove a key from the environment/)).toBeVisible();
-  await expect(claude.getByRole("button", { name: "Sign out" })).toHaveCount(0);
+  await expect(claude.getByRole("button", { name: /^More for / })).toHaveCount(0);
+
+  expect(errors).toEqual([]);
+});
+
+test("AI: a device-code provider shows its code to confirm, then signs in", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+
+  await page.goto("/?replay=manual&ai=device");
+  await page.getByTestId("ai-accounts-open").click();
+  const card = page.getByRole("dialog", { name: "AI accounts" }).locator('li[data-provider="copilot"]');
+  // A provider the UI has no entry for: generic texts and a neutral monogram.
+  await expect(card.getByRole("heading", { name: "Copilot" })).toBeVisible();
+  await card.getByRole("button", { name: "Sign in with Copilot" }).click();
+  const code = card.getByTestId("ai-device-code");
+  await expect(code.getByLabel("Device code")).toHaveText("WDJB-MJHT");
+  await expect(code).toContainText(/Expires in 1[45]:\d\d/);
+  await expect(card.getByTestId("ai-status")).toHaveText("Signing in…");
+  expect(await aiStep(page)).toBe("auth");
+  await expect(code).toHaveCount(0);
+  await expect(card.getByTestId("ai-status")).toHaveText("Signed in");
 
   expect(errors).toEqual([]);
 });
