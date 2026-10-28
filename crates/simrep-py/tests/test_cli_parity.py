@@ -511,3 +511,44 @@ def test_beam_validation_matches_cli_failure(cli, particles, options, arguments)
     assert cli("fly", "--particles", particles, *arguments, check=False).returncode
     with pytest.raises(ValueError):
         simrep.fly(None, particles, **options)
+
+@pytest.mark.parametrize("source", ["explicit", "sibling", "disabled", "none"])
+def test_cuts_report_and_warning(cli, tmp_path, source):
+    gem = tmp_path / "field.gem"
+    gem.write_text("pa_define(9,7,1,planar,non_mirrored)\ne(1){fill{within{box(-2,-2,0,8)}}}\ne(2){fill{within{box(6,-2,10,8)}}}\n")
+    pa = tmp_path / "field.pa0"
+    simrep.refine_geometry(gem, electrodes={1: (1, 0), 2: (2, 0)}, out=tmp_path / "field")
+    sidecar = pa.with_suffix(".cuts.json")
+    ions = tmp_path / "ions.ion"
+    ions.write_text("0,39,1,1,2,0,0,0,2,1\n")
+    options = dict(device="cpu", duration_us=0.001, allow_time_limit=True)
+    args = ["--json", "fly", "--pa", pa, "--particles", ions, "--device=cpu", "--duration-us=0.001", "--allow-time-limit"]
+    if source == "explicit":
+        options["cuts"] = sidecar
+        args += ["--cuts", sidecar]
+    elif source == "disabled":
+        options["no_cuts"] = True
+        args += ["--no-cuts"]
+    elif source == "none":
+        sidecar.unlink()
+    import warnings
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always")
+        result = simrep.fly(pa, ions, **options)
+    output = cli(*args)
+    executed = json.loads(output.stdout)["executed"]
+    expected_path = str(sidecar) if source in ("explicit", "sibling") else None
+    assert (executed["cuts_source"], executed["cuts_path"]) == (source, expected_path)
+    assert (result.report["cuts_source"], result.report["cuts_path"]) == (source, expected_path)
+    expected = f"warning: no exact-surface sidecar {sidecar} next to {pa}; flying with staircase collisions (pass --cuts PATH, or --no-cuts to silence)"
+    assert [str(w.message) for w in captured] == ([expected] if source == "none" else [])
+    assert [line for line in output.stderr.splitlines() if line.startswith("warning:")] == ([expected] if source == "none" else [])
+    if source == "explicit":
+        in_memory = simrep.fly(pa, ions, **dict(options, cuts=json.loads(sidecar.read_text())))
+        assert in_memory.report["cuts_source"] == "explicit"
+        assert in_memory.report["cuts_path"] is None
+    if source == "sibling":
+        field = simrep.load_field(pa).fast_adjust({})
+        retained = simrep.fly(field, ions, **options)
+        assert retained.report["cuts_source"] == "sibling"
+        assert retained.report["cuts_path"] == str(sidecar)

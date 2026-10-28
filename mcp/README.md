@@ -113,6 +113,7 @@ stdio로 JSON-RPC를 주고받는 표준 MCP 서버입니다. 실행 명령은
 | `refine` | `.pa` / `.pa#` 솔브. `.pa#` 는 `.pa0` + `.paN` 패밀리를 씁니다 |
 | `refine_geometry` | GEM/메시/CAD 연속 표면 솔브 (`part=number:voltage`) |
 | `cad_measure` | STEP/IGES complete-face gap and touch matrices (`--features cad`) |
+| `analyzer_scan` | ESA voltage scan, passband and origin-fit k |
 | `fly` | 이온 비행. 입자 파일 또는 생성된 빔, 전압, 검출면, bounds, device, bfield, collision, CSV |
 | `export_geometry` | 전극 표면 메시; USDA에는 궤적 CSV를 곡선으로 함께 저장 가능 |
 | `export_grid` | 전위 격자 VTI/VTS |
@@ -207,3 +208,11 @@ Prosperity Public License 3.0.0 입니다. 전문과 파일 목록은
 [`licenses/THIRD_PARTY.md`](../licenses/THIRD_PARTY.md) 에 있습니다.
 그 라이선스는 비상업적 이용을 허용하고, 상업적 이용은 30일 시험 후 별도 허락이 필요합니다.
 SimRep 도구 정의와 이 문서는 그 저장소에서 복사한 것이 아닙니다.
+
+### Analyzer voltage convention
+
+`analyzer_scan` accepts `voltage_convention`: `absolute_electrode` (default),
+`plate_difference`, or `single_plate`. This labels the supplied scan voltages;
+it does not rescale them. The result echoes the convention and `k_definition`.
+Omitting it adds a warning because literature conventions can differ by a factor
+of two; the harness verification includes that warning.

@@ -174,8 +174,10 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
       electrode: { type: 'integer', minimum: 1, maximum: 1000 }, fixed_voltage: {}, beam: { type: 'object' },
       plane: array(number), aperture: array(object({ axis: { type: 'string', enum: ['x', 'y', 'z'] }, center_mm: number, width_mm: number })),
       bounds: array(number), origin: array(number), duration_us: number, out: string,
+      voltage_convention: { type: 'string', enum: ['absolute_electrode', 'plate_difference', 'single_plate'] },
     }, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'beam', 'plane', 'aperture', 'duration_us', 'out'], false, async args => {
-      only(args, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'fixed_voltage', 'beam', 'plane', 'aperture', 'bounds', 'origin', 'duration_us', 'out'])
+      only(args, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'fixed_voltage', 'beam', 'plane', 'aperture', 'bounds', 'origin', 'duration_us', 'out', 'voltage_convention'])
+      requireCondition(args.voltage_convention === undefined || ['absolute_electrode', 'plate_difference', 'single_plate'].includes(args.voltage_convention), 'invalid voltage_convention')
       inputFile(args.pa, 'pa')
       requireCondition(Array.isArray(args.energies_ev) && args.energies_ev.length >= 1 && args.energies_ev.length <= 64, 'energies_ev needs 1..64 energies')
       args.energies_ev.forEach(value => positive(value, 'energy_ev'))
@@ -216,7 +218,10 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
         channels.push({ energy_ev: energy, voltages_v: args.channel_voltages, transmission, ...passband(args.channel_voltages, transmission) })
       }
       return json({ schema_version: 1, channels, k_v_per_ev: channels.reduce((sum, channel) => sum + channel.centroid_v * channel.energy_ev, 0) / channels.reduce((sum, channel) => sum + channel.energy_ev ** 2, 0),
-        voltage_convention: `absolute electrode ${args.electrode} voltage relative to fixed electrodes`, beam: args.beam, aperture: args.aperture,
+        voltage_convention: args.voltage_convention ?? 'absolute_electrode',
+        k_definition: `k = U/E with U = ${args.voltage_convention ?? 'absolute_electrode'}`,
+        ...(args.voltage_convention === undefined && { warnings: ['voltage_convention not stated; k may differ by a factor of 2 from literature conventions'] }),
+        beam: args.beam, aperture: args.aperture,
         compute_ms: runs.reduce((sum, run) => sum + run.compute_ms, 0), runs })
     }),
     tool('grid_convergence', 'Run exactly three exact-surface physical grids, finest first, keeping extent/origin/electrodes/flight fixed. Observable is a flight JSON scalar (e.g. arrival_tof_us.mean). Calls simrep.uncertainty.observed_order (Celik GCI) via SIMREP_PYTHON; requires installed native Python package. Returns value +/- absolute u_num, not residual convergence.', {

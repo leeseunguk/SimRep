@@ -101,3 +101,23 @@ test('passband rejects unbracketed, empty and nonmonotonic voltage scans', () =>
   assert.equal(result.centroid_v, 20)
   assert.equal(result.fwhm_v, 10)
 })
+
+test('analyzer voltage convention is echoed and omission is verified', async t => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'simrep-analyzer-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  const runTool = async (name, args) => {
+    const voltage = Number(args.voltage.at(-1).split('=')[1])
+    await writeFile(args.output, `ion,x_mm,y_mm,z_mm,reason\n1,0,0,0,${voltage === 2 ? 'plane' : 'outside'}\n`)
+    return { text: JSON.stringify({ ion_count: 1, compute_ms: 1 }) }
+  }
+  const tool = workflowTools({ inputFile: value => value, prepareOutput: value => value, runTool }).find(item => item.name === 'analyzer_scan')
+  const args = { pa: path.join(dir, 'a.pa0'), energies_ev: [1], channel_voltages: [1, 2, 3], electrode: 1, beam: {}, plane: [1,0,0,1], aperture: [{ axis: 'y', center_mm: 0, width_mm: 1 }], duration_us: 1, out: path.join(dir, 'out') }
+  for (const convention of [undefined, 'absolute_electrode', 'plate_difference', 'single_plate']) {
+    const result = JSON.parse((await tool.run({ ...args, ...(convention && { voltage_convention: convention }) })).text)
+    assert.equal(result.voltage_convention, convention ?? 'absolute_electrode')
+    assert.equal(result.k_definition, `k = U/E with U = ${convention ?? 'absolute_electrode'}`)
+    assert.equal(result.k_v_per_ev, 2)
+    assert.equal(verifyResult(result).issues.some(issue => issue.includes('factor of 2')), convention === undefined)
+  }
+  await assert.rejects(tool.run({ ...args, voltage_convention: 'other' }), /voltage_convention/)
+})

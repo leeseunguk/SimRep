@@ -410,3 +410,94 @@ fn errors_have_one_json_object_and_exit_one() {
         assert!(!output.stderr.is_empty());
     }
 }
+
+#[test]
+fn cuts_sources_and_warning_are_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    plates(dir.path());
+    run(
+        dir.path(),
+        &[
+            "refine-geometry",
+            "plates.gem",
+            "--device=cpu",
+            "--electrode=1=1:0",
+            "--electrode=2=2:0",
+            "--out=field",
+        ],
+    );
+    fs::write(dir.path().join("ions.ion"), "0,1,1,3,2,0,0,0,1\n").unwrap();
+    let base = [
+        "fly",
+        "--device=cpu",
+        "--pa=field.pa0",
+        "--particles=ions.ion",
+        "--duration-us=0.001",
+        "--allow-time-limit",
+    ];
+    for (extra, source, path) in [
+        (
+            Some("--cuts=field.cuts.json"),
+            "explicit",
+            Some("field.cuts.json"),
+        ),
+        (None, "sibling", Some("field.cuts.json")),
+        (Some("--no-cuts"), "disabled", None),
+    ] {
+        let mut args = base.to_vec();
+        if let Some(extra) = extra {
+            args.push(extra);
+        }
+        let output = invoke(dir.path(), &args);
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let value = object(&output);
+        assert_eq!(value["executed"]["cuts_source"], source);
+        assert_eq!(value["executed"]["cuts_path"], json!(path));
+        assert!(
+            !String::from_utf8_lossy(&output.stderr).contains("warning: no exact-surface sidecar")
+        );
+    }
+    fs::remove_file(dir.path().join("field.cuts.json")).unwrap();
+    let output = invoke(dir.path(), &base);
+    assert!(output.status.success());
+    assert_eq!(object(&output)["executed"]["cuts_source"], "none");
+    assert!(object(&output)["executed"]["cuts_path"].is_null());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(
+        stderr
+            .lines()
+            .filter(|line| line.starts_with("warning:"))
+            .collect::<Vec<_>>(),
+        vec![
+            "warning: no exact-surface sidecar field.cuts.json next to field.pa0; flying with staircase collisions (pass --cuts PATH, or --no-cuts to silence)"
+        ]
+    );
+}
+
+#[test]
+fn pa_info_reports_cylindrical_spacing_incompatibility() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&(-2_i32).to_le_bytes());
+    bytes.extend_from_slice(&0_i32.to_le_bytes());
+    bytes.extend_from_slice(&100_000_f64.to_le_bytes());
+    for dimension in [3_i32, 3, 1] {
+        bytes.extend_from_slice(&dimension.to_le_bytes());
+    }
+    bytes.extend_from_slice(&2_i32.to_le_bytes());
+    for spacing in [1.0_f64, 1.0, 2.0] {
+        bytes.extend_from_slice(&spacing.to_le_bytes());
+    }
+    bytes.extend_from_slice(&[0; 72]);
+    fs::write(dir.path().join("bad.pa"), bytes).unwrap();
+    let info = run(dir.path(), &["pa-info", "bad.pa"]);
+    assert_eq!(info["simion_compatible"], false);
+    assert_eq!(
+        info["simion_issues"],
+        json!(["cylindrical symmetry requires dy_mm == dz_mm in SIMION 2024"])
+    );
+}

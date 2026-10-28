@@ -22,7 +22,7 @@ global `--json` interface; human diagnostics go to stderr. They do not print
 JSON or reports to stdout.
 
 `pa_info()` returns header fields (`dims`, `spacing_mm`, `mode`, `symmetry`,
-mirror flags and field type) and potential statistics. `gpu_info()` returns
+mirror flags and field type), potential statistics, and `simion_compatible` / `simion_issues` diagnostics (currently the observed cylindrical dy/dz incompatibility; not an exhaustive SIMION validator). The PA reader already rejects invalid or zero spacing. `gpu_info()` returns
 `adapter_name`, `adapter_type`, `backend`, `f64_support` and `software_adapter`.
 `gpu_smoke()` adds numerical `checks`; `fly_bench()`, `refine_bench()` and
 `refine_sdf()` return benchmark dictionaries. All include `schema_version=1`
@@ -32,6 +32,9 @@ and `simrep_version`. The four `export_*()` functions now return
 and `fly()` retain their structured result types. File-based
 `refine_geometry().report` contains the CLI's executed device/precision,
 cycles, residual, convergence, separate compute/preparation times and paths.
+`fly().report` includes `cuts_path` (path or None) and `cuts_source` (`explicit`,
+`sibling`, `disabled`, or `none`); a missing sidecar emits a `UserWarning`.
+An in-memory cuts dictionary has no path. `no_cuts=True` silences the warning.
 Native errors still raise `ValueError`, rather than returning error dictionaries.
 
 | CLI command / option | Python function / argument | Status |

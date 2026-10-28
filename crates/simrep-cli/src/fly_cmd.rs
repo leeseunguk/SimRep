@@ -561,6 +561,30 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             .map(|path| path.with_extension("cuts.json"))
             .filter(|path| !options.no_cuts && path.is_file())
     });
+    let cuts_source = if options.no_cuts {
+        "disabled"
+    } else if options.cuts.is_some() {
+        "explicit"
+    } else if cuts_path.is_some() {
+        "sibling"
+    } else {
+        "none"
+    };
+    if cuts_source == "none" {
+        let pa = options
+            .pa
+            .as_deref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "<pa0>".to_owned());
+        let sidecar = options
+            .pa
+            .as_ref()
+            .map(|p| p.with_extension("cuts.json").display().to_string())
+            .unwrap_or_else(|| "<stem>.cuts.json".to_owned());
+        eprintln!(
+            "warning: no exact-surface sidecar {sidecar} next to {pa}; flying with staircase collisions (pass --cuts PATH, or --no-cuts to silence)"
+        );
+    }
     let surface = cuts_path
         .as_ref()
         .map(|path| -> GpuResult<SurfaceModel> {
@@ -1260,6 +1284,8 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             "precision": if use_gpu && options.space_charge.is_some() { "mixed-f32-f64" } else if gpu.as_ref().is_none_or(Gpu::has_f64) { "f64" } else { "f32" },
             "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()),
             "surface_mode": surface_mode,
+            "cuts_path": cuts_path,
+            "cuts_source": cuts_source,
         },
         "reason": if options.device == FlyDevice::Auto { reason.as_str() } else { "explicit --device" },
         "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) {

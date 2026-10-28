@@ -264,8 +264,17 @@ fn pa_info(file: &Path) -> GpuResult<()> {
         println!("adjustable_electrodes: {count}");
         println!("reference_voltage: {}", metadata.reference_voltage);
     }
+    // SIMION 2024 was observed rejecting cylindrical headers when dy != dz;
+    // oracle context: tools/simion-oracle/README.md.
+    // Other spacing/dimension values are already validated by simrep-io's PA reader.
+    let mut simion_issues = Vec::new();
+    if a.symmetry == Symmetry::Cylindrical && a.dy_mm != a.dz_mm {
+        simion_issues.push("cylindrical symmetry requires dy_mm == dz_mm in SIMION 2024");
+    }
     json::set_summary(serde_json::json!({
         "file": file,
+        "simion_compatible": simion_issues.is_empty(),
+        "simion_issues": simion_issues,
         "mode": pa.mode.value(),
         "header_bytes": pa.mode.header_bytes(),
         "dims": [a.nx, a.ny, a.nz],

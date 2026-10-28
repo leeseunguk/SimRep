@@ -15,6 +15,7 @@ export function verifyResult(value) {
       if (gap.mode === 'off') issues.push(`${location}gap check was disabled`)
       if (gap.warnings?.length || gap.pairs?.some(pair => pair.status !== 'ok')) issues.push(`${location}gap check has unresolved or under-resolved gaps; refine spacing (target gap/10)`)
     }
+    if (Array.isArray(node.warnings) && node.warnings.includes('voltage_convention not stated; k may differ by a factor of 2 from literature conventions')) issues.push(`${location}voltage_convention not stated; k may differ by a factor of 2 from literature conventions`)
     if (node.error) issues.push(`${location}tool failed: ${node.error.message ?? node.error}`)
     if (Object.hasOwn(node, 'u_num') && node.u_num === null) issues.push(`${location}numerical uncertainty is indeterminate; refine the grid study before claiming convergence`)
     for (const [key, child] of Object.entries(node)) {

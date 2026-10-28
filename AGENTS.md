@@ -119,12 +119,12 @@ Every object has `schema_version` (integer, currently 1) and
 
 | Command | Keys (besides the two above) |
 |---|---|
-| `fly` | `ion_count`, `arrivals` (detector-plane hits): int; `splat_counts`: {reason: int} over `electrode`, `outside`, `plane`, `time_limit`, `step_limit`, `step_underflow`, `nonfinite`, `beam_diverged`, `beam_leader_stopped`; `arrival_tof_us`: {`mean`,`std` (population),`min`,`max`: number or null}; `compute_ms`, `prep_ms`: number; `requested`, `executed`: selection; `reason`: string; `fallback_reason`: string or null; `output_paths`: string[] |
+| `fly` | `ion_count`, `arrivals` (detector-plane hits): int; `splat_counts`: {reason: int} over `electrode`, `outside`, `plane`, `time_limit`, `step_limit`, `step_underflow`, `nonfinite`, `beam_diverged`, `beam_leader_stopped`; `arrival_tof_us`: {`mean`,`std` (population),`min`,`max`: number or null}; `compute_ms`, `prep_ms`: number; `requested`, `executed`: selection (executed adds `cuts_path`: string or null and `cuts_source`: `explicit`, `sibling`, `disabled`, or `none`); `reason`: string; `fallback_reason`: string or null; `output_paths`: string[] |
 | `refine`, `refine-geometry` | `requested`, `executed`: selection; `reason`; `fallback_reason`; `cycles`: int; `final_residual`, `tolerance`, `compute_ms`, `prep_ms`: number; `converged`: bool; `output_paths`: string[] |
 | `gem2pa` | `output_paths`; `dims`: int[3]; `spacing_mm`: number[3]; `electrode_numbers`: int[]; `compute_ms` |
 | `mesh-import` | `output_paths`; `dims`; `spacing_mm`; `electrode_numbers` |
 | `export *` | `output_paths` |
-| `pa-info` | `file`, `symmetry`, `field_type`: string; `mode`, `header_bytes`, `ng`, `points`, `electrode_points`, `non_electrode_points`: int; `dims`; `spacing_mm`; `mirrors`, `anti_mirrors`: bool[3]; `refinable`: bool; `max_voltage`, `potential_min`, `potential_max`, `potential_mean`: number; `adjustable_electrodes`: int or null; `reference_voltage`: number or null |
+| `pa-info` | `file`, `symmetry`, `field_type`: string; `mode`, `header_bytes`, `ng`, `points`, `electrode_points`, `non_electrode_points`: int; `dims`; `spacing_mm`; `mirrors`, `anti_mirrors`: bool[3]; `refinable`, `simion_compatible`: bool; `simion_issues`: string[]; `max_voltage`, `potential_min`, `potential_max`, `potential_mean`: number; `adjustable_electrodes`: int or null; `reference_voltage`: number or null |
 | `gpu-info` | `adapter_name`, `adapter_type`, `backend`, `driver`, `driver_info`: string; `f64_support`, `software_adapter`: bool |
 | `gpu-smoke` | `gpu-info` keys plus `checks`: [{`precision`, `kernel_ms` (or null), `submit_readback_ms`, `max_abs_error`, `tolerance`, `cells_checked`}] |
 

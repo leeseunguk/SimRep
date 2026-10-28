@@ -5,6 +5,7 @@ import copy
 import json
 import os
 import sys
+import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -95,6 +96,8 @@ class Field:
     origin_mm: tuple = (0.0, 0.0, 0.0)
     _background: np.ndarray | None = field(default=None, repr=False)
     _cuts: dict | None = field(default=None, repr=False)
+    _source_path: str | None = field(default=None, repr=False)
+    _cuts_path: str | None = field(default=None, repr=False)
 
     def fast_adjust(self, voltages):
         """Return a field at new voltages, retaining unspecified voltages."""
@@ -122,7 +125,8 @@ class Field:
             metadata["pa0"]["reference_voltage"] = 10000.0
         report = dict(self.report, compute_ms=(perf_counter() - start) * 1000)
         return Field(PA(values, self.pa.electrodes, metadata), self.bases,
-                     requested, report, self.origin_mm, background, self._cuts)
+                     requested, report, self.origin_mm, background, self._cuts,
+                     self._source_path, self._cuts_path)
 
     def write(self, path):
         """Write .pa0 plus .paN siblings, ready for the CLI's --voltage."""
@@ -158,7 +162,8 @@ def load_field(path, *, no_cuts=False):
     pa = read_pa(path)
     trailer = pa.metadata.get("pa0")
     if not trailer:
-        return Field(pa, _cuts=cuts)
+        return Field(pa, _cuts=cuts, _source_path=path,
+                     _cuts_path=os.fspath(cuts_path) if cuts is not None else None)
     indices = trailer["electrode_indices"]
     numbers = [n for n, index in enumerate(indices) if index != -1]
     background = _pa(_native.adjust(path, [(n, 0.0) for n in numbers]))
@@ -174,7 +179,8 @@ def load_field(path, *, no_cuts=False):
             voltages[number] = scalable[number]
         else:
             voltages[number] = float(flat[indices[number]])
-    return Field(pa, bases, voltages, _background=background.potentials, _cuts=cuts)
+    return Field(pa, bases, voltages, _background=background.potentials, _cuts=cuts,
+                 _source_path=path, _cuts_path=os.fspath(cuts_path) if cuts is not None else None)
 
 
 def fast_adjust(source, voltages):
@@ -407,6 +413,19 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
         source_field = Field(PA(np.zeros((1, 1, 1)), np.zeros((1, 1, 1), bool)))
     else:
         source_field = load_field(source, no_cuts=no_cuts or cuts is not None)
+    if no_cuts:
+        cuts_source, cuts_path = "disabled", None
+    elif cuts is not None:
+        cuts_source = "explicit"
+        cuts_path = None if isinstance(cuts, dict) else os.fspath(cuts)
+    elif source_field._cuts is not None:
+        cuts_source = "sibling" if source_field._cuts_path else "explicit"
+        cuts_path = source_field._cuts_path
+    else:
+        cuts_source, cuts_path = "none", None
+        pa = source_field._source_path or "<pa0>"
+        sidecar = str(Path(pa).with_suffix(".cuts.json")) if source_field._source_path else "<stem>.cuts.json"
+        warnings.warn(f"warning: no exact-surface sidecar {sidecar} next to {pa}; flying with staircase collisions (pass --cuts PATH, or --no-cuts to silence)", UserWarning, stacklevel=2)
     expressions = {int(n): str(v) for n, v in (voltage_expr or {}).items()}
     adjustments = dict(voltages or {})
     adjustments.update({n: 0.0 for n in expressions})
@@ -451,7 +470,9 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
     arrays, paths, report = _native.fly(
         *_args(source_field.pa), rows, dynamic_bases, _json(settings))
     arrays["reason"] = np.asarray(arrays["reason"], dtype=str)
-    result = FlightResult(arrays, paths if trajectories else None, json.loads(report))
+    report = json.loads(report)
+    report.update(cuts_path=cuts_path, cuts_source=cuts_source)
+    result = FlightResult(arrays, paths if trajectories else None, report)
     if output is not None:
         _write_flight_csv(output, result)
     good = np.isin(arrays["reason"], ["electrode", "outside", "plane"])
