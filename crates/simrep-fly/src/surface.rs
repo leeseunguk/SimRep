@@ -145,12 +145,14 @@ struct Electrode {
 /// grid origin is not applied twice.
 pub struct SurfaceModel {
     electrodes: Vec<Electrode>,
+    collision_only_numbers: Vec<usize>,
     accuracy: SurfaceAccuracy,
     domain: Option<Domain>,
     tolerance_mm: f64,
     pub(crate) reconstruction_cuts: Option<ReconstructionCuts>,
 }
 
+#[derive(Clone)]
 pub(crate) struct ReconstructionCuts {
     pub(crate) nodes: Vec<Option<usize>>,
     pub(crate) links: Vec<LinkIntersections>,
@@ -177,6 +179,8 @@ struct Sidecar {
     #[serde(default)]
     electrode_numbers: Vec<usize>,
     #[serde(default)]
+    collision_only_numbers: Vec<usize>,
+    #[serde(default)]
     sampled_sdfs: Vec<SurfaceSamples>,
     #[serde(default)]
     source_geometry: Vec<SourceSurface>,
@@ -190,7 +194,7 @@ struct Sidecar {
     link_intersections: Option<Vec<LinkIntersections>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct LinkIntersections {
     pub(crate) node: usize,
     pub(crate) fractions: [Option<f64>; 6],
@@ -219,6 +223,7 @@ impl SurfaceModel {
                     mesh: None,
                 })
                 .collect(),
+            collision_only_numbers: Vec::new(),
             accuracy: SurfaceAccuracy::SourceGeometry,
             domain: None,
             tolerance_mm,
@@ -234,6 +239,13 @@ impl SurfaceModel {
         let data: Sidecar = serde_json::from_reader(reader)?;
         if !matches!(data.version, 1..=3) {
             return Err(FlyError("unsupported cuts sidecar version").into());
+        }
+        if data
+            .collision_only_numbers
+            .iter()
+            .any(|n| !data.electrode_numbers.contains(n))
+        {
+            return Err(FlyError("collision-only number has no surface").into());
         }
         let count = checked_grid(data.dims, data.origin_mm, data.spacing_mm)?;
         let valid_nodes = if let Some(runs) = &data.node_electrode_runs {
@@ -405,6 +417,7 @@ impl SurfaceModel {
         };
         Ok(Self {
             electrodes,
+            collision_only_numbers: data.collision_only_numbers,
             accuracy,
             domain: Some(Domain {
                 dims: data.dims,
@@ -416,6 +429,45 @@ impl SurfaceModel {
             tolerance_mm: 1e-10 * h,
             reconstruction_cuts: Some(ReconstructionCuts { nodes, links }),
         })
+    }
+
+    /// Select surfaces used for collision-only or potential reconstruction.
+    pub fn select_collision_only(&self, collision_only: bool) -> Self {
+        Self {
+            electrodes: self
+                .electrodes
+                .iter()
+                .filter(|e| self.collision_only_numbers.contains(&e.number) == collision_only)
+                .cloned()
+                .collect(),
+            collision_only_numbers: self.collision_only_numbers.clone(),
+            accuracy: self.accuracy,
+            domain: self.domain.clone(),
+            tolerance_mm: self.tolerance_mm,
+            reconstruction_cuts: if collision_only {
+                None
+            } else {
+                self.reconstruction_cuts.as_ref().map(|cuts| {
+                    let mut cuts = cuts.clone();
+                    for node in &mut cuts.nodes {
+                        if node.is_some_and(|n| self.collision_only_numbers.contains(&n)) {
+                            *node = None;
+                        }
+                    }
+                    for link in &mut cuts.links {
+                        for side in 0..6 {
+                            if link.electrodes[side]
+                                .is_some_and(|n| self.collision_only_numbers.contains(&n))
+                            {
+                                link.electrodes[side] = None;
+                                link.fractions[side] = None;
+                            }
+                        }
+                    }
+                    cuts
+                })
+            },
+        }
     }
 
     pub(crate) fn electrode_numbers(&self) -> impl Iterator<Item = usize> + '_ {
@@ -430,6 +482,7 @@ impl SurfaceModel {
     ) -> Result<Self, FlyError> {
         Self {
             electrodes: self.electrodes.clone(),
+            collision_only_numbers: self.collision_only_numbers.clone(),
             accuracy: self.accuracy,
             domain: None,
             tolerance_mm: self.tolerance_mm,

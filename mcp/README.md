@@ -239,3 +239,5 @@ The same object can be sent to the standalone `aperture_check` tool. Fixed
 probe coordinates must lie on grid nodes; cylindrical probes use x/r and
 z=0. The default surface sampling step is spacing/64; narrower features may
 be missed. The midpoint vacuum interval must be bounded by two surfaces.
+
+`refine_geometry`의 `insulator` 배열은 전위 경계가 아닌 충돌 전용 부품을 지정합니다. `fly`에서 `no_cuts: true`와 `surface_collisions: "insulators"` (또는 `"all"`)을 함께 쓰면 계단식 전위를 유지하면서 정확한 표면 충돌을 추가합니다. CPU가 필요합니다.

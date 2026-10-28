@@ -186,6 +186,8 @@ SIMREP_BIN=./target/release/simrep node mcp/smoke.mjs     # 점검: "all checks 
 
 ## 7. 함정 (겪은 것)
 
+- 절연체는 `--insulator`로 지정하고 계단식 비행에서 충돌을 원하면 `--no-cuts --surface-collisions insulators`를 함께 쓴다.
+
 - SIMION 호환성: `pa-info`의 `simion_compatible`, `simion_issues`를 확인한다.
 
 - 전압 2배 규약: `analyzer_scan`의 `voltage_convention`, `k_definition`과 생략 경고를 확인한다.

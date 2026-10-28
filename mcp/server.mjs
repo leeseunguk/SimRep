@@ -599,6 +599,7 @@ const TOOLS = [
           minItems: 1,
           description: 'Assignments part=number:voltage, one per part. GEM: source id, e.g. 1=1:0.',
         },
+        insulator: { type: 'array', items: { type: 'string' }, description: 'Collision-only part names or indices.' },
         out: { type: 'string', description: 'Workspace-relative output stem (no extension).' },
         device: { type: 'string', enum: ['cpu', 'gpu'] },
         backend: { type: 'string', enum: ['auto', 'vulkan', 'dx12'] },
@@ -617,7 +618,7 @@ const TOOLS = [
       additionalProperties: false,
     },
     async run(args) {
-      only(args, ['input', 'electrode', 'out', 'device', 'backend', 'grid', 'spacing', 'origin', 'tolerance', 'max_cycles', 'units', 'repair', 'cad_mode', 'cad_tolerance', 'gap_check'])
+      only(args, ['input', 'electrode', 'insulator', 'out', 'device', 'backend', 'grid', 'spacing', 'origin', 'tolerance', 'max_cycles', 'units', 'repair', 'cad_mode', 'cad_tolerance', 'gap_check'])
       const argv = [
         'refine-geometry',
         inputFile(reqString(args, 'input'), 'input'),
@@ -626,6 +627,10 @@ const TOOLS = [
       ]
       for (const item of assignmentList(args.electrode, 'part=number:voltage', /^[^=]+=\d+:[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/, 'electrode')) {
         argv.push('--electrode', item)
+      }
+      if (args.insulator !== undefined) {
+        if (!Array.isArray(args.insulator) || args.insulator.some(x => typeof x !== 'string' || !x)) throw new ToolError('insulator must contain nonempty selectors')
+        for (const item of args.insulator) argv.push('--insulator', item)
       }
       if (args.grid !== undefined) argv.push('--grid', integers(args.grid, 3, 'grid', 1))
       if (args.spacing !== undefined) argv.push('--spacing', numbers(args.spacing, 3, 'spacing'))
@@ -736,11 +741,12 @@ const TOOLS = [
         integrator: { type: 'string', enum: ['rk45', 'boris'] },
         allow_time_limit: { type: 'boolean' },
         no_cuts: { type: 'boolean', description: 'Staircase collisions. Required for GPU flying when a .cuts.json sibling exists.' },
+        surface_collisions: { type: 'string', enum: ['insulators', 'all'], description: 'Add exact collisions to staircase flight; requires no_cuts and CPU.' },
       },
       additionalProperties: false,
     },
     async run(args) {
-      only(args, ['pa', 'particles', 'beam', 'voltage', 'voltage_expr', 'param', 'run_file', 'plane', 'bounds', 'device', 'backend', 'bfield', 'magnetic_pa', 'bfield_coil', 'collision', 'seed', 'pressure_pa', 'temperature_k', 'gas_mass_amu', 'mbmr', 'output', 'duration_us', 'origin', 'tolerance', 'integrator', 'allow_time_limit', 'no_cuts'])
+      only(args, ['pa', 'particles', 'beam', 'voltage', 'voltage_expr', 'param', 'run_file', 'plane', 'bounds', 'device', 'backend', 'bfield', 'magnetic_pa', 'bfield_coil', 'collision', 'seed', 'pressure_pa', 'temperature_k', 'gas_mass_amu', 'mbmr', 'output', 'duration_us', 'origin', 'tolerance', 'integrator', 'allow_time_limit', 'no_cuts', 'surface_collisions'])
       if ((args.particles === undefined) === (args.beam === undefined)) {
         throw new ToolError('provide exactly one of particles or beam')
       }
@@ -787,6 +793,7 @@ const TOOLS = [
       flag(argv, '--integrator', optEnum(args, 'integrator', ['rk45', 'boris']))
       if (optBool(args, 'allow_time_limit')) argv.push('--allow-time-limit')
       if (optBool(args, 'no_cuts')) argv.push('--no-cuts')
+      flag(argv, '--surface-collisions', optEnum(args, 'surface_collisions', ['insulators', 'all']))
       return simrep(argv)
     },
   },

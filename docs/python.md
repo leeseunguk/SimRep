@@ -440,3 +440,7 @@ than the sampling step can be missed. `diff_mm` is staircase minus exact.
 Warnings report deviations over half a cell and staircase widths under 2.5
 cells. Nodes on the surface are electrode (see `SignedDistance::conductor_mask`
 and `SurfaceModel::membership`). Cylindrical probes use the stored x/r plane.
+
+### Collision-only insulators
+
+For file geometry, `refine_geometry(..., insulators=["part"])` retains each selected part as an absorbing surface without using it as a potential boundary or fast-adjust basis. Analytic shapes do not currently support `insulators`. Default exact-surface flight absorbs on these surfaces. `fly(..., no_cuts=True)` uses staircase collisions only; add `surface_collisions="insulators"` or `"all"` to add exact collisions while keeping the staircase field. This mode requires CPU and a sidecar supplied through `cuts` or the field sibling.

@@ -69,11 +69,14 @@ pub struct FlyOptions {
     #[arg(long)]
     pa: Option<PathBuf>,
     /// Continuous electrode sidecar; defaults to the PA's sibling .cuts.json.
-    #[arg(long, requires = "pa", conflicts_with = "no_cuts")]
+    #[arg(long, requires = "pa")]
     cuts: Option<PathBuf>,
     /// Disable sibling .cuts.json pickup and use staircase collisions.
     #[arg(long)]
     no_cuts: bool,
+    /// Add exact collisions to the staircase field.
+    #[arg(long, value_parser = ["insulators", "all"], requires = "pa")]
+    surface_collisions: Option<String>,
     /// SIMION ION CSV or sandboxed, context-aware FLY2 definitions.
     #[arg(long)]
     particles: PathBuf,
@@ -554,14 +557,28 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     {
         return Err("direct Coulomb physics requires --device cpu or auto".into());
     }
+    if options.surface_collisions.is_some() && !options.no_cuts {
+        return Err("--surface-collisions requires --no-cuts".into());
+    }
+    if options.cuts.is_some() && options.no_cuts && options.surface_collisions.is_none() {
+        return Err("--cuts conflicts with --no-cuts".into());
+    }
+    if options.surface_collisions.is_some() && options.device == FlyDevice::Gpu {
+        return Err("--surface-collisions requires --device cpu or auto".into());
+    }
     let cuts_path = options.cuts.clone().or_else(|| {
         options
             .pa
             .as_ref()
             .map(|path| path.with_extension("cuts.json"))
-            .filter(|path| !options.no_cuts && path.is_file())
+            .filter(|path| {
+                (!options.no_cuts || options.surface_collisions.is_some()) && path.is_file()
+            })
     });
-    let cuts_source = if options.no_cuts {
+    if options.surface_collisions.is_some() && cuts_path.is_none() {
+        return Err("--surface-collisions requires a --cuts or sibling sidecar".into());
+    }
+    let cuts_source = if options.no_cuts && options.surface_collisions.is_none() {
         "disabled"
     } else if options.cuts.is_some() {
         "explicit"
@@ -594,8 +611,19 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             )
         })
         .transpose()?
+        .map(|surface| {
+            if options.surface_collisions.as_deref() == Some("insulators") {
+                surface.select_collision_only(true)
+            } else {
+                surface
+            }
+        })
         .map(std::sync::Arc::new);
-    let surface_mode = match surface.as_ref().map(|surface| surface.accuracy()) {
+    let surface_mode = match surface
+        .as_ref()
+        .filter(|_| options.surface_collisions.is_none())
+        .map(|surface| surface.accuracy())
+    {
         Some(SurfaceAccuracy::ApproximateV1) => "approximate-v1",
         Some(SurfaceAccuracy::SampledSdf) => "sampled-sdf",
         Some(SurfaceAccuracy::SourceGeometry) => "source-geometry",
@@ -735,7 +763,11 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             source = source.with_adaptive(adaptive);
         }
         if let Some(surface) = &surface {
-            source = source.with_surface(surface.clone())?;
+            source = if options.surface_collisions.is_some() {
+                source.with_collision_surface(surface.clone())?
+            } else {
+                source.with_surface(surface.clone())?
+            };
         }
         let provider = |_, point| {
             let sample = source.sample(point, 0.0);
@@ -804,7 +836,9 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     } else {
         "no measured GPU crossover for this collision profile".to_owned()
     };
-    let gpu = if (surface.is_none() || matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
+    let gpu = if (surface.is_none()
+        || options.surface_collisions.is_none()
+            && matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
         && request_gpu
     {
         match pollster::block_on(Gpu::new(options.backend.backends()))? {
@@ -925,7 +959,11 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         field = field.with_adaptive(adaptive);
     }
     if let Some(surface) = surface {
-        field = field.with_surface(surface)?;
+        field = if options.surface_collisions.is_some() {
+            field.with_collision_surface(surface)?
+        } else {
+            field.with_surface(surface)?
+        };
     }
     let ghost_fill = field.ghost_fill_report();
     if let Some(report) = &ghost_fill {
@@ -1284,6 +1322,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             "precision": if use_gpu && options.space_charge.is_some() { "mixed-f32-f64" } else if gpu.as_ref().is_none_or(Gpu::has_f64) { "f64" } else { "f32" },
             "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()),
             "surface_mode": surface_mode,
+            "surface_collisions": options.surface_collisions,
             "cuts_path": cuts_path,
             "cuts_source": cuts_source,
         },

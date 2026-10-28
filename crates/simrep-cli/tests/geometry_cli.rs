@@ -393,3 +393,72 @@ fn fly_picks_up_v3_sidecar_and_reports_electrode_number() {
         ],
     );
 }
+
+#[test]
+fn insulator_is_collision_only_and_does_not_change_the_field() {
+    let dir = tempfile::tempdir().unwrap();
+    let electrodes = "pa_define(21,7,1,planar)\ne(1){fill{within{box(-1,-1,1,7)}}}\ne(2){fill{within{box(19,-1,21,7)}}}\n";
+    fs::write(dir.path().join("base.gem"), electrodes).unwrap();
+    fs::write(
+        dir.path().join("slab.gem"),
+        format!("{electrodes}e(3){{fill{{within{{box(9,-1,10,7)}}}}}}\n"),
+    )
+    .unwrap();
+    fs::write(dir.path().join("ions.ion"), "0,1,1,3,3,0,0,0,100\n").unwrap();
+    for (source, stem, extra) in [
+        ("base.gem", "base", vec![]),
+        ("slab.gem", "slab", vec!["--insulator", "3"]),
+    ] {
+        let mut args = vec![
+            "refine-geometry",
+            source,
+            "--electrode",
+            "1=1:0",
+            "--electrode",
+            "2=2:20",
+            "--out",
+            stem,
+            "--gap-check",
+            "off",
+        ];
+        args.extend(extra);
+        run(dir.path(), &args);
+    }
+    for ext in ["pa#", "pa0", "pa1", "pa2"] {
+        assert_eq!(
+            fs::read(dir.path().join(format!("base.{ext}"))).unwrap(),
+            fs::read(dir.path().join(format!("slab.{ext}"))).unwrap()
+        );
+    }
+    let sidecar: serde_json::Value =
+        serde_json::from_slice(&fs::read(dir.path().join("slab.cuts.json")).unwrap()).unwrap();
+    assert_eq!(sidecar["collision_only_numbers"], serde_json::json!([3]));
+    for (flags, expected) in [
+        (vec!["--no-cuts"], "plane"),
+        (
+            vec!["--no-cuts", "--surface-collisions", "insulators"],
+            "electrode",
+        ),
+        (vec![], "electrode"),
+        (
+            vec!["--no-cuts", "--surface-collisions", "all"],
+            "electrode",
+        ),
+    ] {
+        let mut args = vec![
+            "--json",
+            "fly",
+            "--pa",
+            "slab.pa0",
+            "--particles",
+            "ions.ion",
+            "--plane",
+            "1,0,0,18",
+            "--device",
+            "cpu",
+        ];
+        args.extend(flags);
+        let summary: serde_json::Value = serde_json::from_str(&run(dir.path(), &args)).unwrap();
+        assert_eq!(summary["splat_counts"][expected], 1);
+    }
+}

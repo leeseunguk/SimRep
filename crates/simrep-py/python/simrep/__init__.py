@@ -264,7 +264,7 @@ def refine(source, *, device="auto", backend="vulkan", tolerance=1e-10,
     return adjusted
 
 
-def refine_geometry(source=None, *, electrodes, dims=None, spacing_mm=None,
+def refine_geometry(source=None, *, electrodes, insulators=(), dims=None, spacing_mm=None,
                     origin_mm=(0.0, 0.0, 0.0), symmetry="planar", device="cpu",
                     backend="vulkan", tolerance=1e-10, max_cycles=100,
                     units=None, repair=False, out=None, sidecar_dense_sdf=False,
@@ -291,6 +291,7 @@ def refine_geometry(source=None, *, electrodes, dims=None, spacing_mm=None,
             report = _command("refine-geometry", source, grid=dims, spacing=spacing_mm,
                      origin=origin_mm, electrode=[
                          f"{part}={number}:{voltage}" for part, (number, voltage) in electrodes.items()],
+                     insulator=[str(part) for part in insulators],
                      device=device, backend=backend, tolerance=tolerance,
                      max_cycles=max_cycles, out=stem, units=units, repair=repair,
                      sidecar_dense_sdf=sidecar_dense_sdf,
@@ -304,6 +305,8 @@ def refine_geometry(source=None, *, electrodes, dims=None, spacing_mm=None,
             return solve(out)
         with TemporaryDirectory(prefix="simrep-geometry-") as directory:
             return solve(Path(directory) / "field")
+    if insulators:
+        raise ValueError("insulators require a geometry file")
     if out is not None or sidecar_dense_sdf or cad_mode != "auto" or cad_tolerance is not None:
         raise ValueError("out and sidecar/CAD options require a geometry file")
     settings = dict(solve=dict(device=device, backend=backend,
@@ -357,7 +360,7 @@ class FlightResult:
 
 
 def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
-        trajectories=False, sample_every=1, cuts=None, no_cuts=False, run_file=None,
+        trajectories=False, sample_every=1, cuts=None, no_cuts=False, surface_collisions=None, run_file=None,
         output=None, allow_time_limit=False, **options):
     """Fly NumPy rows or .ion/.fly2 particles through a PA, PA0, or Field.
 
@@ -399,7 +402,11 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
     parameters = dict(run.get("parameters", {}), **(parameters or {}))
     voltage_expr = dict(run.get("voltage_expr", {}), **{
         str(n): value for n, value in (voltage_expr or {}).items()})
-    if cuts is not None and no_cuts:
+    if surface_collisions is not None and not no_cuts:
+        raise ValueError("surface_collisions requires no_cuts")
+    if surface_collisions not in (None, "insulators", "all"):
+        raise ValueError("surface_collisions must be insulators or all")
+    if cuts is not None and no_cuts and surface_collisions is None:
         raise ValueError("cuts conflicts with no_cuts")
     if cuts is not None and source is None:
         raise ValueError("cuts requires a PA source")
@@ -412,8 +419,8 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
     elif source is None:
         source_field = Field(PA(np.zeros((1, 1, 1)), np.zeros((1, 1, 1), bool)))
     else:
-        source_field = load_field(source, no_cuts=no_cuts or cuts is not None)
-    if no_cuts:
+        source_field = load_field(source, no_cuts=(no_cuts and surface_collisions is None) or cuts is not None)
+    if no_cuts and surface_collisions is None:
         cuts_source, cuts_path = "disabled", None
     elif cuts is not None:
         cuts_source = "explicit"
@@ -433,9 +440,11 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
         source_field = source_field.fast_adjust(adjustments)
     settings = dict(options, voltage_expr=expressions, parameters=parameters or {},
                     sample_every=sample_every if trajectories else None,
-                    has_pa=source is not None)
-    if not no_cuts:
+                    has_pa=source is not None, surface_collisions=surface_collisions)
+    if not no_cuts or surface_collisions is not None:
         surface = source_field._cuts if cuts is None else cuts
+        if surface_collisions is not None and surface is None:
+            raise ValueError("surface_collisions requires a cuts or sibling sidecar")
         if surface is not None:
             settings["cuts_json" if isinstance(surface, dict) else "cuts"] = (
                 surface if isinstance(surface, dict) else os.fspath(surface))
@@ -471,7 +480,7 @@ def fly(source, particles, *, voltages=None, voltage_expr=None, parameters=None,
         *_args(source_field.pa), rows, dynamic_bases, _json(settings))
     arrays["reason"] = np.asarray(arrays["reason"], dtype=str)
     report = json.loads(report)
-    report.update(cuts_path=cuts_path, cuts_source=cuts_source)
+    report.update(cuts_path=cuts_path, cuts_source=cuts_source, surface_collisions=surface_collisions)
     result = FlightResult(arrays, paths if trajectories else None, report)
     if output is not None:
         _write_flight_csv(output, result)
@@ -495,7 +504,7 @@ def _command(name, *positionals, **options):
         if value is True:
             arguments.append(flag)
         elif isinstance(value, (tuple, list, np.ndarray)):
-            if key == "electrode":
+            if key in ("electrode", "insulator"):
                 for item in value:
                     arguments.append(f"{flag}={item}")
             else:

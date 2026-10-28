@@ -161,13 +161,14 @@ impl InstanceField {
         domain.electrodes.fill(false);
         domain.potentials.fill(0.0);
         self.surface_domain = Some(GridField::new(domain)?);
-        self.grid = self.grid.with_surface(&surface)?;
+        let conductors = surface.select_collision_only(false);
+        self.grid = self.grid.with_surface(&conductors)?;
         for (basis, _) in &mut self.voltage_bases {
-            *basis = basis.clone().with_surface(&surface)?;
+            *basis = basis.clone().with_surface(&conductors)?;
         }
         if let Some(adaptive) = self.adaptive.take() {
             self.adaptive = Some(Arc::new(
-                Arc::unwrap_or_clone(adaptive).with_surface(self.grid.clone(), &surface)?,
+                Arc::unwrap_or_clone(adaptive).with_surface(self.grid.clone(), &conductors)?,
             ));
         }
         self.surface = Some(surface);
@@ -212,8 +213,9 @@ impl InstanceField {
         if let Some(surface) = &self.surface
             && self.surface_domain.is_some()
         {
+            let conductors = surface.select_collision_only(false);
             for (basis, _) in &mut bases {
-                *basis = basis.clone().with_surface(surface)?;
+                *basis = basis.clone().with_surface(&conductors)?;
             }
         }
         self.voltage_bases = bases;
@@ -227,7 +229,7 @@ impl InstanceField {
             // AdaptiveField owns validated GridFields; patch domains are made
             // from those same grids, so this does not introduce new validation.
             field
-                .with_surface(self.grid.clone(), surface)
+                .with_surface(self.grid.clone(), &surface.select_collision_only(false))
                 .expect("validated adaptive grids accept surface reconstruction")
         } else {
             field

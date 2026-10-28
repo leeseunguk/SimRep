@@ -71,6 +71,7 @@ struct Settings {
     nearest_node_collisions: bool,
     cuts: Option<String>,
     cuts_json: Option<serde_json::Value>,
+    surface_collisions: Option<String>,
     transparent_faces: [bool; 6],
     sample_every: Option<usize>,
     trajectory_indices: Option<Vec<usize>>,
@@ -134,6 +135,7 @@ impl Default for Settings {
             nearest_node_collisions: false,
             cuts: None,
             cuts_json: None,
+            surface_collisions: None,
             transparent_faces: [false; 6],
             sample_every: None,
             trajectory_indices: None,
@@ -510,13 +512,15 @@ pub fn fly<'py>(
         if let Some(path) = &s.cuts {
             let surface = SurfaceModel::from_reader(BufReader::new(File::open(path)?))?
                 .with_tolerance(s.tolerance.unwrap_or(1e-12) / s.scale)?;
-            field = field.with_surface(Arc::new(surface))?;
+            let surface = if s.surface_collisions.as_deref() == Some("insulators") { surface.select_collision_only(true) } else { surface };
+            field = if s.surface_collisions.is_some() { field.with_collision_surface(Arc::new(surface))? } else { field.with_surface(Arc::new(surface))? };
             eprintln!("surface: {path} (explicit cuts)");
         }
         if let Some(value) = &s.cuts_json {
             let surface = SurfaceModel::from_reader(value.to_string().as_bytes())?
                 .with_tolerance(s.tolerance.unwrap_or(1e-12) / s.scale)?;
-            field = field.with_surface(Arc::new(surface))?;
+            let surface = if s.surface_collisions.as_deref() == Some("insulators") { surface.select_collision_only(true) } else { surface };
+            field = if s.surface_collisions.is_some() { field.with_collision_surface(Arc::new(surface))? } else { field.with_surface(Arc::new(surface))? };
         }
         let magnetic = magnetic(&s)?;
         let collision = collision(&s)?;
@@ -527,7 +531,8 @@ pub fn fly<'py>(
         if beam_mode && s.device == "gpu" { return Err("leader-plane beam integration requires device='cpu' or 'auto'".into()); }
         if s.device == "gpu" && s.space_charge.as_deref() == Some("direct") { return Err("direct Coulomb physics requires device='cpu' or 'auto'".into()); }
         if (beam_mode || s.space_charge.is_some()) && collision.is_some() { return Err("space charge does not support collision models".into()); }
-        let cpu_only = beam_mode || s.transparent_faces.contains(&true)
+        if s.surface_collisions.is_some() && s.device == "gpu" { return Err("surface_collisions requires device=cpu or auto".into()); }
+        let cpu_only = beam_mode || s.transparent_faces.contains(&true) || s.surface_collisions.is_some()
             || ((s.cuts.is_some() || s.cuts_json.is_some()) && s.space_charge.as_deref() != Some("pic"));
         if s.device == "gpu" && cpu_only { return Err("surface collisions and transparent faces require device='cpu' or 'auto'".into()); }
         let has_magnetic = magnetic.uniform_gauss != [0.0; 3] || !magnetic.arrays.is_empty()

@@ -59,6 +59,9 @@ pub struct GeometryOptions {
     /// GEM source electrode value, or mesh/CAD part name/index = number:volts.
     #[arg(long, required = true, value_parser = assignment, allow_hyphen_values = true)]
     electrode: Vec<Assignment>,
+    /// Part name/index to use only as an absorbing surface.
+    #[arg(long)]
+    insulator: Vec<String>,
     /// Device used to refine each electrode basis.
     #[arg(long, value_enum, default_value = "cpu")]
     device: Device,
@@ -312,6 +315,8 @@ struct Sidecar {
     symmetry: &'static str,
     mirrors: [bool; 3],
     electrode_numbers: Vec<usize>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    collision_only_numbers: Vec<usize>,
     #[serde(skip_serializing)]
     sampled_sdfs: Vec<simrep_fly::surface::SurfaceSamples>,
     source_geometry: Vec<SourceSurface>,
@@ -635,6 +640,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     let mut used = vec![false; args.electrode.len()];
     let mut voltages = BTreeMap::new();
     let mut parts = Vec::new();
+    let mut insulator_parts = Vec::new();
+    let mut used_insulators = vec![false; args.insulator.len()];
+    let mut next_number = args.electrode.iter().map(|e| e.number).max().unwrap_or(0);
     for (i, (name, shape, source, gap_source)) in sources.into_iter().enumerate() {
         let matches: Vec<_> = args
             .electrode
@@ -642,10 +650,36 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
             .enumerate()
             .filter(|(_, e)| e.part == name || (!gem && e.part == i.to_string()))
             .collect();
-        if matches.len() != 1 {
-            return Err(
-                format!("part {i} {name:?} requires exactly one --electrode assignment").into(),
-            );
+        let insulator_matches: Vec<_> = args
+            .insulator
+            .iter()
+            .enumerate()
+            .filter(|(_, selector)| **selector == name || (!gem && **selector == i.to_string()))
+            .collect();
+        if matches.len() + insulator_matches.len() != 1 {
+            return Err(format!(
+                "part {i} {name:?} requires exactly one --electrode or --insulator assignment"
+            )
+            .into());
+        }
+        if let Some((slot, selector)) = insulator_matches.first().copied() {
+            if used_insulators[slot] {
+                return Err(format!("ambiguous part selector {selector:?}").into());
+            }
+            used_insulators[slot] = true;
+            next_number += 1;
+            insulator_parts.push(Part {
+                name,
+                shape,
+                assignment: Assignment {
+                    part: selector.clone(),
+                    number: next_number,
+                    voltage: 0.0,
+                },
+                source,
+                gap_source,
+            });
+            continue;
         }
         let (slot, assignment) = matches[0];
         if used[slot] {
@@ -672,6 +706,9 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
     }
     if used.contains(&false) {
         return Err("an --electrode selector did not match any input part".into());
+    }
+    if used_insulators.contains(&false) {
+        return Err("an --insulator selector did not match any input part".into());
     }
     let h_min = (0..3)
         .filter(|&a| dims[a] > 1)
@@ -889,12 +926,23 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         .try_fold(1usize, usize::checked_mul)
         .ok_or("surface sample count overflows usize")?;
     let sample_spacing = spacing.map(|h| h / args.surface_supersampling as f64);
-    let electrode_numbers: Vec<_> = voltages.keys().copied().collect();
+    let collision_only_numbers: Vec<_> = insulator_parts
+        .iter()
+        .map(|p| p.assignment.number)
+        .collect();
+    let electrode_numbers: Vec<_> = voltages
+        .keys()
+        .copied()
+        .chain(collision_only_numbers.iter().copied())
+        .collect();
     let sampled_sdfs = electrode_numbers
         .iter()
         .filter(|_| args.sidecar_dense_sdf)
         .map(|&number| {
-            let mut sources = parts.iter().filter(|part| part.assignment.number == number);
+            let mut sources = parts
+                .iter()
+                .chain(&insulator_parts)
+                .filter(|part| part.assignment.number == number);
             let mut values = vec![0.0; sample_count];
             sources.next().unwrap().shape.sample_grid(
                 sample_dims,
@@ -933,9 +981,11 @@ fn run_once(args: GeometryOptions) -> GpuResult<()> {
         symmetry: if cylindrical { "cylindrical" } else { "planar" },
         mirrors: [pa.array.mirrors.x, pa.array.mirrors.y, pa.array.mirrors.z],
         electrode_numbers,
+        collision_only_numbers,
         sampled_sdfs,
         source_geometry: parts
             .iter()
+            .chain(&insulator_parts)
             .map(|p| SourceSurface {
                 number: p.assignment.number,
                 geometry: p.source.clone(),
@@ -1528,6 +1578,7 @@ mod tests {
                 symmetry: "planar",
                 mirrors: [false; 3],
                 electrode_numbers: vec![3, 7],
+                collision_only_numbers: vec![],
                 sampled_sdfs: Vec::new(),
                 source_geometry: Vec::new(),
                 assignments: Vec::new(),

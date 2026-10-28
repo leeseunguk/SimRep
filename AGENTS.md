@@ -100,7 +100,9 @@ eV, currents in amperes, pressure in Pa. All public APIs use these units.
   when the field carries exact surfaces.
 - `.cuts.json`: exact electrode surfaces written by `refine-geometry`;
   `fly` picks up a sibling automatically, `--no-cuts` (`no_cuts=True`)
-  falls back to staircase voxel collisions.
+  falls back to staircase voxel collisions. `refine-geometry --insulator PART`
+  assigns a collision-only surface without a potential boundary. With `--no-cuts`,
+  `--surface-collisions insulators|all` adds exact collisions on CPU.
 - Electrode numbers are 1..1000 and map to the `e(n)`/`electrode(n)` values
   in GEM, not to stored volts.
 - PA nodes sit at the origin; grid node (0,0,0) is at `origin_mm`. PA files
@@ -120,7 +122,7 @@ Every object has `schema_version` (integer, currently 1) and
 
 | Command | Keys (besides the two above) |
 |---|---|
-| `fly` | `ion_count`, `arrivals` (detector-plane hits): int; `splat_counts`: {reason: int} over `electrode`, `outside`, `plane`, `time_limit`, `step_limit`, `step_underflow`, `nonfinite`, `beam_diverged`, `beam_leader_stopped`; `arrival_tof_us`: {`mean`,`std` (population),`min`,`max`: number or null}; `compute_ms`, `prep_ms`: number; `requested`, `executed`: selection (executed adds `cuts_path`: string or null and `cuts_source`: `explicit`, `sibling`, `disabled`, or `none`); `reason`: string; `fallback_reason`: string or null; `output_paths`: string[] |
+| `fly` | `ion_count`, `arrivals` (detector-plane hits): int; `splat_counts`: {reason: int} over `electrode`, `outside`, `plane`, `time_limit`, `step_limit`, `step_underflow`, `nonfinite`, `beam_diverged`, `beam_leader_stopped`; `arrival_tof_us`: {`mean`,`std` (population),`min`,`max`: number or null}; `compute_ms`, `prep_ms`: number; `requested`, `executed`: selection (executed adds `cuts_path`: string or null and `cuts_source`: `explicit`, `sibling`, `disabled`, or `none`, `surface_collisions`: null, `insulators`, or `all`); `reason`: string; `fallback_reason`: string or null; `output_paths`: string[] |
 | `refine`, `refine-geometry` | `requested`, `executed`: selection; `reason`; `fallback_reason`; `cycles`: int; `final_residual`, `tolerance`, `compute_ms`, `prep_ms`: number; `converged`: bool; `output_paths`: string[] |
 | `gem2pa` | `output_paths`; `dims`: int[3]; `spacing_mm`: number[3]; `electrode_numbers`: int[]; `compute_ms` |
 | `mesh-import` | `output_paths`; `dims`; `spacing_mm`; `electrode_numbers` |
@@ -155,15 +157,17 @@ Quoted strings are the real messages emitted by the code.
 - `--device gpu requires a hardware GPU; adapter <name> (<backend>) is a
   CPU/software adapter; use --device cpu`: WSL, CI, or a system without a
   hardware adapter. Pass `--device cpu` / `device="cpu"`.
+- `--surface-collisions requires --no-cuts`: use the flag with staircase flight.
 - `surface collisions require CPU; use --device cpu or auto, or --no-cuts
   for staircase GPU flying`: exact-surface flight has no GPU path.
 - `refinement did not converge after {cycles} cycles` /
   `electrode {number} did not converge after {cycles} cycles; increase
   max_cycles`: raise `max_cycles`/`--max-cycles`, loosen `--tolerance`, or
   check for floating/overlapping electrode constraints.
-- `part {i} {name:?} needs exactly one --electrode assignment`: every
-  geometry part needs exactly one `part=number:voltage` (GEM: `SRC=N:V`,
-  mesh/CAD: name or index). Unused `--electrode` selectors also fail.
+- `part {i} {name:?} requires exactly one --electrode or --insulator assignment`: every
+  geometry part needs either `--electrode part=number:voltage` (GEM: `SRC=N:V`,
+  mesh/CAD: name or index) or `--insulator part`, but not both. Unused
+  selectors also fail.
 - `electrode {number} has no inside/on-surface node; refine the grid`:
   the electrode's surface contains no grid node; use a finer `--grid` or
   thicker part. Analytic-shape input needs a node on the surface.
