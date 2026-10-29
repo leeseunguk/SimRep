@@ -20,8 +20,10 @@ macro_rules! println {
 
 mod aperture_check;
 mod cad_measure;
+mod flight_shards;
 mod fly_bench;
 mod fly_cmd;
+mod gpu_adapter;
 mod json;
 mod mesh_cmd;
 mod physics_cmd;
@@ -65,6 +67,8 @@ enum Command {
     FlyBench(fly_bench::FlyBenchOptions),
     /// Fly particles through electric/magnetic fields and report terminal events.
     Fly(Box<fly_cmd::FlyOptions>),
+    /// Validate and merge complementary flight shards without rerunning physics.
+    MergeFlights(flight_shards::MergeOptions),
     /// Benchmark multigrid on a 3D harmonic boundary case.
     RefineBench(RefineBenchOptions),
     /// Refine a PA or PA# and write potentials or fast-adjust basis files.
@@ -132,7 +136,7 @@ fn parse_tolerance(value: &str) -> Result<f64, String> {
     Ok(tolerance)
 }
 
-#[derive(Clone, Copy, Debug, ValueEnum)]
+#[derive(Clone, Copy, Debug, ValueEnum, serde::Serialize)]
 enum Backend {
     /// Prefer a high-performance adapter among DX12 and Vulkan devices.
     Auto,
@@ -356,6 +360,7 @@ fn run(cli: Cli) -> GpuResult<()> {
         Command::CadMeasure(options) => return cad_measure::run(options),
         Command::FlyBench(options) => return fly_bench::run(options),
         Command::Fly(options) => return fly_cmd::run(*options),
+        Command::MergeFlights(options) => return flight_shards::merge(options),
         Command::MeshImport(options) => return mesh_cmd::import(*options),
         Command::Export(command) => return mesh_cmd::export(command),
     };

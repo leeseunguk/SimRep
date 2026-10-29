@@ -100,6 +100,7 @@ print(r.report["device"], r.report["relativistic"], r.report["compute_ms"])
 - PA 밖을 날아야 하면 `--bounds xmin,ymin,zmin,xmax,ymax,zmax` (`bounds=[[...],[...]]`). 없으면 PA 경계에서 `outside`로 끝난다.
 - 시간 한계는 기본이 실패다. `--duration-us`를 늘리거나, 의도한 것이면 `--allow-time-limit`. 종료 이유는 CSV `reason`과 JSON `splat_counts`로 센다.
 - 정확 표면은 `--device gpu --surface-backend sdf`로 GPU 비행할 수 있다. 인증된 보간 오차 상한을 가진 근사이며 CPU exact가 기준이다. `auto`는 CPU를 유지한다.
+- 독립 이온 비행은 `fly --shard i/N --output shard.csv`로 나누고 CSV와 `.csv.json`을 함께 모아 `merge-flights out.csv a.csv b.csv` 또는 `simrep.merge_flights(output, shards)`로 합친다. 원본 인덱스·난수는 유지하며 공간전하·beam은 거부한다. GPU 배정은 `--device gpu --gpu-adapter 이름또는인덱스`다.
 
 ## 4. 분석기 에너지 채널 레시피 (ESA)
 

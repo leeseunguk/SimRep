@@ -55,6 +55,7 @@ live in `examples/`.
 | Solve PA/PA# | `simrep refine file.pa#` | `field = simrep.refine("file.pa#")` |
 | Solve exact surfaces | `simrep refine-geometry geo.gem --electrode SRC=N:V --out stem` | `simrep.refine_geometry("geo.gem", electrodes={src: (n, v)}, out="stem")` |
 | Fly particles | `simrep fly --pa f.pa0 --particles ions.ion --voltage 1=0,2=110` | `simrep.fly(field, ions)` |
+| Merge flight shards | `simrep merge-flights out.csv shard1.csv shard2.csv ...` | `simrep.merge_flights("out.csv", ["shard1.csv", "shard2.csv"])` |
 | Change voltages, no re-solve | `--voltage N=V` on a PA0 with `.paN` siblings | `field.fast_adjust({2: 110})` |
 | Time-varying voltages | `--voltage-expr N=EXPR --param name=value` or `--run-file run.json` | `voltage_expr={2: "..."}, parameters={...}` |
 | Uniform B field | `fly --bfield Bx,By,Bz` (gauss) | `fly(..., bfield=[bx, by, bz])` |
@@ -76,6 +77,48 @@ rk45|boris`, `--tolerance`, `--output results.csv`.
 `--surface-backend sdf` flies sampled collision surfaces on CPU or explicit GPU;
 `--surface-sdf-resolution-divisor N` sets the sampling refinement. The reported
 certified interpolation bound describes an approximation; CPU exact is the reference.
+
+### Portable flight shards
+
+Run the same `fly` command on each process or PC, changing only `--shard i/N`,
+`--output`, optional `--trajectories`, and `--gpu-adapter`. No MPI, scheduler,
+or additional runtime installation is needed, including on Windows. `i` is
+one-based and `1 <= i <= N`. A shard flies zero-based source indices
+`k % N == i-1`; the CSV `ion` column remains the original one-based index.
+The complete ION/FLY2 source is expanded before filtering, preserving birth
+order and source sampling. CPU HS1/SDS and GPU Philox streams retain global
+ion identities. Auto device selection uses the original total ion count.
+Direct Coulomb, PIC, and beam/leader mode refuse sharding, even `--shard 1/1`.
+
+```sh
+simrep fly --pa lens.pa0 --particles ions.ion --device cpu --shard 1/2 --output a.csv
+simrep fly --pa lens.pa0 --particles ions.ion --device cpu --shard 2/2 --output b.csv
+simrep --json merge-flights out.csv a.csv b.csv
+```
+
+For different hardware GPUs use `--device gpu --gpu-adapter INDEX_OR_NAME`:
+indices are zero-based within the requested backend; names are unambiguous,
+case-insensitive substrings. Software adapters are still refused. Use the same
+SimRep version, input bytes, physical settings, device/backend, and precision
+on all workers. Adapter names and output paths do not enter the run hash;
+CPU and GPU or f32 and f64 results are not interchangeable reference runs.
+
+Every file-based CLI flight writes `OUT.csv.json`, containing a SHA256 run
+hash (PA and basis bytes, surfaces, source, external physics files, settings,
+and executed precision), CSV checksum, original total count, full-precision
+TOFs, and the summary. Copy sidecars along with the CSVs. `merge-flights`
+requires all partitions, including empty ones, checks identical run hashes,
+shard layout, checksums, and exactly one of every global ion index, then
+copies rows in global order without reformatting. Its CSV is byte-identical
+to an unsharded run on the same numerical execution path. TOF statistics are
+recomputed in global order from the full-precision values, not rounded CSV.
+
+`--trajectories PATH --sample-every N` exports initial/final states and every
+Nth accepted step with global indices. Keep trajectory files beside their
+flight CSVs when copying between machines. GPU sampling also accepts
+`--max-samples-per-ion`; capacity overflow is an error. A merge with trajectory
+exports requires them on every shard and writes `OUT.trajectories.csv`, sorted
+by global ion index while preserving sample order. It also writes `OUT.csv.json`.
 
 ## Device and precision rules
 
@@ -131,6 +174,7 @@ Every object has `schema_version` (integer, currently 1) and
 | Command | Keys (besides the two above) |
 |---|---|
 | `fly` | `ion_count`, `arrivals` (detector-plane hits): int; `splat_counts`: {reason: int} over `electrode`, `outside`, `plane`, `time_limit`, `step_limit`, `step_underflow`, `nonfinite`, `beam_diverged`, `beam_leader_stopped`; `arrival_tof_us`: {`mean`,`std` (population),`min`,`max`: number or null}; `compute_ms`, `prep_ms`: number; `requested`, `executed`: selection (executed adds `cuts_path`: string or null and `cuts_source`: `explicit`, `sibling`, `disabled`, or `none`, `surface_collisions`: null, `insulators`, or `all`, `surface_backend`, `surface_sdf_resolution_mm`, `surface_sdf_lipschitz`, `surface_sdf_interp_error_mm`, and `surface_sdf_error_bound_mm`); `reason`: string; `fallback_reason`: string or null; `output_paths`: string[] |
+| `merge-flights` | Flight count/statistics keys recomputed globally; `run_hash`, `total_ions`, `merged_shards`; `shard`: null; `compute_ms` and `compute_ms_sum`: sum of shard compute times; `compute_ms_max`: longest shard compute time; `prep_ms`: sum; `output_paths`: merged CSV, JSON sidecar, optional trajectory CSV |
 | `refine`, `refine-geometry` | `requested`, `executed`: selection; `reason`; `fallback_reason`; `cycles`: int; `final_residual`, `tolerance`, `compute_ms`, `prep_ms`: number; `converged`: bool; `output_paths`: string[] |
 | `gem2pa` | `output_paths`; `dims`: int[3]; `spacing_mm`: number[3]; `electrode_numbers`: int[]; `compute_ms` |
 | `mesh-import` | `output_paths`; `dims`; `spacing_mm`; `electrode_numbers` |
@@ -139,6 +183,11 @@ Every object has `schema_version` (integer, currently 1) and
 | `pa-info` | `file`, `symmetry`, `field_type`: string; `mode`, `header_bytes`, `ng`, `points`, `electrode_points`, `non_electrode_points`: int; `dims`; `spacing_mm`; `mirrors`, `anti_mirrors`: bool[3]; `refinable`, `simion_compatible`: bool; `simion_issues`: string[]; `max_voltage`, `potential_min`, `potential_max`, `potential_mean`: number; `adjustable_electrodes`: int or null; `reference_voltage`: number or null |
 | `gpu-info` | `adapter_name`, `adapter_type`, `backend`, `driver`, `driver_info`: string; `f64_support`, `software_adapter`: bool |
 | `gpu-smoke` | `gpu-info` keys plus `checks`: [{`precision`, `kernel_ms` (or null), `submit_readback_ms`, `max_abs_error`, `tolerance`, `cells_checked`}] |
+
+Flight summaries also include `run_hash`, `total_ions`, and `shard` (null for an
+unsharded flight, otherwise `{index, count, ions}` with one-based `index` and
+local `ions`). Requested/executed selections add `gpu_adapter` (selector/name,
+or null). File-based CLI flights include their provenance sidecar in `output_paths`.
 
 A selection is `{device, precision, backend}` (`backend` is null for CPU);
 flight selections add `surface_mode`. Compare `requested` with `executed`
@@ -162,6 +211,13 @@ Example:
 
 Quoted strings are the real messages emitted by the code.
 
+- `--shard requires i/N with 1 <= i <= N`: supply a valid one-based partition.
+- `--shard cannot be used with coupled physics: direct Coulomb, PIC space charge, or beam/leader mode`: fly the complete coupled ensemble without sharding.
+- `--gpu-adapter requires --device gpu`: explicit adapter selection requires explicit GPU flight.
+- `GPU adapter index {index} not found for {backends:?}` / `GPU adapter name {selector:?} not found for {backends:?}`: choose an adapter available to that backend; ambiguous name matches require an index.
+- `merge-flights run hash or shard layout mismatch`: use identical inputs, settings, execution precision, and shard count.
+- `merge-flights duplicate shard` / `merge-flights missing shard or ion index`: supply every partition exactly once, including empty partitions.
+- `merge-flights CSV checksum mismatch` / `merge-flights trajectory checksum mismatch`: copy the original CSV and matching sidecar/trajectory files without editing them.
 - `--device gpu requires a hardware GPU; adapter <name> (<backend>) is a
   CPU/software adapter; use --device cpu`: WSL, CI, or a system without a
   hardware adapter. Pass `--device cpu` / `device="cpu"`.

@@ -226,6 +226,8 @@ simrep fly --pa quadrupole.pa0 --particles ions.ion --voltage 1=2.5,2=-2.5
 simrep export grid quadrupole.pa0 field.vti
 ```
 
+`fly --shard i/N`으로 독립 이온 비행을 여러 프로세스·GPU·PC에 나누고 `simrep merge-flights out.csv a.csv b.csv`로 합칩니다(원본 인덱스·난수 보존, JSON 사이드카 필요, 공간전하·beam 제외); GPU 선택은 `--device gpu --gpu-adapter 이름또는인덱스`, Python 병합은 `simrep.merge_flights(output, shards)`입니다.
+
 그 밖에 메시 가져오기(`mesh-import`), 외부 프로그램(COMSOL, Opera 등)의 자기장 지도(`fly --bfield-map`), 시간 가변 전압(`--voltage-expr`)을 지원합니다.
 각 명령의 옵션은 `simrep <명령> --help`로 볼 수 있습니다.
 

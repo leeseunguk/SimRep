@@ -44,6 +44,7 @@ Native errors still raise `ValueError`, rather than returning error dictionaries
 | `gpu-info --backend auto` | `gpu_info(backend="auto")` | Shared |
 | `gpu-smoke --backend auto` | `gpu_smoke(backend="auto")` | Shared |
 | `gem2pa INPUT [OUTPUT]` | `gem2pa(source, output=None)` | Shared; Lua preprocessing and requested fractional `.pa-surf`; returns PA |
+| `merge-flights OUTPUT SHARD...` | `merge_flights(output, shards)` | Shared; complementary CLI shard CSVs and JSON sidecars, exact TOF statistics |
 | `fly-bench --ions 10000` (`--particles` alias) | `fly_bench(ions=10000)` | Shared |
 | `refine-bench --device cpu --backend vulkan --n 128` | `refine_bench(device="cpu", backend="vulkan", n=128)` | Shared |
 | `refine-bench --tolerance 1e-10 --max-cycles 100` | `refine_bench(tolerance=1e-10, max_cycles=100)` | Shared |
@@ -52,7 +53,7 @@ Native errors still raise `ValueError`, rather than returning error dictionaries
 | `refine-sdf --tolerance 1e-10 --max-cycles 100 --compare-staircase` | `refine_sdf(tolerance=1e-10, max_cycles=100, compare_staircase=False)` | Shared |
 | `refine FILE` | `refine(source)`; `Field.write(path)` for output | Supported; PA, PA#, in-memory PA |
 | `refine --device auto --backend vulkan` | `refine(device="auto", backend="vulkan")` | Supported; same automatic dielectric class policy |
-| `refine --tolerance 1e-10 --max-cycles 100` | `refine(tolerance=1e-10, max_cycles=100)` | Supported |
+| `refine --tolerance 1e-10 --max-cycles 100` | `tolerance=1e-10, max_cycles=100` | Supported |
 | `refine --permittivity PATH` | `refine(permittivity=path)` | Supported; cell PA and linear/nonlinear JSON laws; nonlinear PA# rejected |
 | `refine-geometry INPUT --electrode PART=N:V` | `refine_geometry(source, electrodes={part: (number, volts)})` | Shared for GEM/mesh/CAD files; analytic lists also supported |
 | `refine-geometry --grid --spacing --origin 0,0,0` | `dims=None, spacing_mm=None, origin_mm=(0,0,0)` | Shared; GEM grid/spacing defaults retained |
@@ -70,7 +71,7 @@ Native errors still raise `ValueError`, rather than returning error dictionaries
 | `mesh-import --repair --allow-defects --sdf-prefix` | `repair=False, allow_defects=False, sdf_prefix=None` | Shared; same conflicts and topology checks |
 | `export geometry INPUT OUTPUT --electrode` | `export_geometry(source, output, electrode=None)` | Shared |
 | `export geometry --origin --angular-segments 64 --sweep-degrees 360 --extrusion-depth 1` | `origin_mm=(0,0,0), angular_segments=64, sweep_degrees=360, extrusion_depth=1` | Shared |
-| `export grid INPUT OUTPUT --origin --no-field --revolve` | `export_grid(source, output, origin_mm=(0,0,0), no_field=False, revolve=False)` | Shared; VTI or revolved VTS |
+| `export grid INPUT OUTPUT --origin --no-field --revolve` | `export_grid(source, output, origin_mm=(0,0,0), no_field=False, revolve=False)` | Shared |
 | `export grid --angular-segments 64 --sweep-degrees 360` | `angular_segments=64, sweep_degrees=360` | Shared |
 | `export isosurface INPUT OUTPUT --potential` | `export_isosurface(source, output, potential=...)` | Shared |
 | `export isosurface --origin --angular-segments --sweep-degrees --extrusion-depth` | Same keywords/defaults as `export_geometry` | Shared |
@@ -103,7 +104,7 @@ Native errors still raise `ValueError`, rather than returning error dictionaries
 | `fly --beam-current-a` | `beam_current_a=None` | Supported; beam-only, CPU/auto, incompatible with ensemble space charge |
 | `fly --charge-softening-mm 0 --pic-dims 33,33,33` | `charge_softening_mm=0, pic_dims=(33,33,33)` | Supported; PIC requires full Cartesian bounds |
 | `fly --space-charge-step-fraction` | `space_charge_step_fraction=None` | Supported; omitted means beam 1.0, ensemble 0.1 |
-| Sampled trajectories (native API; CLI terminal CSV unchanged) | `trajectories=False, sample_every=1, trajectory_indices=None, max_samples_per_ion=10000` | CPU/GPU; selected ordered zero-based indices; GPU capacity overflow raises |
+| `fly --trajectories PATH --sample-every N` (CSV export) | `trajectories=False, sample_every=1, trajectory_indices=None, max_samples_per_ion=10000` (owned arrays) | CPU/GPU; selected ordered zero-based indices in Python; GPU capacity overflow raises |
 | Global `--help` / `--version` | Python `help(simrep.function)` / installed package metadata | Presentation equivalents |
 
 Python also retains library-only `particle_format="velocity"`, `min_step_us`,
@@ -112,6 +113,60 @@ not remove any CLI capability. The auxiliary functions require the repository's
 CLI sources when building from source; wheels are self-contained. Build CAD
 wheels with `maturin build ... --features cad`; without OCCT, CAD raises the same
 feature-gate error as a default CLI build.
+
+### Merging portable flight shards
+
+Launch CLI workers with identical input files and settings, changing only
+`--shard i/N`, output paths, and optional `--device gpu --gpu-adapter INDEX_OR_NAME`
+adapter selection. No MPI or extra runtime is required on Windows or Linux.
+The zero-based source index `k` belongs to worker `k % N == i-1`; CSV `ion`
+remains one-based and global. The source is fully expanded before filtering,
+so FLY2 sampling, birth order, and HS1/SDS per-ion RNG streams do not change.
+Direct Coulomb, PIC, and beam/leader modes refuse sharding. Auto device
+selection uses the original total count, not each worker's local count.
+The public NumPy `fly()` continues to fly its supplied array; CLI sharding
+and adapter selection are command options, not NumPy `fly()` keywords.
+
+```sh
+simrep fly --pa lens.pa0 --particles ions.ion --device cpu --shard 1/2 --output a.csv
+simrep fly --pa lens.pa0 --particles ions.ion --device cpu --shard 2/2 --output b.csv
+```
+
+```python
+from pathlib import Path
+import simrep
+summary = simrep.merge_flights(Path("merged.csv"), [Path("a.csv"), Path("b.csv")])
+print(summary["ion_count"], summary["arrival_tof_us"])
+print(summary["compute_ms_sum"], summary["compute_ms_max"])
+```
+
+Copy each CLI flight's `.csv.json` provenance sidecar with its CSV. The merger
+checks matching SHA256 run identities (PA/basis/surface/source/physics bytes,
+settings and executed device/precision), matching shard layout, checksums,
+and exactly one occurrence of every original ion index. All partitions must
+be supplied, including empty ones. Output paths and GPU adapter names are
+excluded from identity; use the same backend and precision on every worker.
+CPU/GPU or f32/f64 mixtures are not a bitwise-equivalent reference run.
+
+The shared Rust merger copies CSV rows in global index order without rounding,
+producing byte-identical terminal CSV to the unsharded execution path. It
+recomputes counts and TOF statistics in global order using full-precision
+sidecar values, not rounded CSV TOFs. `compute_ms` and `compute_ms_sum` are the
+sum of worker compute times; `compute_ms_max` is the longest worker compute
+time, not measured end-to-end distributed latency. `prep_ms` is summed.
+The result also includes `merged_shards`, `total_ions`, `run_hash`, `shard=None`,
+and versioned `output_paths`. CLI flight JSON has `shard={index,count,ions}`
+(or null when unsharded), `total_ions`, and `run_hash`.
+
+If workers use `--trajectories PATH --sample-every N`, keep trajectory CSVs
+beside their terminal CSVs for portable copying. Every shard must either export
+trajectories or omit them. Merging writes `merged.trajectories.csv` with global
+ion order and original within-ion sample order, plus `merged.csv.json`.
+Invalid inputs raise `ValueError` with the CLI merge error, such as
+`merge-flights run hash or shard layout mismatch`, `merge-flights duplicate shard`,
+or `merge-flights missing shard or ion index`. Validation finishes before
+opening outputs. Shard inputs must be produced by CLI `fly --output`, not by
+splitting an ordinary CSV or slicing NumPy result rows.
 
 ## WSL build and checks
 

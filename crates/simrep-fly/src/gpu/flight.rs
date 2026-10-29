@@ -6,7 +6,6 @@ pub(super) struct IonBufferPool {
     pub(super) idle: Vec<IonBuffers>,
     pub(super) bytes: u64,
 }
-
 impl IonBuffers {
     fn bytes(&self) -> u64 {
         [
@@ -26,7 +25,6 @@ impl IonBuffers {
                 .map_or(0, |(_, buffer)| buffer.size())
     }
 }
-
 struct Sampling {
     ion_indices: Vec<usize>,
     max_samples_per_ion: usize,
@@ -44,7 +42,6 @@ pub struct PendingFlight<'a> {
     pool: Arc<Mutex<IonBufferPool>>,
     batches: Vec<PendingBatch>,
 }
-
 struct PendingBatch {
     buffers: IonBuffers,
     bindings: wgpu::BindGroup,
@@ -64,7 +61,6 @@ struct PendingBatch {
     fly_ticks: u64,
     timings: Timings,
 }
-
 impl PendingFlight<'_> {
     pub fn collect(mut self) -> GpuResult<FlightReport> {
         let mut results =
@@ -82,7 +78,6 @@ impl PendingFlight<'_> {
         Ok(FlightReport { results, timings })
     }
 }
-
 impl Drop for PendingFlight<'_> {
     fn drop(&mut self) {
         let mut pool = self.pool.lock().unwrap();
@@ -94,17 +89,15 @@ impl Drop for PendingFlight<'_> {
         }
     }
 }
-
 impl<'a> PreparedField<'a> {
     pub fn fly(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
     ) -> GpuResult<FlightReport> {
-        self.submit_internal(particles, options, false, None, 0)?
+        self.submit_internal(particles, options, false, None, 0, 1)?
             .collect()
     }
-
     /// Continue a seeded input stream across caller-controlled batches.
     /// `first_ion_index` is the index of `particles[0]` in the complete beam.
     pub fn fly_indexed(
@@ -113,40 +106,56 @@ impl<'a> PreparedField<'a> {
         options: &FlightOptions,
         first_ion_index: u64,
     ) -> GpuResult<FlightReport> {
-        self.submit_internal(particles, options, false, None, first_ion_index)?
+        self.submit_internal(particles, options, false, None, first_ion_index, 1)?
             .collect()
     }
-
+    /// Fly an interleaved partition using absolute Philox stream identities.
+    /// Sampling indices address the local particle slice, not the complete beam.
+    pub fn fly_interleaved(
+        &mut self,
+        particles: &[Particle],
+        options: &FlightOptions,
+        first_ion_index: u64,
+        ion_stride: u64,
+        sampling: Option<&TrajectorySampling<'_>>,
+    ) -> GpuResult<FlightReport> {
+        self.submit_internal(
+            particles,
+            options,
+            false,
+            sampling,
+            first_ion_index,
+            ion_stride,
+        )?
+        .collect()
+    }
     /// Explicit emission from initial metal, matching the CPU launch API.
     pub fn fly_from_electrode(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
     ) -> GpuResult<FlightReport> {
-        self.submit_internal(particles, options, true, None, 0)?
+        self.submit_internal(particles, options, true, None, 0, 1)?
             .collect()
     }
-
     pub fn fly_sampled(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
         sampling: &TrajectorySampling<'_>,
     ) -> GpuResult<FlightReport> {
-        self.submit_internal(particles, options, false, Some(sampling), 0)?
+        self.submit_internal(particles, options, false, Some(sampling), 0, 1)?
             .collect()
     }
-
     pub fn fly_from_electrode_sampled(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
         sampling: &TrajectorySampling<'_>,
     ) -> GpuResult<FlightReport> {
-        self.submit_internal(particles, options, true, Some(sampling), 0)?
+        self.submit_internal(particles, options, true, Some(sampling), 0, 1)?
             .collect()
     }
-
     /// Enqueue a flight without waiting for GPU completion. The returned handle
     /// owns its input metadata and scratch buffers; it does not borrow this
     /// prepared field, the particles, or options. Voltages and pipeline selection
@@ -156,9 +165,8 @@ impl<'a> PreparedField<'a> {
         particles: &[Particle],
         options: &FlightOptions,
     ) -> GpuResult<PendingFlight<'a>> {
-        self.submit_internal(particles, options, false, None, 0)
+        self.submit_internal(particles, options, false, None, 0, 1)
     }
-
     /// Nonblocking counterpart of fly_indexed, retaining absolute RNG indices.
     pub fn submit_indexed(
         &mut self,
@@ -166,35 +174,31 @@ impl<'a> PreparedField<'a> {
         options: &FlightOptions,
         first_ion_index: u64,
     ) -> GpuResult<PendingFlight<'a>> {
-        self.submit_internal(particles, options, false, None, first_ion_index)
+        self.submit_internal(particles, options, false, None, first_ion_index, 1)
     }
-
     pub fn submit_from_electrode(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
     ) -> GpuResult<PendingFlight<'a>> {
-        self.submit_internal(particles, options, true, None, 0)
+        self.submit_internal(particles, options, true, None, 0, 1)
     }
-
     pub fn submit_sampled(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
         sampling: &TrajectorySampling<'_>,
     ) -> GpuResult<PendingFlight<'a>> {
-        self.submit_internal(particles, options, false, Some(sampling), 0)
+        self.submit_internal(particles, options, false, Some(sampling), 0, 1)
     }
-
     pub fn submit_from_electrode_sampled(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
         sampling: &TrajectorySampling<'_>,
     ) -> GpuResult<PendingFlight<'a>> {
-        self.submit_internal(particles, options, true, Some(sampling), 0)
+        self.submit_internal(particles, options, true, Some(sampling), 0, 1)
     }
-
     fn submit_internal(
         &mut self,
         particles: &[Particle],
@@ -202,8 +206,17 @@ impl<'a> PreparedField<'a> {
         launch: bool,
         sampling: Option<&TrajectorySampling<'_>>,
         ion_offset: u64,
+        ion_stride: u64,
     ) -> GpuResult<PendingFlight<'a>> {
         options.validate()?;
+        if ion_stride == 0
+            || (particles.len().saturating_sub(1) as u64)
+                .checked_mul(ion_stride)
+                .and_then(|n| ion_offset.checked_add(n))
+                .is_none()
+        {
+            return Err("GPU ion indices require a positive stride without u64 overflow".into());
+        }
         if self.integrator != options.integrator {
             self.integrator = options.integrator;
             let programs = if self.programs.is_empty() {
@@ -266,12 +279,12 @@ impl<'a> PreparedField<'a> {
                 options,
                 launch,
                 batch_sampling.as_ref(),
-                ion_offset + begin as u64,
+                ion_offset + begin as u64 * ion_stride,
+                ion_stride,
             )?);
         }
         Ok(pending)
     }
-
     fn submit_batch(
         &mut self,
         particles: &[Particle],
@@ -279,6 +292,7 @@ impl<'a> PreparedField<'a> {
         launch: bool,
         sampling: Option<&TrajectorySampling<'_>>,
         ion_offset: u64,
+        ion_stride: u64,
     ) -> GpuResult<PendingBatch> {
         let mut timings = Timings::default();
         let start = Instant::now();
@@ -321,7 +335,7 @@ impl<'a> PreparedField<'a> {
                     &mut ion,
                     particle,
                     self.collision,
-                    ion_offset + index as u64,
+                    ion_offset + index as u64 * ion_stride,
                 )?;
                 if !ion.metadata[1].is_finite() || !ion.metadata[2].is_finite() {
                     return Err("particle birth time exceeds GPU f32 range".into());
@@ -532,7 +546,6 @@ impl<'a> PreparedField<'a> {
         self.dirty = false;
         Ok(batch)
     }
-
     fn take_buffers(&self, count: usize, sample_bytes: u64) -> GpuResult<IonBuffers> {
         let gpu = self.gpu;
         let mut pool = self.ion_buffers.lock().unwrap();
@@ -626,7 +639,6 @@ impl<'a> PreparedField<'a> {
         Ok(buffers)
     }
 }
-
 impl PendingBatch {
     fn timestamp_bytes(&self) -> u64 {
         if self.buffers.timestamps.is_some() {
@@ -635,7 +647,6 @@ impl PendingBatch {
             0
         }
     }
-
     fn copy_results(&self, encoder: &mut wgpu::CommandEncoder) -> u64 {
         let readback = &self.buffers.readback;
         encoder.copy_buffer_to_buffer(&self.buffers.terminal, 32, readback, 0, self.output_size);
@@ -666,7 +677,6 @@ impl PendingBatch {
         }
         self.output_size + self.sample_size + timestamp_bytes
     }
-
     fn map(&mut self, gpu: &Gpu, encoder: wgpu::CommandEncoder, size: u64) {
         self.started = Instant::now();
         self.submission = Some(gpu.queue.submit([encoder.finish()]));
@@ -680,7 +690,6 @@ impl PendingBatch {
         self.mapping = Some(rx);
         self.needs_unmap = true;
     }
-
     fn wait(&mut self, gpu: &Gpu) -> GpuResult<()> {
         gpu.device.poll(wgpu::PollType::Wait {
             submission_index: self.submission.take(),
@@ -697,7 +706,6 @@ impl PendingBatch {
         result?;
         Ok(())
     }
-
     fn dispatch(&mut self, gpu: &Gpu, mut encoder: wgpu::CommandEncoder, combine: Option<u32>) {
         if self.physics {
             encoder.clear_buffer(&self.buffers.terminal, 0, Some(4));
@@ -753,7 +761,6 @@ impl PendingBatch {
         };
         self.map(gpu, encoder, read_size);
     }
-
     fn collect(
         &mut self,
         gpu: &Gpu,
@@ -849,9 +856,7 @@ impl PendingBatch {
             drop(mapped);
             readback.unmap();
             self.needs_unmap = false;
-            return Err(
-                "GPU flight returned invalid or unfinished terminal states (possible device loss or shader failure); compute timestamps and results are invalid".into(),
-            );
+            return Err("GPU flight returned invalid or unfinished terminal states (possible device loss or shader failure); compute timestamps and results are invalid".into());
         }
         let mut results: Vec<_> = output
             .iter()

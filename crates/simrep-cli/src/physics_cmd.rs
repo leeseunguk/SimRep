@@ -1,7 +1,7 @@
 use std::{fs::File, io::BufReader, path::PathBuf};
 
 use clap::{Args, ValueEnum};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use simrep_fly::{
     FlyError, Integrator,
     physics::{
@@ -13,12 +13,11 @@ use simrep_io::read_pa;
 use simrep_solve::gpu::GpuResult;
 use simrep_solve::magnetostatics::{FieldFile as MagneticFieldFile, Formulation};
 
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, ValueEnum, Serialize)]
 pub enum Integration {
     Rk45,
     Boris,
 }
-
 impl From<Integration> for Integrator {
     fn from(value: Integration) -> Self {
         match value {
@@ -27,14 +26,13 @@ impl From<Integration> for Integrator {
         }
     }
 }
-
-#[derive(Clone, Copy, ValueEnum)]
+#[derive(Clone, Copy, ValueEnum, Serialize)]
 pub enum Collisions {
     Hs1,
     Sds,
 }
 
-#[derive(Args)]
+#[derive(Args, Serialize)]
 pub struct PhysicsOptions {
     /// Magnetic PA, using its header ng and the electric PA placement.
     #[arg(long)]
@@ -106,7 +104,6 @@ pub struct PhysicsRun {
     pub magnetic_pas: Vec<MagneticPaRun>,
     pub magnetic_support: Option<MagneticPaRun>,
 }
-
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct MagneticPaRun {
@@ -128,7 +125,6 @@ fn identity() -> [[f64; 3]; 3] {
 fn one() -> f64 {
     1.0
 }
-
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum CoilRun {
@@ -151,7 +147,6 @@ pub enum CoilRun {
         turns: usize,
     },
 }
-
 impl PhysicsOptions {
     pub fn prepare(
         &self,

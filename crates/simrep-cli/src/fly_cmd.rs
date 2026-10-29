@@ -4,8 +4,10 @@ use std::io::{self, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::time::Instant;
 
+use crate::flight_shards::{self, Shard};
 use clap::{Args, ValueEnum};
-use serde::Deserialize;
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use simrep_fly::{
     ELECTRIC_ACCELERATION, Field, FlightOptions, GridField, InstanceField, Particle,
     Reconstruction, SPEED_OF_LIGHT, SplatReason, VoltageExpression, fly_many,
@@ -13,7 +15,7 @@ use simrep_fly::{
     physics::{
         BeamOptions, BeamTermination, ChargeMode, DirectCharge, EnsembleOptions, GpuPic, PicMesh,
         SpaceCharge,
-        collision::{CollisionModel, Hs1, fly_many_collisional},
+        collision::{CollisionModel, Hs1, fly_collisional, fly_many_collisional},
         fly_beam, fly_ensemble,
         magnetic::{
             Electromagnetic, ImportedMagneticMap, MapPlacement, OutsideMap, PreparedMagneticField,
@@ -31,33 +33,30 @@ const GPU_COMPUTE_THRESHOLD: usize = 4096;
 const GPU_PIC_THRESHOLD: usize = 100_000;
 const HS1_GPU_COMPUTE_THRESHOLD: usize = 10_000;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum, Serialize)]
 enum FlyDevice {
     Auto,
     Cpu,
     Gpu,
 }
-
 impl FlyDevice {
     fn requests_gpu(self, ions: usize, crossover: Option<usize>) -> bool {
         self == Self::Gpu || self == Self::Auto && crossover.is_some_and(|n| ions >= n)
     }
 }
-
-#[derive(Clone, Copy, clap::ValueEnum)]
+#[derive(Clone, Copy, clap::ValueEnum, Serialize)]
 enum SpaceChargeMethod {
     Direct,
     Pic,
 }
-
-#[derive(Clone, Copy, clap::ValueEnum)]
+#[derive(Clone, Copy, clap::ValueEnum, Serialize)]
 enum ChargeModeName {
     Factor,
     Coulombic,
     Beam,
 }
 
-#[derive(Args)]
+#[derive(Args, Serialize)]
 pub struct FlyOptions {
     /// Auto uses the measured compute crossover; CPU for small beams.
     #[arg(long, value_enum, default_value = "auto")]
@@ -65,6 +64,12 @@ pub struct FlyOptions {
     /// Native GPU backend (unused on CPU).
     #[arg(long, value_enum, default_value = "vulkan")]
     backend: crate::Backend,
+    /// Zero-based adapter index or an unambiguous case-insensitive name substring.
+    #[arg(long)]
+    gpu_adapter: Option<String>,
+    /// Interleaved partition i/N (1 <= i <= N); preserves global ion indices.
+    #[arg(long)]
+    shard: Option<Shard>,
     /// SIMION PA or PA0; sibling PA1..PAN supply fast-adjust voltage changes.
     #[arg(long)]
     pa: Option<PathBuf>,
@@ -114,6 +119,15 @@ pub struct FlyOptions {
     /// CSV output path; omitted writes to stdout (stderr with --json).
     #[arg(long)]
     output: Option<PathBuf>,
+    /// Export sampled trajectories as CSV with global ion indices.
+    #[arg(long, requires = "output")]
+    trajectories: Option<PathBuf>,
+    /// Retain every Nth accepted trajectory step (initial/final states included).
+    #[arg(long, default_value_t = 1)]
+    sample_every: usize,
+    /// GPU trajectory capacity per ion; overflow is an error.
+    #[arg(long, default_value_t = 10000)]
+    max_samples_per_ion: usize,
     /// Override automatic field-aware absolute (mm, mm/us) and relative tolerances.
     #[arg(long)]
     tolerance: Option<f64>,
@@ -143,6 +157,7 @@ pub struct FlyOptions {
     bfield_map_format: String,
     /// Coordinate,flux units: mm/G (default), m/T, cm/mT or inch/G.
     #[arg(long, value_parser = map_units)]
+    #[serde(serialize_with = "flight_shards::debug_units")]
     bfield_map_units: Option<(simrep_io::bfield::LengthUnit, simrep_io::bfield::FluxUnit)>,
     /// origin xyz(mm), rotation columns(9), positive geometric scale.
     #[arg(long, value_parser = numbers::<13>, allow_hyphen_values = true)]
@@ -190,7 +205,6 @@ pub struct FlyOptions {
     #[arg(long)]
     space_charge_step_fraction: Option<f64>,
 }
-
 impl FlyOptions {
     fn compute_crossover(
         &self,
@@ -230,7 +244,6 @@ impl FlyOptions {
         }
     }
 }
-
 pub(crate) fn numbers<const N: usize>(text: &str) -> Result<[f64; N], String> {
     let values = text
         .split(',')
@@ -247,14 +260,11 @@ pub(crate) fn numbers<const N: usize>(text: &str) -> Result<[f64; N], String> {
         .try_into()
         .map_err(|_| format!("expected {N} comma-separated numbers"))
 }
-
 fn map_units(
     text: &str,
 ) -> Result<(simrep_io::bfield::LengthUnit, simrep_io::bfield::FluxUnit), String> {
     use simrep_io::bfield::{FluxUnit as B, LengthUnit as L};
-    let (length, flux) = text
-        .split_once('/')
-        .ok_or("expected coordinate/flux units: length mm, m, cm, inch or in / flux G, gauss, T, tesla or mT (for example mm/G)")?;
+    let (length, flux) = text.split_once('/').ok_or("expected coordinate/flux units: length mm, m, cm, inch or in / flux G, gauss, T, tesla or mT (for example mm/G)")?;
     let length = match length.to_ascii_lowercase().as_str() {
         "mm" => L::Mm,
         "m" => L::M,
@@ -270,7 +280,6 @@ fn map_units(
     };
     Ok((length, flux))
 }
-
 fn load_magnetic_maps(options: &FlyOptions) -> GpuResult<Vec<ImportedMagneticMap>> {
     use simrep_io::bfield::{self, Format, ReadOptions};
     let format = match options.bfield_map_format.as_str() {
@@ -376,7 +385,6 @@ fn load_magnetic_maps(options: &FlyOptions) -> GpuResult<Vec<ImportedMagneticMap
     }
     Ok(maps)
 }
-
 fn voltage(text: &str) -> Result<(usize, f64), String> {
     let (number, volts) = text.split_once('=').ok_or("expected electrode=volts")?;
     let number = number
@@ -390,7 +398,6 @@ fn voltage(text: &str) -> Result<(usize, f64), String> {
     }
     Ok((number, volts))
 }
-
 fn expression_assignment(text: &str) -> Result<(usize, String), String> {
     let (n, expression) = text
         .split_once('=')
@@ -401,7 +408,6 @@ fn expression_assignment(text: &str) -> Result<(usize, String), String> {
     }
     Ok((n, expression.to_owned()))
 }
-
 fn parameter(text: &str) -> Result<(String, f64), String> {
     let (name, value) = text.split_once('=').ok_or("expected name=value")?;
     let value: f64 = value.parse().map_err(|_| "invalid parameter value")?;
@@ -410,7 +416,6 @@ fn parameter(text: &str) -> Result<(String, f64), String> {
     }
     Ok((name.to_owned(), value))
 }
-
 #[derive(Default, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 struct VoltageRun {
@@ -421,6 +426,27 @@ struct VoltageRun {
 
 pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     let start = Instant::now();
+    if options.shard.is_some()
+        && (options.space_charge.is_some()
+            || matches!(options.charge_mode, ChargeModeName::Beam)
+            || options.beam_current_a.is_some())
+    {
+        return Err("--shard cannot be used with coupled physics: direct Coulomb, PIC space charge, or beam/leader mode".into());
+    }
+    if options.gpu_adapter.is_some() && options.device != FlyDevice::Gpu {
+        return Err("--gpu-adapter requires --device gpu".into());
+    }
+    if options.sample_every == 0 {
+        return Err("--sample-every must be positive".into());
+    }
+    if options
+        .trajectories
+        .as_ref()
+        .is_some_and(|p| Some(p) == options.output.as_ref())
+    {
+        return Err("--trajectories must differ from --output".into());
+    }
+    let identity = serde_json::to_value(&options)?;
     let adaptive_manifest = if let Some(path) = options.pa.as_ref().filter(|p| {
         p.extension()
             .is_some_and(|e| e.eq_ignore_ascii_case("json"))
@@ -737,6 +763,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             "vector potentials and magnetic material cells require --device cpu or auto".into(),
         );
     }
+    let identity = flight_shards::run_identity(identity)?;
     let particle_data = if options
         .particles
         .extension()
@@ -803,6 +830,18 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             },
         )?
     };
+    // Expand the entire source before partitioning: FLY2 sampling and birth
+    // order are properties of the original run, not of an individual worker.
+    let total_ions = particle_data.len();
+    let indices: Vec<_> = (0..total_ions)
+        .filter(|&i| options.shard.is_none_or(|s| s.contains(i)))
+        .collect();
+    let particle_data: Vec<_> = particle_data
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| options.shard.is_none_or(|s| s.contains(*i)))
+        .map(|(_, p)| p)
+        .collect();
     let has_magnetic = magnetic.uniform_gauss != [0.0; 3]
         || !magnetic.arrays.is_empty()
         || !magnetic.vector_potentials.is_empty()
@@ -826,7 +865,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         }
     };
     let init = Instant::now();
-    let request_gpu = !beam_mode && options.device.requests_gpu(particle_data.len(), crossover);
+    let request_gpu = !beam_mode && options.device.requests_gpu(total_ions, crossover);
     let mut reason = if adaptive_manifest.is_some() {
         "adaptive fields require CPU".to_owned()
     } else if beam_mode {
@@ -842,7 +881,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     } else if let Some(threshold) = crossover {
         format!(
             "{} ions {} measured crossover {threshold}",
-            particle_data.len(),
+            total_ions,
             if request_gpu { ">=" } else { "<" }
         )
     } else {
@@ -854,7 +893,14 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             && matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
         && request_gpu
     {
-        match pollster::block_on(Gpu::new(options.backend.backends()))? {
+        let selected = match options.gpu_adapter.as_deref() {
+            Some(selector) => pollster::block_on(crate::gpu_adapter::selected(
+                options.backend.backends(),
+                selector,
+            ))?,
+            None => pollster::block_on(Gpu::new(options.backend.backends()))?,
+        };
+        match selected {
             None if options.device == FlyDevice::Gpu => {
                 return Err("no adapter available for GPU flying".into());
             }
@@ -900,7 +946,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             format!("auto: {} ({reason})", if use_gpu { "GPU" } else { "CPU" })
         } else {
             "explicit --device".to_owned()
-        },
+        }
     );
     if let Some(gpu) = &gpu {
         eprintln!(
@@ -975,12 +1021,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     } else {
         None
     };
-    let sdf_report = sdf.as_ref().map(|s| {
-        s.volumes.iter().map(|v| serde_json::json!({
-        "number": v.number, "collision_only": v.collision_only, "resolution_mm": v.spacing,
-        "lipschitz": v.lipschitz, "interp_error_mm": v.interp_error_mm, "error_bound_mm": v.error_bound_mm,
-    })).collect::<Vec<_>>()
-    });
+    let sdf_report = sdf.as_ref().map(|s| s.volumes.iter().map(|v| serde_json::json!({ "number": v.number, "collision_only": v.collision_only, "resolution_mm": v.spacing, "lipschitz": v.lipschitz, "interp_error_mm": v.interp_error_mm, "error_bound_mm": v.error_bound_mm })).collect::<Vec<_>>());
     let grid = grid_field(array)?;
     let adaptive = adaptive_field(&grid, &adjustments)?;
     let mut field = InstanceField::new(grid, options.origin, axes, options.scale, bounds, plane)?
@@ -1052,6 +1093,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         max_step_us: options.max_step_us.unwrap_or(f64::MAX),
         duration_us: options.duration_us,
         relativistic: !nonrelativistic,
+        sample_every: options.trajectories.as_ref().map(|_| options.sample_every),
         ..FlightOptions::default()
     };
     let mut beam_terminations = None;
@@ -1204,14 +1246,31 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             .collect();
         resident.set_voltages(&voltages)?;
         let setup = start.elapsed();
-        let report = resident.fly(&particles, &flight_options)?;
+        let sampling_indices: Vec<_> = (0..particles.len()).collect();
+        let sampling = options
+            .trajectories
+            .as_ref()
+            .map(|_| simrep_fly::gpu::TrajectorySampling {
+                ion_indices: &sampling_indices,
+                every: options.sample_every,
+                max_samples_per_ion: options.max_samples_per_ion,
+            });
+        let mut gpu_options = flight_options.clone();
+        gpu_options.sample_every = None;
+        let report = resident.fly_interleaved(
+            &particles,
+            &gpu_options,
+            options.shard.map_or(0, |s| (s.index - 1) as u64),
+            options.shard.map_or(1, |s| s.count as u64),
+            sampling.as_ref(),
+        )?;
         eprintln!(
             "gpu_init_s: {:.6}, gpu_setup_s: {:.6}, gpu_upload_s: {:.6}, gpu_fly_s: {:.6}, gpu_readback_s: {:.6}",
             initialization.as_secs_f64(),
             (resident.timings.setup + report.timings.setup).as_secs_f64(),
             (resident.timings.upload + report.timings.upload).as_secs_f64(),
             report.timings.fly.as_secs_f64(),
-            report.timings.readback.as_secs_f64(),
+            report.timings.readback.as_secs_f64()
         );
         eprintln!(
             "GPU precision: {}; compute clock: {}",
@@ -1224,7 +1283,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
                 "GPU pass timestamps"
             } else {
                 "submission-through-completion (timestamps unavailable)"
-            },
+            }
         );
         (report.results, setup, report.timings.fly)
     } else {
@@ -1235,7 +1294,23 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         let setup = start.elapsed();
         let flight_start = Instant::now();
         let results = if let Some(model) = &collision {
-            fly_many_collisional(&field, &particles, &flight_options, model, seed)?
+            if options.shard.is_some() {
+                particles
+                    .par_iter()
+                    .zip(&indices)
+                    .map(|(p, &i)| {
+                        fly_collisional(
+                            &field,
+                            p,
+                            &flight_options,
+                            model,
+                            seed.wrapping_add((i as u64).wrapping_mul(0x9e3779b97f4a7c15)),
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()?
+            } else {
+                fly_many_collisional(&field, &particles, &flight_options, model, seed)?
+            }
         } else {
             fly_many(&field, &particles, &flight_options)?
         };
@@ -1247,10 +1322,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         None => Box::new(io::stdout().lock()),
     };
     let mut writer = BufWriter::new(writer);
-    writeln!(
-        writer,
-        "ion,tof_us,x_mm,y_mm,z_mm,ke_ev,reason,electrode_number,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us"
-    )?;
+    writeln!(writer, "{}", flight_shards::CSV_HEADER)?;
     let mut splats = 0;
     let mut counts: BTreeMap<_, usize> = [
         "electrode",
@@ -1310,7 +1382,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         writeln!(
             writer,
             "{},{:.15e},{:.15e},{:.15e},{:.15e},{:.15e},{},{},{:.15e},{:.15e},{:.15e}",
-            i + 1,
+            indices[i] + 1,
             result.tof_us,
             p[0],
             p[1],
@@ -1323,59 +1395,36 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             },
             result.final_state.velocity_mm_per_us[0],
             result.final_state.velocity_mm_per_us[1],
-            result.final_state.velocity_mm_per_us[2],
+            result.final_state.velocity_mm_per_us[2]
         )?;
     }
     writer.flush()?;
-    let tof = (!arrivals.is_empty()).then(|| {
-        let mean = arrivals.iter().sum::<f64>() / arrivals.len() as f64;
-        serde_json::json!({
-            "mean": mean,
-            "std": (arrivals.iter().map(|t| (t - mean).powi(2)).sum::<f64>() / arrivals.len() as f64).sqrt(),
-            "min": arrivals.iter().copied().fold(f64::INFINITY, f64::min),
-            "max": arrivals.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-        })
-    });
-    crate::json::set_summary(serde_json::json!({
-        "ion_count": particles.len(),
-        "splat_counts": counts,
-        "arrivals": arrivals.len(),
-        "arrival_tof_us": tof.unwrap_or_else(|| serde_json::json!({"mean": null, "std": null, "min": null, "max": null})),
-        "compute_ms": flight.as_secs_f64() * 1000.0,
-        "prep_ms": setup.as_secs_f64() * 1000.0,
-        "ghost_fill": ghost_fill,
-        "requested": {
-            "device": format!("{:?}", options.device).to_lowercase(),
-            "precision": "f64",
-            "backend": format!("{:?}", options.backend).to_lowercase(),
-            "surface_mode": if options.no_cuts { "staircase" } else if options.cuts.is_some() { "continuous" } else if options.nearest_node_collisions { "nearest-node" } else { "auto" },
-        },
-        "executed": {
-            "device": if use_gpu { "gpu" } else { "cpu" },
-            "precision": if use_gpu && options.space_charge.is_some() { "mixed-f32-f64" } else if gpu.as_ref().is_none_or(Gpu::has_f64) { "f64" } else { "f32" },
-            "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()),
-            "surface_mode": surface_mode,
-            "surface_backend": if cuts_path.is_some() { options.surface_backend.as_str() } else { "staircase" },
+    let precision = if use_gpu && options.space_charge.is_some() {
+        "mixed-f32-f64"
+    } else if gpu.as_ref().is_none_or(Gpu::has_f64) {
+        "f64"
+    } else {
+        "f32"
+    };
+    let execution =
+        serde_json::json!({"device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision});
+    let run_hash = flight_shards::sha256(&serde_json::to_vec(
+        &serde_json::json!({"inputs": identity, "execution": execution}),
+    )?);
+    let mut summary = serde_json::json!({
+        "schema_version": 1, "simrep_version": env!("CARGO_PKG_VERSION"), "ion_count": particles.len(), "total_ions": total_ions, "run_hash": run_hash,
+        "shard": options.shard.map(|s| serde_json::json!({"index": s.index, "count": s.count, "ions": particles.len()})),
+        "splat_counts": counts, "arrivals": arrivals.len(), "arrival_tof_us": flight_shards::tof_stats(&arrivals), "compute_ms": flight.as_secs_f64() * 1000.0, "prep_ms": setup.as_secs_f64() * 1000.0, "ghost_fill": ghost_fill,
+        "requested": { "device": format!("{:?}", options.device).to_lowercase(), "precision": "f64", "backend": format!("{:?}", options.backend).to_lowercase(), "gpu_adapter": options.gpu_adapter, "surface_mode": if options.no_cuts { "staircase" } else if options.cuts.is_some() { "continuous" } else if options.nearest_node_collisions { "nearest-node" } else { "auto" } },
+        "executed": { "device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision, "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()), "gpu_adapter": gpu.as_ref().map(|g| &g.info.name), "surface_mode": surface_mode, "surface_backend": if cuts_path.is_some() { options.surface_backend.as_str() } else { "staircase" },
             "surface_sdf_resolution_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| &v["resolution_mm"]).collect::<Vec<_>>()),
             "surface_sdf_lipschitz": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "lipschitz": v["lipschitz"]})).collect::<Vec<_>>()),
             "surface_sdf_interp_error_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "interp_error_mm": v["interp_error_mm"]})).collect::<Vec<_>>()),
-            "surface_sdf_error_bound_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "error_bound_mm": v["error_bound_mm"]})).collect::<Vec<_>>()),
-            "surface_collisions": options.surface_collisions,
-            "cuts_path": cuts_path,
-            "cuts_source": cuts_source,
-        },
+            "surface_sdf_error_bound_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "error_bound_mm": v["error_bound_mm"]})).collect::<Vec<_>>()), "surface_collisions": options.surface_collisions, "cuts_path": cuts_path, "cuts_source": cuts_source },
         "reason": if options.device == FlyDevice::Auto { reason.as_str() } else { "explicit --device" },
-        "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) {
-            Some(if options.space_charge.is_some() {
-                "adapter lacks native f64; GPU f32 corrections with CPU f64 flight/residual"
-            } else {
-                "adapter lacks native f64; GPU f32 flight with two-float TOF"
-            })
-        } else {
-            (options.device == FlyDevice::Auto && !use_gpu).then_some(reason.as_str())
-        },
+        "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) { Some(if options.space_charge.is_some() { "adapter lacks native f64; GPU f32 corrections with CPU f64 flight/residual" } else { "adapter lacks native f64; GPU f32 flight with two-float TOF" }) } else { (options.device == FlyDevice::Auto && !use_gpu).then_some(reason.as_str()) },
         "output_paths": options.output.iter().collect::<Vec<_>>(),
-    }));
+    });
     eprintln!(
         "ions: {}, splats: {}, setup_s: {:.6}, fly_s: {:.6}, total_s: {:.6}, ions_per_s: {:.0}",
         particles.len(),
@@ -1427,12 +1476,81 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             0
         };
     if completed != particles.len() {
+        crate::json::set_summary(summary);
         return Err(format!(
             "{} particles did not reach an allowed termination; inspect CSV reasons",
             particles.len() - completed
         )
         .into());
     }
+    let trajectory = if let Some(path) = &options.trajectories {
+        let mut writer = BufWriter::new(File::create(path)?);
+        writeln!(writer, "{}", flight_shards::TRAJECTORY_HEADER)?;
+        for (&index, result) in indices.iter().zip(&results) {
+            for state in result
+                .trajectory
+                .as_ref()
+                .ok_or("missing sampled trajectory")?
+            {
+                writeln!(
+                    writer,
+                    "{},{:.15e},{:.15e},{:.15e},{:.15e},{:.15e},{:.15e},{:.15e}",
+                    index + 1,
+                    state.time_us,
+                    state.position_mm[0],
+                    state.position_mm[1],
+                    state.position_mm[2],
+                    state.velocity_mm_per_us[0],
+                    state.velocity_mm_per_us[1],
+                    state.velocity_mm_per_us[2]
+                )?;
+            }
+        }
+        writer.flush()?;
+        summary["output_paths"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!(path));
+        let absolute = std::fs::canonicalize(path)?;
+        let output_parent = options
+            .output
+            .as_ref()
+            .unwrap()
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(std::path::Path::new("."));
+        let output_parent = std::fs::canonicalize(output_parent)?;
+        let file = absolute
+            .strip_prefix(&output_parent)
+            .unwrap_or(&absolute)
+            .to_path_buf();
+        Some(flight_shards::TrajectoryFile {
+            file,
+            sha256: flight_shards::sha256(&std::fs::read(path)?),
+        })
+    } else {
+        None
+    };
+    if let Some(path) = &options.output {
+        summary["output_paths"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!(flight_shards::sidecar(path)));
+        flight_shards::write_metadata(
+            path,
+            &flight_shards::FlightFile {
+                schema_version: 1,
+                run_hash,
+                total_ions,
+                shard: options.shard,
+                csv_sha256: flight_shards::sha256(&std::fs::read(path)?),
+                tof_us: results.iter().map(|r| r.tof_us).collect(),
+                summary: summary.clone(),
+                trajectories: trajectory,
+            },
+        )?;
+    }
+    crate::json::set_summary(summary);
     Ok(())
 }
 
@@ -1440,13 +1558,11 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
 mod tests {
     use super::*;
     use clap::Parser;
-
     #[derive(Parser)]
     struct TestCli {
         #[command(flatten)]
         fly: FlyOptions,
     }
-
     #[test]
     fn placement_and_voltages_parse_without_losing_negative_values() {
         let cli = TestCli::try_parse_from([
@@ -1473,7 +1589,6 @@ mod tests {
         assert!(numbers::<3>("1,2").is_err());
         assert!(voltage("2=NaN").is_err());
     }
-
     #[test]
     fn gpu_device_is_additive() {
         let cli = TestCli::try_parse_from([
@@ -1489,7 +1604,6 @@ mod tests {
         assert_eq!(cli.fly.device, FlyDevice::Gpu);
         assert!(matches!(cli.fly.backend, crate::Backend::Vulkan));
     }
-
     #[test]
     fn beam_current_and_gpu_pic_modes_parse_additively() {
         let cli = TestCli::try_parse_from([
@@ -1525,12 +1639,11 @@ mod tests {
                 "--particles",
                 "ions.ion",
                 "--charge-mode",
-                "coulombic",
+                "coulombic"
             ])
             .is_err()
         );
     }
-
     #[test]
     fn automatic_device_uses_the_compute_crossover_and_respects_overrides() {
         let measured = Some(GPU_COMPUTE_THRESHOLD);
@@ -1541,7 +1654,6 @@ mod tests {
         assert!(FlyDevice::Gpu.requests_gpu(0, None));
         assert!(!FlyDevice::Auto.requests_gpu(usize::MAX, None));
     }
-
     #[test]
     fn hs1_auto_crossover_is_limited_to_the_measured_profile() {
         let mut options = TestCli::try_parse_from([
@@ -1576,7 +1688,6 @@ mod tests {
         options.pa = Some("lens.pa0".into());
         assert_eq!(options.compute_crossover(false, Some(&model)), None);
     }
-
     #[test]
     fn waveform_run_settings_and_cli_arguments() {
         let run: VoltageRun = serde_json::from_str(
@@ -1606,7 +1717,6 @@ mod tests {
         assert_eq!(cli.fly.run_file, Some(PathBuf::from("run.json")));
         assert!(serde_json::from_str::<VoltageRun>(r#"{"unknown":5}"#).is_err());
     }
-
     #[test]
     fn magnetic_and_collision_inputs_are_additive() {
         let cli = TestCli::try_parse_from([
@@ -1643,7 +1753,6 @@ mod tests {
         assert_eq!(run.physics.coils.len(), 1);
         assert!(serde_json::from_str::<VoltageRun>(r#"{"physics":{"unknown":1}}"#).is_err());
     }
-
     #[test]
     fn external_maps_cli_units_columns_placement_and_axisymmetric_frame() {
         use std::io::Write as _;
@@ -1692,7 +1801,6 @@ mod tests {
         assert!(map_units("bad/T").is_err());
         assert!(map_units("mm/bad").is_err());
     }
-
     #[test]
     fn external_maps_are_available_to_fly2_field_queries() {
         let directory = tempfile::tempdir().unwrap();
@@ -1730,7 +1838,6 @@ mod tests {
             Some("time_limit")
         );
     }
-
     #[test]
     fn external_map_cli_flight_stops_at_boundary_and_zero_extends() {
         let directory = tempfile::tempdir().unwrap();

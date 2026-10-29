@@ -19,7 +19,7 @@ __all__ = [
     "uncertainty",
     "PA", "Field", "FlightResult", "read_pa", "write_pa", "read_particles",
     "load_field", "refine", "refine_geometry", "fast_adjust", "fly",
-    "particles_from_energy",
+    "particles_from_energy", "merge_flights",
     "gem2pa", "mesh_import", "export_geometry", "export_grid", "export_isosurface",
     "export_trajectories", "pa_info", "gpu_info", "gpu_smoke", "fly_bench",
     "refine_bench", "refine_sdf", "aperture_check",
@@ -512,6 +512,16 @@ def _command(name, *positionals, **options):
         else:
             arguments.append(f"{flag}={value}")
     return json.loads(_native.command(arguments))
+
+
+def merge_flights(output, shards):
+    """Merge complementary CLI shard CSVs and their .csv.json sidecars.
+
+    ``shards`` is a sequence of paths. Validation, lossless CSV assembly and
+    exact TOF statistics use the same Rust implementation as merge-flights.
+    Returns its versioned summary; invalid shards raise ValueError.
+    """
+    return _command("merge-flights", output, *shards)
 
 
 def gem2pa(source, output=None):
