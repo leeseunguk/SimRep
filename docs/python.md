@@ -10,6 +10,34 @@ they do not require Python, NumPy headers or libpython. Maturin enables its
 `python` feature and PyO3's `extension-module` feature. Wheels use the stable
 CPython ABI (`abi3-py310`, Python 3.10 or newer).
 
+## macOS (experimental)
+
+Build from source on Apple Silicon with Xcode Command Line Tools and the pinned
+Rust 1.95.0 toolchain. Use a native arm64 Python (3.10+) rather than mixing a
+Rosetta interpreter with an arm64 wheel:
+
+```sh
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install 'maturin>=1.8,<2' numpy pytest scipy
+maturin build --release --manifest-path crates/simrep-py/Cargo.toml --out dist/wheels
+python -m pip install dist/wheels/*.whl
+cargo build --release -p simrep-cli
+python -m pytest crates/simrep-py/tests -q -rs
+```
+
+The macOS CI job runs CPU coverage; Vulkan-only GPU fixtures skip when no Vulkan
+adapter exists. It does not validate Metal numerics. Select `device="cpu"` for
+the reference path. Native Python refinement can explicitly select
+`device="gpu", backend="metal"`: Metal has no `SHADER_F64`, so potential solves
+use f32 corrections with a CPU f64 iterate/residual (`mixed-f32-f64`), not native
+GPU f64. GPU PIC requires `SHADER_F64` and is unavailable on Metal. The default
+Python backend remains Vulkan; select Metal explicitly. CAD is optional and
+requires a compatible dynamically linked OCCT 7.6/7.7 SDK (see
+`docs/step-import.md`); the default wheel has no CAD dependency. Homebrew's
+`opencascade` formula may be newer than the supported SDK. Desktop CI bundles
+are unsigned; Developer ID signing and Apple notarization remain follow-ups.
+
 ## CLI parity
 
 All user-facing CLI commands are available. "Shared" means the existing CLI Rust

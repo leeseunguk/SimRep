@@ -16,6 +16,9 @@ pollster = "1.0.1"
 rayon = "1.12.0"
 wgpu = { version = "30.0.1", default-features = false, features = ["std", "parking_lot", "dx12", "vulkan", "wgsl", "glsl"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+wgpu = { version = "30.0.1", default-features = false, features = ["metal"] }
+
 [[test]]
 name = "gpu_smoke"
 harness = false

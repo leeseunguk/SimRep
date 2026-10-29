@@ -160,6 +160,24 @@ STEP/IGES 가져오기용 OpenCascade 라이브러리와 Visual C++ 런타임이
 
 GPU 기능에는 WebGPU/Vulkan 또는 DX12를 지원하는 그래픽 카드가 필요합니다. GPU가 없으면 CPU로 계산합니다.
 
+### macOS (실험적)
+
+Apple Silicon에서는 Xcode Command Line Tools, Rust 1.95.0, Node.js 24를 설치하고 소스에서 빌드합니다.
+
+```sh
+xcode-select --install
+cargo build --release -p simrep-cli
+(cd ai && npm ci)
+(cd app && npm ci && npm run tauri -- build --no-sign)
+```
+
+앱과 DMG는 `app/src-tauri/target/release/bundle/`에 생성됩니다. Windows NSIS 설정은 그대로입니다.
+CI는 CPU 테스트를 실행하며 Metal GPU 성능·정확도를 검증하지 않습니다.
+Python에서 `backend="metal"`로 선택하는 GPU 전위 계산은 Metal에 `SHADER_F64`가 없어 f32 보정과 CPU f64 해·잔차를 섞는 경로(`mixed-f32-f64`)를 씁니다. CPU는 f64입니다.
+선택 기능인 CAD는 Homebrew의 `brew install opencascade`로 OCCT를 설치할 수 있으나, 현재 바인딩은 OCCT 7.6/7.7 SDK가 필요합니다. 최신 brew 버전과의 호환성은 별도 확인이 필요하며 기본 빌드·CI에는 CAD가 들어 있지 않습니다([빌드 조건](docs/step-import.md)).
+배포용 Developer ID 서명·Apple 공증(notarization), 실제 Mac GUI 및 Metal 검증은 후속 작업입니다. CI 번들은 서명하지 않습니다.
+Python wheel 빌드는 [Python 문서](docs/python.md)의 macOS 절을 보세요.
+
 ---
 
 ## AI 도우미

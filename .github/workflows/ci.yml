@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci/macos]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -120,6 +120,74 @@ jobs:
         run: |
           . .venv/bin/activate
           python -m pytest crates/simrep-py/tests -q -rs
+
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.95.0"
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            app/src-tauri -> target
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: crates/simrep-py/pyproject.toml
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.14.1"
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            ai/package-lock.json
+      - name: Build CLI
+        run: cargo build --release -p simrep-cli
+      - name: Test workspace on CPU
+        env:
+          RUST_TEST_NOCAPTURE: "1"
+        # GPU tests probe Vulkan/DX12 and explicitly skip absent adapters.
+        # Do not install MoltenVK or switch these tests to Metal: this gate is CPU-only.
+        # Native-f64 GPU tests additionally check SHADER_F64 before execution.
+        run: cargo test --workspace --release
+      - name: Build and install Python wheel
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install 'maturin>=1.8,<2' numpy pytest scipy
+          maturin build --release --manifest-path crates/simrep-py/Cargo.toml --out dist/wheels
+          python -m pip install dist/wheels/*.whl
+      - name: Test Python API and CLI parity on CPU
+        run: |
+          . .venv/bin/activate
+          python -m pytest crates/simrep-py/tests -q -rs
+      - name: Test AI bridge
+        working-directory: ai
+        run: npm ci && npm test && npm run typecheck
+      - name: Build and test frontend
+        working-directory: app
+        run: npm ci && npm run typecheck && npm test && npm run build
+      - name: Test native shell
+        run: cargo test --release --manifest-path app/src-tauri/Cargo.toml
+      - name: Build unsigned macOS app and DMG
+        working-directory: app
+        run: npm run tauri -- build --no-sign
+      - name: Upload experimental macOS bundles and wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: simrep-macos-arm64-unsigned
+          if-no-files-found: error
+          path: |
+            app/src-tauri/target/release/bundle/macos/*.app
+            app/src-tauri/target/release/bundle/dmg/*.dmg
+            dist/wheels/*.whl
 
   app:
     runs-on: ubuntu-latest
