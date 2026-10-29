@@ -26,6 +26,8 @@ wgpu = { version = "30.0.1", default-features = false, features = ["std", "parki
 
 [dev-dependencies]
 simrep-io.workspace = true
+# The test-only Vulkan benchmark writes SPIR-V even on hosts without Vulkan.
+naga = { version = "30.0.1", features = ["spv-out"] }
 
 [[test]]
 name = "gpu_pic"
