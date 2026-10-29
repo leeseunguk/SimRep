@@ -12,6 +12,7 @@ pub mod gpu;
 mod instance;
 pub mod physics;
 pub mod surface;
+pub mod surface_sdf;
 
 pub use adaptive::AdaptiveField;
 pub use expression::VoltageExpression;

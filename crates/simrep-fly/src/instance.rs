@@ -17,6 +17,7 @@ pub struct InstanceField {
     pub(crate) plane: Option<(Vector, f64)>,
     pub(crate) voltage_bases: Vec<(GridField, VoltageExpression)>,
     surface: Option<Arc<SurfaceModel>>,
+    surface_sdf: Option<Arc<crate::surface_sdf::SdfVolumes>>,
     surface_domain: Option<GridField>,
     adaptive: Option<Arc<crate::AdaptiveField>>,
 }
@@ -146,6 +147,7 @@ impl InstanceField {
             plane,
             voltage_bases: Vec::new(),
             surface: None,
+            surface_sdf: None,
             surface_domain: None,
             adaptive: None,
         })
@@ -185,6 +187,12 @@ impl InstanceField {
         surface.validate_array(self.grid.array())?;
         self.surface = Some(surface);
         Ok(self)
+    }
+
+    /// Replace surface collision queries with the sampled SDF zero set.
+    pub fn with_surface_sdf(mut self, sdf: Arc<crate::surface_sdf::SdfVolumes>) -> Self {
+        self.surface_sdf = Some(sdf);
+        self
     }
 
     /// Preparation counts summed over the background and unit-voltage bases.
@@ -312,7 +320,12 @@ impl Field for InstanceField {
             .filter(|s| self.bounds_mm.is_none() || *s != SplatReason::OutsideGrid);
         boundary.or_else(|| {
             self.surface.as_ref().and_then(|s| {
-                s.membership(s.source_point(local))
+                self.surface_sdf
+                    .as_ref()
+                    .map_or_else(
+                        || s.membership(s.source_point(local)),
+                        |sdf| sdf.membership(s.source_point(local)),
+                    )
                     .map(|number| SplatReason::SurfaceElectrode { number })
             })
         })
@@ -353,10 +366,21 @@ impl InstanceField {
             }
         };
         if let Some(surface) = &self.surface
-            && let Some((fraction, number)) = surface.segment_hit(
-                surface.source_point(local_from),
-                surface.source_point(local_to),
-                launch,
+            && let Some((fraction, number)) = self.surface_sdf.as_ref().map_or_else(
+                || {
+                    surface.segment_hit(
+                        surface.source_point(local_from),
+                        surface.source_point(local_to),
+                        launch,
+                    )
+                },
+                |sdf| {
+                    sdf.segment_hit(
+                        surface.source_point(local_from),
+                        surface.source_point(local_to),
+                        launch,
+                    )
+                },
             )
         {
             consider(fraction, SplatReason::SurfaceElectrode { number });

@@ -10,13 +10,19 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 pub type Point = [f64; 3];
 
-/// A finite, continuous signed-distance bound (Lipschitz constant at most one).
+/// A finite, continuous signed-distance bound. Analytic implementations are
+/// normally one-Lipschitz; sampled fields can report a larger bound.
 /// Near the zero set it must be comparable to geometric distance, with a
 /// constant independent of grid refinement (a scaled-down arbitrary field or
 /// a zero plateau is not a signed-distance representation).
 /// Mesh importers may implement this trait without depending on a solver.
 pub trait SignedDistance: Send + Sync {
     fn distance(&self, point: Point) -> f64;
+
+    /// Conservative global Lipschitz constant for the represented field.
+    fn lipschitz_bound(&self) -> f64 {
+        1.0
+    }
 
     /// Optional conservative bounds on all distance values along a segment.
     /// Consumers may reject a segment only when its lower bound exceeds their
@@ -263,6 +269,20 @@ impl SampledSdf {
 }
 
 impl SignedDistance for SampledSdf {
+    fn lipschitz_bound(&self) -> f64 {
+        let strides = [1, self.dims[0], self.dims[0] * self.dims[1]];
+        let mut gradient = [0.0_f64; 3];
+        for (a, &stride) in strides.iter().enumerate() {
+            for i in 0..self.values.len() {
+                if i / stride % self.dims[a] + 1 < self.dims[a] {
+                    gradient[a] = gradient[a]
+                        .max(((self.values[i + stride] - self.values[i]) / self.spacing[a]).abs());
+                }
+            }
+        }
+        gradient.into_iter().map(|x| x * x).sum::<f64>().sqrt()
+    }
+
     fn distance(&self, p: Point) -> f64 {
         let q: Point = std::array::from_fn(|a| {
             ((p[a] - self.origin[a]) / self.spacing[a]).clamp(0.0, (self.dims[a] - 1) as f64)

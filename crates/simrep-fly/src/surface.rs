@@ -67,6 +67,7 @@ impl SourceGeometry {
                     number,
                     shape: Arc::new(shape),
                     mesh: None,
+                    sampled: None,
                     lipschitz: 1.0,
                 })
             }
@@ -84,6 +85,7 @@ impl SourceGeometry {
                     number,
                     shape: Arc::new(move |p| shape.signed_distance(p)),
                     mesh: Some(mesh),
+                    sampled: None,
                     lipschitz: 1.0,
                 })
             }
@@ -133,22 +135,23 @@ pub enum SurfaceAccuracy {
 }
 
 #[derive(Clone)]
-struct Electrode {
-    number: usize,
-    shape: Arc<dyn SignedDistance>,
-    lipschitz: f64,
+pub(crate) struct Electrode {
+    pub(crate) number: usize,
+    pub(crate) shape: Arc<dyn SignedDistance>,
+    pub(crate) lipschitz: f64,
     mesh: Option<Arc<simrep_mesh::Solid>>,
+    pub(crate) sampled: Option<SampledSdf>,
 }
 
 /// Geometry coordinates are the source's mm coordinates. Placed PA instances
 /// add `origin_mm` after undoing the instance transform, so a nonzero source
 /// grid origin is not applied twice.
 pub struct SurfaceModel {
-    electrodes: Vec<Electrode>,
-    collision_only_numbers: Vec<usize>,
+    pub(crate) electrodes: Vec<Electrode>,
+    pub(crate) collision_only_numbers: Vec<usize>,
     accuracy: SurfaceAccuracy,
     domain: Option<Domain>,
-    tolerance_mm: f64,
+    pub(crate) tolerance_mm: f64,
     pub(crate) reconstruction_cuts: Option<ReconstructionCuts>,
 }
 
@@ -216,11 +219,15 @@ impl SurfaceModel {
         Ok(Self {
             electrodes: electrodes
                 .into_iter()
-                .map(|(number, shape)| Electrode {
-                    number,
-                    shape,
-                    lipschitz: 1.0,
-                    mesh: None,
+                .map(|(number, shape)| {
+                    let lipschitz = shape.lipschitz_bound().max(1.0);
+                    Electrode {
+                        number,
+                        shape,
+                        lipschitz,
+                        mesh: None,
+                        sampled: None,
+                    }
                 })
                 .collect(),
             collision_only_numbers: Vec::new(),
@@ -345,9 +352,10 @@ impl SurfaceModel {
                 let lipschitz = sampled_lipschitz(&shape).max(1.0);
                 Ok(Electrode {
                     number: s.number,
-                    shape: Arc::new(shape),
+                    shape: Arc::new(shape.clone()),
                     lipschitz,
                     mesh: None,
+                    sampled: Some(shape),
                 })
             })
             .collect::<Result<Vec<_>, FlyError>>()?;
@@ -726,7 +734,7 @@ impl SurfaceModel {
         electrode.shape.distance(p).max(boundary)
     }
 
-    fn coordinates(&self, mut p: Vector) -> (Vector, f64) {
+    pub(crate) fn coordinates(&self, mut p: Vector) -> (Vector, f64) {
         let Some(domain) = &self.domain else {
             return (p, f64::NEG_INFINITY);
         };

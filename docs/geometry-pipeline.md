@@ -962,3 +962,27 @@ tried and removed. On this mesh it was slower than the existing BVH for
 nearest queries. The parallel face mesher reproduces the serial triangulation
 on the sphere fixture, and the private-analyzer arrays above stayed
 byte-identical with it enabled.
+
+## Experimental sampled collision surfaces
+
+`fly --surface-backend sdf` selects an experimental CPU reference for a
+future GPU path. `--surface-sdf-resolution-divisor N` subdivides PA spacing
+(default 2) when sampling source geometry. Loaded sampled sidecars retain their
+original grid regardless of this divisor. The collision surface is the zero set
+of a trilinear interpolant,
+not the original exact surface; sufficiently shallow grazing hits can be missed.
+The JSON execution report includes per-volume Lipschitz values, resolution,
+sampled interpolation error estimates and `surface_sdf_error_bound_mm`. For
+source fields satisfying the one-Lipschitz contract, the latter bounds the
+interpolation error in field values within the sampled grid box by half the
+sum of active grid spacings. Degenerate axes have no extent in that box; the
+bound does not cover extrapolation away from those planes. Resolution and
+error values are in source-coordinate millimeters; multiply them by the PA
+instance scale to obtain workbench distances.
+Sampled sidecars retain their original interpolant, so their bound relative to
+that interpolant is zero. A bound on field values is not in general a bound on
+physical penetration depth when a CSG signed-distance field is conservative
+rather than an exact Euclidean distance.
+
+The current CPU reference does not yet provide a certified no-miss guarantee:
+its minimum tracing step can skip a narrow negative interval.

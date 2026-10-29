@@ -77,6 +77,10 @@ pub struct FlyOptions {
     /// Add exact collisions to the staircase field.
     #[arg(long, value_parser = ["insulators", "all"], requires = "pa")]
     surface_collisions: Option<String>,
+    #[arg(long, hide = true, default_value = "exact", value_parser = ["exact", "sdf"])]
+    surface_backend: String,
+    #[arg(long, hide = true, default_value_t = 2)]
+    surface_sdf_resolution_divisor: u32,
     /// SIMION ION CSV or sandboxed, context-aware FLY2 definitions.
     #[arg(long)]
     particles: PathBuf,
@@ -619,6 +623,12 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             }
         })
         .map(std::sync::Arc::new);
+    if options.surface_backend == "sdf" && surface.is_none() {
+        return Err("--surface-backend sdf requires exact surfaces or --surface-collisions".into());
+    }
+    if options.surface_backend == "sdf" && options.device == FlyDevice::Gpu {
+        return Err("--surface-backend sdf requires CPU".into());
+    }
     let surface_mode = match surface
         .as_ref()
         .filter(|_| options.surface_collisions.is_none())
@@ -951,6 +961,23 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         }
         read_electric(&adjustments)?
     };
+    let sdf = if options.surface_backend == "sdf" {
+        Some(std::sync::Arc::new(
+            simrep_fly::surface_sdf::SdfVolumes::build(
+                surface.as_ref().unwrap(),
+                &array,
+                options.surface_sdf_resolution_divisor,
+            )?,
+        ))
+    } else {
+        None
+    };
+    let sdf_report = sdf.as_ref().map(|s| {
+        s.volumes.iter().map(|v| serde_json::json!({
+        "number": v.number, "collision_only": v.collision_only, "resolution_mm": v.spacing,
+        "lipschitz": v.lipschitz, "interp_error_mm": v.interp_error_mm, "error_bound_mm": v.error_bound_mm,
+    })).collect::<Vec<_>>()
+    });
     let grid = grid_field(array)?;
     let adaptive = adaptive_field(&grid, &adjustments)?;
     let mut field = InstanceField::new(grid, options.origin, axes, options.scale, bounds, plane)?
@@ -964,6 +991,9 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         } else {
             field.with_surface(surface)?
         };
+    }
+    if let Some(sdf) = sdf {
+        field = field.with_surface_sdf(sdf);
     }
     let ghost_fill = field.ghost_fill_report();
     if let Some(report) = &ghost_fill {
@@ -1322,6 +1352,11 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             "precision": if use_gpu && options.space_charge.is_some() { "mixed-f32-f64" } else if gpu.as_ref().is_none_or(Gpu::has_f64) { "f64" } else { "f32" },
             "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()),
             "surface_mode": surface_mode,
+            "surface_backend": if cuts_path.is_some() { options.surface_backend.as_str() } else { "staircase" },
+            "surface_sdf_resolution_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| &v["resolution_mm"]).collect::<Vec<_>>()),
+            "surface_sdf_lipschitz": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "lipschitz": v["lipschitz"]})).collect::<Vec<_>>()),
+            "surface_sdf_interp_error_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "interp_error_mm": v["interp_error_mm"]})).collect::<Vec<_>>()),
+            "surface_sdf_error_bound_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "error_bound_mm": v["error_bound_mm"]})).collect::<Vec<_>>()),
             "surface_collisions": options.surface_collisions,
             "cuts_path": cuts_path,
             "cuts_source": cuts_source,
