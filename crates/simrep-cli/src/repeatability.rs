@@ -24,7 +24,7 @@ use simrep_solve::{
 
 #[track_caller]
 fn across_threads(work: impl Fn() -> Vec<u8> + Sync) {
-    let mut expected = None;
+    let mut expected: Option<Vec<u8>> = None;
     for threads in [1, 2, 8, 32] {
         let actual = ThreadPoolBuilder::new()
             .num_threads(threads)
