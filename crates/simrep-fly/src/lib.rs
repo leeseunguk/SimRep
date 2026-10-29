@@ -11,6 +11,8 @@ mod flight;
 pub mod gpu;
 mod instance;
 pub mod physics;
+#[path = "gpu/sdf_hit.rs"]
+pub mod sdf_hit;
 pub mod surface;
 pub mod surface_sdf;
 

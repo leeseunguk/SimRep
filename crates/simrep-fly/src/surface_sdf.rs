@@ -30,6 +30,10 @@ pub struct SdfVolumes {
 }
 
 impl SdfVolumes {
+    pub(crate) fn gpu_geometry(&self) -> (bool, [bool; 3], f64) {
+        (self.cylindrical, self.mirrors, self.tolerance)
+    }
+
     pub fn build(
         surface: &SurfaceModel,
         pa_domain: &PotentialArray,
