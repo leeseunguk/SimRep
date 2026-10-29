@@ -47,6 +47,8 @@ struct Phase { d: vec3<f32>, u: vec3<f32> }
 struct Trial { phase: Phase, error: f32 }
 struct Event { t: f32, code: u32, index: u32 }
 var<private> field_invalid: bool;
+const SURFACE_SDF: bool = false;
+const SURFACE_SDF_REPLACE: bool = false;
 const WORKBENCH: bool = false;
 const DYNAMIC: bool = false;
 const PHYSICS: bool = false;
@@ -72,6 +74,10 @@ var<private> launch_departure: bool;
 @group(0) @binding(6) var<storage, read_write> terminal: TerminalBuffer;
 @group(0) @binding(7) var<storage, read_write> samples: array<Sample>;
 @group(0) @binding(8) var<storage, read> transport_data: array<f32>;
+
+// SDF_FUNCTIONS
+@group(0) @binding(9) var<storage, read> sdf_headers: array<sdf_Volume>;
+@group(0) @binding(10) var<storage, read> sdf_samples: array<f32>;
 
 fn voltage(b: u32, t: f32) -> f32 { return p.voltages[b].x; }
 fn next_voltage_event(t: f32) -> f32 { return 3.402823e38; }
@@ -206,9 +212,9 @@ fn grid_status(input: Coordinate) -> Event {
     if p.padding.z != 0u {
         let cell_index = (node.z*p.cells.y+node.y)*p.cells.x+node.x;
         let packed = metal[p.padding.x+cell_index+select(0u,p.counts.x,WORKBENCH)];
-        return Event(0.0,(packed>>12u)&1u,index);
+        return Event(0.0,select((packed>>12u)&1u,0u,SURFACE_SDF_REPLACE),index);
     }
-    return Event(0.0, metal[index + select(0u, p.counts.x, WORKBENCH)], index);
+    return Event(0.0, select(metal[index + select(0u, p.counts.x, WORKBENCH)],0u,SURFACE_SDF_REPLACE), index);
 }
 
 fn instance_electric(input: Coordinate, time: f32) -> vec3<f32> {
@@ -476,7 +482,7 @@ fn instance_intersection(q: Coordinate, d: vec3<f32>) -> Event {
     return first;
 }
 
-fn status(q: Coordinate) -> Event {
+fn base_status(q: Coordinate) -> Event {
     if !WORKBENCH { return instance_status(q); }
     let point = root_world(q);
     var result = Event(0.0,0u,0u);
@@ -500,7 +506,7 @@ fn status(q: Coordinate) -> Event {
     p=root;
     return result;
 }
-fn intersection(q: Coordinate, d: vec3<f32>) -> Event {
+fn base_intersection(q: Coordinate, d: vec3<f32>) -> Event {
     if !WORKBENCH { return instance_intersection(q,d); }
     let point = root_world(q);
     let delta = root.axes[0].xyz*d.x+root.axes[1].xyz*d.y+root.axes[2].xyz*d.z;
@@ -517,6 +523,32 @@ fn intersection(q: Coordinate, d: vec3<f32>) -> Event {
         if s.code!=0u && (result.code==0u || s.t<result.t) { result=s; }
     }
     return plane_event(physical(q),d,root.stop_plane,result);
+}
+
+// SDF coordinates are source geometry coordinates, before instance placement.
+// Header spare components carry the source origin and instance scale.
+fn sdf_source(q: Coordinate) -> vec3<f32> {
+    let h=sdf_headers[0];
+    return physical(q)/h.origin.w+vec3<f32>(h.parameters.zw,h.spacing.w);
+}
+fn status(q: Coordinate) -> Event {
+    let result=base_status(q);
+    if SURFACE_SDF && result.code==0u {
+        let number=sdf_membership(sdf_source(q));
+        if number!=0u { return Event(0.0,1u,number|0x80000000u); }
+    }
+    return result;
+}
+fn intersection(q: Coordinate, d: vec3<f32>) -> Event {
+    let result=base_intersection(q,d);
+    if SURFACE_SDF {
+        let hit=sdf_first_hit(sdf_source(q),d/sdf_headers[0].origin.w,launch_departure);
+        if hit.z==2.0 { return Event(0.0,7u,0u); }
+        if hit.z==1.0 && (result.code==0u || hit.x<result.t || (hit.x==result.t && result.code==3u)) {
+            return Event(hit.x,1u,u32(hit.y)|0x80000000u);
+        }
+    }
+    return result;
 }
 
 // WGSL permits floating-point reassociation; an ordinary two_sum can therefore

@@ -66,56 +66,12 @@ impl GpuSdf {
             * scalar_bytes;
         let header_size = sdf.volumes.len() as u64 * if wide { 128 } else { 80 };
         check_storage(size.max(header_size), &gpu.device().limits())?;
-        let (cylindrical, mirrors, tolerance) = sdf.gpu_geometry();
-        let flags = u32::from(cylindrical)
-            | mirrors
-                .into_iter()
-                .enumerate()
-                .fold(0, |bits, (a, m)| bits | (u32::from(m) << (a + 1)));
-        let mut headers = Vec::new();
-        let mut samples = Vec::new();
-        let mut offset = 0u32;
-        let mut linear_scale = [0.0_f64; 3];
-        let mut radial_scale = 0.0_f64;
-        for v in &sdf.volumes {
-            for value in v.dims.map(|n| n as u32).into_iter().chain([0]) {
-                headers.extend(value.to_le_bytes());
-            }
-            for value in [v.number as u32, offset, flags, 0] {
-                headers.extend(value.to_le_bytes());
-            }
-            for value in v
-                .origin
-                .into_iter()
-                .chain([0.0])
-                .chain(v.spacing)
-                .chain([0.0])
-                .chain([v.lipschitz, tolerance, 0.0, 0.0])
-            {
-                scalar(&mut headers, value, wide)?;
-            }
-            if wide {
-                samples.extend_from_slice(bytemuck::cast_slice(&v.samples_f64));
-            } else {
-                samples.extend_from_slice(bytemuck::cast_slice(&v.samples_f32));
-            }
-            offset += v.samples_f64.len() as u32;
-            for (a, scale) in linear_scale.iter_mut().enumerate() {
-                if v.dims[a] > 1 && (!cylindrical || a == 0) {
-                    *scale = scale.max(1.0 / v.spacing[a]);
-                }
-            }
-            if cylindrical && v.dims[1] > 1 {
-                radial_scale = radial_scale.max(1.0 / v.spacing[1]);
-            }
-        }
-        // Wgpu bindings cannot be zero bytes. Empty input never dispatches.
-        if headers.is_empty() {
-            headers.resize(if wide { 128 } else { 80 }, 0);
-        }
-        if samples.is_empty() {
-            samples.resize(scalar_bytes as usize, 0);
-        }
+        let PackedSdf {
+            headers,
+            samples,
+            linear_scale,
+            radial_scale,
+        } = pack(sdf, wide, [0.0; 3], 1.0)?;
         let buffer = |label, contents: &[u8]| {
             gpu.device()
                 .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -370,7 +326,7 @@ fn scalar(bytes: &mut Vec<u8>, value: f64, wide: bool) -> Result<(), FlyError> {
     Ok(())
 }
 
-fn check_storage(size: u64, limits: &wgpu::Limits) -> Result<(), FlyError> {
+pub(crate) fn check_storage(size: u64, limits: &wgpu::Limits) -> Result<(), FlyError> {
     let limit = limits
         .max_storage_buffer_binding_size
         .min(limits.max_buffer_size);
@@ -391,7 +347,11 @@ fn gpu_error(message: &'static str, error: impl std::fmt::Display) -> FlyError {
 }
 
 fn shader_source(wide: bool) -> String {
-    let source = include_str!("sdf_hit.wgsl");
+    let source = format!(
+        "{}\n{}",
+        include_str!("sdf_common.wgsl"),
+        include_str!("sdf_hit.wgsl")
+    );
     if !wide {
         return source.to_owned();
     }
@@ -424,6 +384,79 @@ fn shader_source(wide: bool) -> String {
         }
     }
     out
+}
+
+/// Shared scalar/layout packing for standalone intersections and resident flights.
+pub(crate) struct PackedSdf {
+    pub headers: Vec<u8>,
+    pub samples: Vec<u8>,
+    pub linear_scale: Vector,
+    pub radial_scale: f64,
+}
+pub(crate) fn pack(
+    sdf: &SdfVolumes,
+    wide: bool,
+    origin: Vector,
+    scale: f64,
+) -> Result<PackedSdf, FlyError> {
+    let scalar_bytes = if wide { 8 } else { 4 };
+    let (cylindrical, mirrors, tolerance) = sdf.gpu_geometry();
+    let flags = u32::from(cylindrical)
+        | mirrors
+            .into_iter()
+            .enumerate()
+            .fold(0, |bits, (a, m)| bits | (u32::from(m) << (a + 1)));
+    let mut headers = Vec::new();
+    let mut samples = Vec::new();
+    let mut offset = 0u32;
+    let mut linear_scale = [0.0_f64; 3];
+    let mut radial_scale = 0.0_f64;
+    for v in &sdf.volumes {
+        for value in v.dims.map(|n| n as u32).into_iter().chain([0]) {
+            headers.extend(value.to_le_bytes());
+        }
+        for value in [v.number as u32, offset, flags, 0] {
+            headers.extend(value.to_le_bytes());
+        }
+        for value in v
+            .origin
+            .into_iter()
+            .chain([scale])
+            .chain(v.spacing)
+            .chain([origin[2]])
+            .chain([v.lipschitz, tolerance, origin[0], origin[1]])
+        {
+            scalar(&mut headers, value, wide)?;
+        }
+        if wide {
+            samples.extend_from_slice(bytemuck::cast_slice(&v.samples_f64));
+        } else {
+            samples.extend_from_slice(bytemuck::cast_slice(&v.samples_f32));
+        }
+        offset += v.samples_f64.len() as u32;
+        for (a, scale) in linear_scale.iter_mut().enumerate() {
+            if v.dims[a] > 1 && (!cylindrical || a == 0) {
+                *scale = scale.max(1.0 / v.spacing[a]);
+            }
+        }
+        if cylindrical && v.dims[1] > 1 {
+            radial_scale = radial_scale.max(1.0 / v.spacing[1]);
+        }
+    }
+    // Wgpu bindings cannot be zero bytes. Empty input never dispatches.
+    if headers.is_empty() {
+        headers.resize(if wide { 128 } else { 80 }, 0);
+    }
+    if samples.is_empty() {
+        samples.resize(scalar_bytes as usize, 0);
+    }
+
+    Ok(PackedSdf {
+        headers,
+        samples,
+        linear_scale,
+        radial_scale,
+    })
 }
 
 #[cfg(test)]

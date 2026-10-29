@@ -99,7 +99,7 @@ print(r.report["device"], r.report["relativistic"], r.report["compute_ms"])
 
 - PA 밖을 날아야 하면 `--bounds xmin,ymin,zmin,xmax,ymax,zmax` (`bounds=[[...],[...]]`). 없으면 PA 경계에서 `outside`로 끝난다.
 - 시간 한계는 기본이 실패다. `--duration-us`를 늘리거나, 의도한 것이면 `--allow-time-limit`. 종료 이유는 CSV `reason`과 JSON `splat_counts`로 센다.
-- 정확 표면 비행은 CPU 전용이다. `--device gpu`로 쓰려면 `--no-cuts`로 계단 충돌을 받아들여야 한다.
+- 정확 표면은 `--device gpu --surface-backend sdf`로 GPU 비행할 수 있다. 인증된 보간 오차 상한을 가진 근사이며 CPU exact가 기준이다. `auto`는 CPU를 유지한다.
 
 ## 4. 분석기 에너지 채널 레시피 (ESA)
 

@@ -40,6 +40,8 @@ mod physics_benchmark;
 #[cfg(test)]
 mod physics_tests;
 mod precision;
+mod surface;
+use surface::SdfBuffers;
 #[cfg(test)]
 mod quad_reference;
 #[cfg(test)]
@@ -127,6 +129,7 @@ pub struct PreparedField<'a> {
     magnetic_expressions: Option<[String; 3]>,
     integrator: Integrator,
     waveform_pipeline: Option<wgpu::ComputePipeline>,
+    sdf: Option<SdfBuffers>,
     instances: wgpu::Buffer,
     instance_count: usize,
     physics_enabled: bool,
@@ -180,6 +183,9 @@ impl Gpu {
                         wgpu::Features::empty()
                     },
                 required_limits: wgpu::Limits {
+                    max_storage_buffers_per_shader_stage: limits
+                        .max_storage_buffers_per_shader_stage
+                        .min(10),
                     max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
                     max_buffer_size: limits.max_buffer_size,
                     max_compute_workgroups_per_dimension: limits
@@ -316,6 +322,19 @@ impl Gpu {
         cache: bool,
     ) -> GpuResult<PreparedField<'a>> {
         let start = Instant::now();
+        let surface_bases = field
+            .surface
+            .as_ref()
+            .filter(|_| field.surface_domain.is_some())
+            .map(|s| {
+                let conductors = s.select_collision_only(false);
+                additional_bases
+                    .iter()
+                    .map(|b| b.clone().with_surface(&conductors))
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+        let additional_bases = surface_bases.as_deref().unwrap_or(additional_bases);
         let additional_bases: Vec<_> = additional_bases
             .iter()
             .chain(field.voltage_bases.iter().map(|(g, _)| g))
@@ -570,6 +589,7 @@ impl Gpu {
             magnetic_expressions: None,
             integrator: Integrator::Rk45,
             waveform_pipeline: None,
+            sdf: self.prepare_sdf(field)?,
             instances,
             instance_count: 1,
             physics_enabled: false,
@@ -599,7 +619,7 @@ impl Gpu {
                 ..Default::default()
             },
         };
-        if expressions.iter().any(Option::is_some) {
+        if prepared.sdf.is_some() || expressions.iter().any(Option::is_some) {
             prepared.set_voltage_expressions(&expressions)?;
         }
         Ok(prepared)
@@ -628,6 +648,9 @@ impl Gpu {
         physics_enabled: bool,
     ) -> GpuResult<PreparedField<'a>> {
         let start = Instant::now();
+        if fields.iter().any(|f| f.sdf.is_some()) {
+            return Err("GPU SDF workbench flights require a single electric instance".into());
+        }
         let count = fields.len();
         let size: u64 = fields.iter().map(|f| f.basis.size()).sum();
         self.check_size(size)?;
@@ -745,6 +768,10 @@ impl PreparedField<'_> {
         .iter()
         .map(|buffer| buffer.size())
         .sum::<u64>()
+            + self
+                .sdf
+                .as_ref()
+                .map_or(0, |s| s.headers.size() + s.samples.size())
             + self.ion_buffers.lock().unwrap().bytes
     }
 
@@ -887,6 +914,7 @@ impl PreparedField<'_> {
             || dynamic
             || self.physics_enabled
             || self.integrator == Integrator::Boris
+            || self.sdf.is_some()
         {
             let mut code = String::from("fn voltage(b: u32, t: f32) -> f32 { switch b {");
             if programs.len() > 1 {
@@ -931,6 +959,17 @@ impl PreparedField<'_> {
             }
             edges.push_str("return edge; }");
             let mut source = include_str!("fly.wgsl")
+                .replace(
+                    "const SURFACE_SDF: bool = false;",
+                    &format!("const SURFACE_SDF: bool = {};", self.sdf.is_some()),
+                )
+                .replace(
+                    "const SURFACE_SDF_REPLACE: bool = false;",
+                    &format!(
+                        "const SURFACE_SDF_REPLACE: bool = {};",
+                        self.sdf.is_some() && self.field.surface_domain.is_some()
+                    ),
+                )
                 .replace(
                     "const DYNAMIC: bool = false;",
                     if dynamic {
@@ -1049,7 +1088,9 @@ impl PreparedField<'_> {
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("voltage expression flyer"),
-                    bind_group_layouts: &[Some(&self.gpu.layout)],
+                    bind_group_layouts: &[Some(
+                        self.sdf.as_ref().map_or(&self.gpu.layout, |s| &s.layout),
+                    )],
                     immediate_size: 0,
                 });
             let pipeline =
@@ -1063,6 +1104,18 @@ impl PreparedField<'_> {
                         compilation_options: Default::default(),
                         cache: None,
                     });
+            if let Some(sdf) = &mut self.sdf {
+                sdf.combine = Some(self.gpu.device.create_compute_pipeline(
+                    &wgpu::ComputePipelineDescriptor {
+                        label: Some("SDF field combination"),
+                        layout: Some(&layout),
+                        module: &shader,
+                        entry_point: Some("combine"),
+                        compilation_options: Default::default(),
+                        cache: None,
+                    },
+                ));
+            }
             if let Some(error) = pollster::block_on(scope.pop()) {
                 return Err(error.into());
             }

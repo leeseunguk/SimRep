@@ -567,7 +567,10 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     if options.cuts.is_some() && options.no_cuts && options.surface_collisions.is_none() {
         return Err("--cuts conflicts with --no-cuts".into());
     }
-    if options.surface_collisions.is_some() && options.device == FlyDevice::Gpu {
+    if options.surface_collisions.is_some()
+        && options.device == FlyDevice::Gpu
+        && options.surface_backend != "sdf"
+    {
         return Err("--surface-collisions requires --device cpu or auto".into());
     }
     let cuts_path = options.cuts.clone().or_else(|| {
@@ -626,9 +629,6 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     if options.surface_backend == "sdf" && surface.is_none() {
         return Err("--surface-backend sdf requires exact surfaces or --surface-collisions".into());
     }
-    if options.surface_backend == "sdf" && options.device == FlyDevice::Gpu {
-        return Err("--surface-backend sdf requires CPU".into());
-    }
     let surface_mode = match surface
         .as_ref()
         .filter(|_| options.surface_collisions.is_none())
@@ -642,6 +642,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     };
     if let Some(surface) = &surface {
         if options.device == FlyDevice::Gpu
+            && options.surface_backend != "sdf"
             && !matches!(options.space_charge, Some(SpaceChargeMethod::Pic))
         {
             return Err("surface collisions require CPU; use --device cpu or auto, or --no-cuts for staircase GPU flying".into());
@@ -655,6 +656,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
                 "automatic sibling pickup"
             },
             match surface.accuracy() {
+                _ if options.surface_backend == "sdf" => "sampled SDF collision backend",
                 SurfaceAccuracy::ApproximateV1 =>
                     "APPROXIMATE v1 reconstruction from link intersections",
                 SurfaceAccuracy::SampledSdf => "APPROXIMATE sampled SDF (v2); CPU",
@@ -847,6 +849,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         "no measured GPU crossover for this collision profile".to_owned()
     };
     let gpu = if (surface.is_none()
+        || options.surface_backend == "sdf" && options.device == FlyDevice::Gpu
         || options.surface_collisions.is_none()
             && matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
         && request_gpu

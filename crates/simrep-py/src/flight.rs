@@ -72,6 +72,8 @@ struct Settings {
     cuts: Option<String>,
     cuts_json: Option<serde_json::Value>,
     surface_collisions: Option<String>,
+    surface_backend: String,
+    surface_sdf_resolution_divisor: u32,
     transparent_faces: [bool; 6],
     sample_every: Option<usize>,
     trajectory_indices: Option<Vec<usize>>,
@@ -136,6 +138,8 @@ impl Default for Settings {
             cuts: None,
             cuts_json: None,
             surface_collisions: None,
+            surface_backend: "exact".into(),
+            surface_sdf_resolution_divisor: 2,
             transparent_faces: [false; 6],
             sample_every: None,
             trajectory_indices: None,
@@ -522,6 +526,8 @@ pub fn fly<'py>(
             let surface = if s.surface_collisions.as_deref() == Some("insulators") { surface.select_collision_only(true) } else { surface };
             field = if s.surface_collisions.is_some() { field.with_collision_surface(Arc::new(surface))? } else { field.with_surface(Arc::new(surface))? };
         }
+        if !matches!(s.surface_backend.as_str(), "exact" | "sdf") { return Err("surface_backend must be exact or sdf".into()); }
+        if s.surface_backend == "sdf" { field = field.with_surface_sdf_resolution(s.surface_sdf_resolution_divisor)?; }
         let magnetic = magnetic(&s)?;
         let collision = collision(&s)?;
         let beam_mode = s.charge_mode == "beam";
@@ -531,9 +537,10 @@ pub fn fly<'py>(
         if beam_mode && s.device == "gpu" { return Err("leader-plane beam integration requires device='cpu' or 'auto'".into()); }
         if s.device == "gpu" && s.space_charge.as_deref() == Some("direct") { return Err("direct Coulomb physics requires device='cpu' or 'auto'".into()); }
         if (beam_mode || s.space_charge.is_some()) && collision.is_some() { return Err("space charge does not support collision models".into()); }
-        if s.surface_collisions.is_some() && s.device == "gpu" { return Err("surface_collisions requires device=cpu or auto".into()); }
-        let cpu_only = beam_mode || s.transparent_faces.contains(&true) || s.surface_collisions.is_some()
-            || ((s.cuts.is_some() || s.cuts_json.is_some()) && s.space_charge.as_deref() != Some("pic"));
+        if s.surface_collisions.is_some() && s.device == "gpu" && s.surface_backend != "sdf" { return Err("surface_collisions requires device=cpu or auto".into()); }
+        let cpu_only = beam_mode || s.transparent_faces.contains(&true)
+            || ((s.surface_collisions.is_some() || ((s.cuts.is_some() || s.cuts_json.is_some()) && s.space_charge.as_deref() != Some("pic")))
+                && (s.surface_backend != "sdf" || s.device == "auto"));
         if s.device == "gpu" && cpu_only { return Err("surface collisions and transparent faces require device='cpu' or 'auto'".into()); }
         let has_magnetic = magnetic.uniform_gauss != [0.0; 3] || !magnetic.arrays.is_empty()
             || !magnetic.coils.is_empty() || magnetic.support.is_some();
@@ -691,7 +698,7 @@ pub fn fly<'py>(
                 if indices.binary_search(&index).is_err() { result.trajectory = None; }
             }
         }
-        let report = serde_json::json!({"compute_ms":compute_ms,"setup_ms":setup_ms,"total_ms":start.elapsed().as_secs_f64()*1000.0,"device":if gpu.is_some() {"gpu"} else {"cpu"},"relativistic":o_relativistic(&s),"coil_map_calibration":coil_map_calibration,"trajectory_indices":indices}).to_string();
+        let report = serde_json::json!({"compute_ms":compute_ms,"setup_ms":setup_ms,"total_ms":start.elapsed().as_secs_f64()*1000.0,"device":if gpu.is_some() {"gpu"} else {"cpu"},"relativistic":o_relativistic(&s),"surface_backend":s.surface_backend,"precision":gpu.as_ref().map_or("f64", |g| if g.has_f64() { "f64" } else { "f32" }),"executed":{"device":if gpu.is_some(){"gpu"}else{"cpu"},"precision":gpu.as_ref().map_or("f64",|g|if g.has_f64(){"f64"}else{"f32"}),"surface_backend":if s.cuts.is_some()||s.cuts_json.is_some(){s.surface_backend.as_str()}else{"staircase"}},"coil_map_calibration":coil_map_calibration,"trajectory_indices":indices}).to_string();
         Ok((particles, results, terminations, report))
     }).map_err(error)?;
     result_arrays(

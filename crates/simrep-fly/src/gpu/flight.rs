@@ -49,6 +49,7 @@ struct PendingBatch {
     buffers: IonBuffers,
     bindings: wgpu::BindGroup,
     pipeline: wgpu::ComputePipeline,
+    combine_pipeline: wgpu::ComputePipeline,
     physics: bool,
     groups: u32,
     timestamp_count: u32,
@@ -457,7 +458,7 @@ impl<'a> PreparedField<'a> {
         );
         let bindings = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("flight snapshot"),
-            layout: &gpu.layout,
+            layout: self.sdf.as_ref().map_or(&gpu.layout, |s| &s.layout),
             entries: &[
                 &buffers.uniform,
                 &self.basis,
@@ -469,7 +470,8 @@ impl<'a> PreparedField<'a> {
                 &buffers.samples,
                 &self.physics_data,
             ]
-            .iter()
+            .into_iter()
+            .chain(self.sdf.iter().flat_map(|s| [&s.headers, &s.samples]))
             .enumerate()
             .map(|(binding, buffer)| wgpu::BindGroupEntry {
                 binding: binding as u32,
@@ -490,6 +492,12 @@ impl<'a> PreparedField<'a> {
             buffers,
             bindings,
             pipeline: self.waveform_pipeline.as_ref().unwrap_or(&gpu.fly).clone(),
+            combine_pipeline: self
+                .sdf
+                .as_ref()
+                .and_then(|s| s.combine.as_ref())
+                .unwrap_or(&gpu.combine)
+                .clone(),
             physics: self.physics_enabled,
             groups,
             timestamp_count: if combine { 4 } else { 2 },
@@ -705,7 +713,7 @@ impl PendingBatch {
                     }
                 }),
             });
-            pass.set_pipeline(&gpu.combine);
+            pass.set_pipeline(&self.combine_pipeline);
             pass.set_bind_group(0, &self.bindings, &[]);
             let groups = count.div_ceil(64);
             pass.dispatch_workgroups(groups.min(65535), groups.div_ceil(65535), 1);
@@ -872,6 +880,9 @@ impl PendingBatch {
                         time_us: birth + tof,
                     },
                     splat_reason: match ion.outcome[2] {
+                        1 if ion.outcome[3] & 0x8000_0000 != 0 => SplatReason::SurfaceElectrode {
+                            number: (ion.outcome[3] & 0x7fff_ffff) as usize,
+                        },
                         1 => SplatReason::Electrode {
                             index: ion.outcome[3] as usize,
                         },

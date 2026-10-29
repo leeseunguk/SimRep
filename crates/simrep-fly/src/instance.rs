@@ -16,9 +16,9 @@ pub struct InstanceField {
     pub(crate) bounds_mm: Option<[Vector; 2]>,
     pub(crate) plane: Option<(Vector, f64)>,
     pub(crate) voltage_bases: Vec<(GridField, VoltageExpression)>,
-    surface: Option<Arc<SurfaceModel>>,
-    surface_sdf: Option<Arc<crate::surface_sdf::SdfVolumes>>,
-    surface_domain: Option<GridField>,
+    pub(crate) surface: Option<Arc<SurfaceModel>>,
+    pub(crate) surface_sdf: Option<Arc<crate::surface_sdf::SdfVolumes>>,
+    pub(crate) surface_domain: Option<GridField>,
     adaptive: Option<Arc<crate::AdaptiveField>>,
 }
 
@@ -193,6 +193,23 @@ impl InstanceField {
     pub fn with_surface_sdf(mut self, sdf: Arc<crate::surface_sdf::SdfVolumes>) -> Self {
         self.surface_sdf = Some(sdf);
         self
+    }
+
+    /// Sample the attached collision surfaces for CPU or GPU SDF flight.
+    pub fn with_surface_sdf_resolution(
+        mut self,
+        resolution_divisor: u32,
+    ) -> Result<Self, FlyError> {
+        let surface = self
+            .surface
+            .as_ref()
+            .ok_or(FlyError("SDF backend requires collision surfaces"))?;
+        self.surface_sdf = Some(Arc::new(crate::surface_sdf::SdfVolumes::build(
+            surface,
+            self.grid.array(),
+            resolution_divisor,
+        )?));
+        Ok(self)
     }
 
     /// Preparation counts summed over the background and unit-voltage bases.

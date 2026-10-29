@@ -241,6 +241,23 @@ fn unroll_horner(source: &str) -> String {
 }
 
 pub(super) fn shader(source: &str, wide: bool) -> String {
+    let source = if source.contains("const SURFACE_SDF: bool = true;") {
+        source.replace("// SDF_FUNCTIONS", include_str!("sdf_common.wgsl"))
+    } else {
+        // Naga validates resource usage even behind a constant-false branch.
+        // Keep the default pipeline's original nine-binding contract intact.
+        let start = source.find("// SDF coordinates").unwrap();
+        let end = source
+            .find("// WGSL permits floating-point reassociation;")
+            .unwrap();
+        format!("{}{}", &source[..start], &source[end..])
+            .replace("const SURFACE_SDF: bool = false;\nconst SURFACE_SDF_REPLACE: bool = false;\n", "")
+            .replace("// SDF_FUNCTIONS\n@group(0) @binding(9) var<storage, read> sdf_headers: array<sdf_Volume>;\n@group(0) @binding(10) var<storage, read> sdf_samples: array<f32>;\n\n", "")
+            .replace("return Event(0.0,select((packed>>12u)&1u,0u,SURFACE_SDF_REPLACE),index);", "return Event(0.0,(packed>>12u)&1u,index);")
+            .replace("return Event(0.0, select(metal[index + select(0u, p.counts.x, WORKBENCH)],0u,SURFACE_SDF_REPLACE), index);", "return Event(0.0, metal[index + select(0u, p.counts.x, WORKBENCH)], index);")
+            .replace("fn base_status(", "fn status(")
+            .replace("fn base_intersection(", "fn intersection(")
+    };
     let mut physics = include_str!("physics.wgsl").to_owned();
     if !source.contains("const IMPORTED_MAPS: bool = true;") {
         let start = physics.find("fn imported_local(").unwrap();

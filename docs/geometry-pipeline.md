@@ -249,8 +249,11 @@ axial-x/radial-y revolution retain their event semantics.
 `SplatReason::SurfaceElectrode { number }` reports the physical electrode number;
 `Electrode { index }` still means the PA node index. CLI CSV appends an
 `electrode_number` column, empty for staircase or non-electrode events.
-Surface collisions currently run on CPU: `--device auto` selects CPU even for
-large beams; explicit `--device gpu` with a surface returns a clear error.
+Surface collisions default to CPU exact: `--device auto` stays on CPU even for
+large beams. Explicit `--device gpu --surface-backend sdf` selects sampled
+surfaces; `--surface-backend exact` retains the CPU-only error. The sampled
+backend also supports `--no-cuts --surface-collisions insulators|all`; insulators
+retain staircase conductor collisions.
 
 ### Near-surface field preparation (October 27, 2026)
 
@@ -965,8 +968,10 @@ byte-identical with it enabled.
 
 ## Experimental sampled collision surfaces
 
-`fly --surface-backend sdf` selects an experimental CPU reference for a
-future GPU path. `--surface-sdf-resolution-divisor N` subdivides PA spacing
+`fly --surface-backend sdf` selects the sampled collision rule on CPU or
+explicit GPU (`--device gpu`); auto selection remains CPU. CPU exact remains
+the reference. Python accepts `fly(..., surface_backend="sdf", device="gpu",
+surface_sdf_resolution_divisor=2)`. `--surface-sdf-resolution-divisor N` subdivides PA spacing
 (default 2) when sampling source geometry. Loaded sampled sidecars retain their
 original grid regardless of this divisor. The collision surface is the zero set
 of a trilinear interpolant,
@@ -984,5 +989,18 @@ that interpolant is zero. A bound on field values is not in general a bound on
 physical penetration depth when a CSG signed-distance field is conservative
 rather than an exact Euclidean distance.
 
-The current CPU reference does not yet provide a certified no-miss guarantee:
-its minimum tracing step can skip a narrow negative interval.
+CPU and GPU share cell/fold partitioning and per-cell polynomial root probes
+of the interpolant. GPU segments are split to at most four cells in the shared
+metric (target two), bounding temporary storage to 64 geometric cuts and 16
+root slots. The flight specialization uses the same WGSL functions and scalar
+packing as the standalone segment kernel, preserves group order on ties, and
+merges SDF hits with PA exits, staircase collisions when retained, and detector
+planes before the existing trajectory event localization. Native-f64 flight
+uses f64 headers/samples; the portable path uses f32 and compensated TOF.
+
+The certified field-value interpolation bound is not a no-miss guarantee
+relative to source geometry: a grazing exact hit may miss the sampled zero set.
+Resident SDF uploads reject storage binding limits with the size in MB; reduce
+`--surface-sdf-resolution-divisor` or select CPU rather than silently degrading
+resolution. Software Vulkan is accepted by the Rust GPU API for correctness
+tests; the explicit CLI/Python GPU hardware policy is unchanged.

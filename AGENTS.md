@@ -73,8 +73,9 @@ x, y, z, azimuth_deg, elevation_deg, energy_ev, optional CWF, color), from
 Useful `fly` options: `--plane nx,ny,nz,d` detector, `--bounds` for drift
 outside the PA, `--duration-us`, `--allow-time-limit`, `--integrator
 rk45|boris`, `--tolerance`, `--output results.csv`.
-`--surface-backend sdf` is an experimental CPU reference for a future GPU
-path; `--surface-sdf-resolution-divisor N` sets the sampling refinement.
+`--surface-backend sdf` flies sampled collision surfaces on CPU or explicit GPU;
+`--surface-sdf-resolution-divisor N` sets the sampling refinement. The reported
+certified interpolation bound describes an approximation; CPU exact is the reference.
 
 ## Device and precision rules
 
@@ -87,9 +88,11 @@ path; `--surface-sdf-resolution-divisor N` sets the sampling refinement.
   adapter supports `SHADER_F64`, otherwise f32 corrections with an f64
   iterate and residual (reported as precision `mixed-f32-f64`). GPU f32 "Preview" exists for live display only; it is a
   Rust API selection, not a promised accuracy.
-- Exact-surface (`--cuts`) flying, direct Coulomb, beam mode and
-  `transparent_faces` are CPU paths. The CLI errors rather than silently
-  switching devices when physics is CPU-only.
+- Exact-surface flying supports explicit GPU with `--surface-backend sdf`,
+  including `--no-cuts --surface-collisions insulators|all`. The default exact
+  backend, direct Coulomb, beam mode and `transparent_faces` remain CPU paths.
+  Auto surface flight stays on CPU. SDF flight needs 10 storage bindings;
+  native f64 uses f64 samples and the portable path uses f32 samples.
 
 ## Units and conventions
 
@@ -106,7 +109,8 @@ eV, currents in amperes, pressure in Pa. All public APIs use these units.
   `fly` picks up a sibling automatically, `--no-cuts` (`no_cuts=True`)
   falls back to staircase voxel collisions. `refine-geometry --insulator PART`
   assigns a collision-only surface without a potential boundary. With `--no-cuts`,
-  `--surface-collisions insulators|all` adds exact collisions on CPU.
+  `--surface-collisions insulators|all` adds collision surfaces; GPU requires
+  `--surface-backend sdf`, while CPU exact remains the reference.
 - Electrode numbers are 1..1000 and map to the `e(n)`/`electrode(n)` values
   in GEM, not to stored volts.
 - PA nodes sit at the origin; grid node (0,0,0) is at `origin_mm`. PA files
@@ -163,7 +167,9 @@ Quoted strings are the real messages emitted by the code.
   hardware adapter. Pass `--device cpu` / `device="cpu"`.
 - `--surface-collisions requires --no-cuts`: use the flag with staircase flight.
 - `surface collisions require CPU; use --device cpu or auto, or --no-cuts
-  for staircase GPU flying`: exact-surface flight has no GPU path.
+  for staircase GPU flying`: the default exact backend is CPU-only. Select
+  `--surface-backend sdf` for approximate GPU surface flight.
+- `SDF volumes exceed GPU storage limit (... MB > ... MB); use a smaller --surface-sdf-resolution-divisor or --device cpu`: reduce surface sampling refinement or use CPU.
 - `refinement did not converge after {cycles} cycles` /
   `electrode {number} did not converge after {cycles} cycles; increase
   max_cycles`: raise `max_cycles`/`--max-cycles`, loosen `--tolerance`, or
