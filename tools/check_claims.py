@@ -13,10 +13,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NUMBER = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][+-]?\d+)?"
-TOKEN = re.compile(rf"(?<![A-Za-z0-9_]){NUMBER}(?![A-Za-z0-9_])")
+# English speed factors and reconstruction orders attach a suffix to the number.
+TOKEN = re.compile(rf"(?<![A-Za-z0-9_]){NUMBER}(?=x\b|th-order\b|[^A-Za-z0-9_]|$)")
 UNITS = (
-    r"(?:배|%|V\b|m?s\b|[µμu]s\b|mm\b|MiB\b|쪽|점|만|천|개|초|단계|차|건|"
-    r"x\b|×|코어|스레드)"
+    r"(?:배|%|V\b|[kµμu]?eV\b|[µμu]V\b|m?s\b|[µμu]s\b|mm\b|MiB\b|쪽|점|만|천|개|초|단계|차|건|"
+    r"x\b|×|코어|스레드|pages?\b|nodes?\b|ten-thousand\b|ions?\b|electrons?\b|"
+    r"trajectories\b|hits?\b|threads?\b|seconds?\b|runs?\b|surfaces?\b|examples?\b|"
+    r"matched-accuracy\b|Rust\b|green\b|pink\b|-step\b|th-order\b)"
 )
 QUANTITY = re.compile(
     rf"(?<![A-Za-z0-9_])({NUMBER})"
@@ -192,12 +195,19 @@ def check(registry, root):
     sources = registry["sources"]
     cache = {}
     source_errors = {}
-    readme = (root / registry["readme_file"]).read_text(encoding="utf-8")
+    readme_files = {"readme": registry["readme_file"]}
+    if "readme_ko" in registry:
+        readme_files["readme_ko"] = registry["readme_ko_file"]
+    readmes = {
+        section: (root / filename).read_text(encoding="utf-8")
+        for section, filename in readme_files.items()
+    }
     report = json_selection(
         json.loads((root / registry["report_file"]).read_text(encoding="utf-8")),
         registry["report_table"],
     )
-    coverage = {"readme": set(), "report": {}}
+    coverage = {section: set() for section in readmes}
+    report_coverage = {}
     passed = failed = 0
     ids = set()
 
@@ -212,7 +222,7 @@ def check(registry, root):
                 raise ValueError(f"{name}: {error}") from error
         return cache[name]
 
-    for section in ("readme", "report_table13"):
+    for section in (*readmes, "report_table13"):
         print(f"== {section} ==")
         for claim in registry[section]:
             names = sorted(source_names(claim["derive"]))
@@ -225,13 +235,13 @@ def check(registry, root):
                 if claim["id"] in ids:
                     raise ValueError("duplicate claim id")
                 ids.add(claim["id"])
-                if section == "readme":
-                    spans = number_spans(readme, claim)
-                    coverage["readme"].update(spans)
+                if section in readmes:
+                    spans = number_spans(readmes[section], claim)
+                    coverage[section].update(spans)
                 else:
                     cell = tuple(claim["cell"])
                     spans = number_spans(report[cell[0]][cell[1]], claim)
-                    coverage["report"].setdefault(cell, set()).update(spans)
+                    report_coverage.setdefault(cell, set()).update(spans)
                 actual = calculate(claim["derive"], resolve)
                 published = decimal(claim["number"])
                 quantum = decimal(claim["rounding"])
@@ -256,15 +266,16 @@ def check(registry, root):
                 failed += 1
 
     uncovered = []
-    prose = prose_only(readme)
-    for token in QUANTITY.finditer(prose):
-        if token.span(1) not in coverage["readme"]:
-            line = readme.count("\n", 0, token.start(1)) + 1
-            uncovered.append(f"{registry['readme_file']}:{line}: {token[1]}")
+    for section, readme in readmes.items():
+        prose = prose_only(readme)
+        for token in QUANTITY.finditer(prose):
+            if token.span(1) not in coverage[section]:
+                line = readme.count("\n", 0, token.start(1)) + 1
+                uncovered.append(f"{readme_files[section]}:{line}: {token[1]}")
     for row, cells in enumerate(report):
         for column, text in enumerate(cells):
             for token in table_numbers(text):
-                if token.span() not in coverage["report"].get((row, column), set()):
+                if token.span() not in report_coverage.get((row, column), set()):
                     uncovered.append(f"{registry['report_file']} table 13 [{row},{column}]: {token[0]}")
     print("== coverage ==")
     if uncovered:

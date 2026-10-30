@@ -1,1940 +1,393 @@
 {
   "version": 1,
   "readme_file": "README.md",
+  "readme_ko_file": "README.ko.md",
   "report_file": "docs/report/manuscript.json",
-  "report_table": {
-    "chapter": "8. 종합 결과",
-    "type": "table",
-    "field": "rows"
-  },
+  "report_table": {"chapter": "8. 종합 결과", "type": "table", "field": "rows"},
   "policy": {
     "rounding": "Decimal ROUND_HALF_UP to the stated power-of-ten quantum. Approximate 700 uses one significant figure; ranges round each endpoint independently.",
     "bounds": "A literal upper bound (이내) must also contain the unrounded source value; agreement after rounding alone is insufficient.",
-    "coverage": "Every quantity token in README prose (including both range endpoints), plus every numeric table 13 token, must have a claim. Code examples, link/image destinations, software/product/file-format identifiers (3D, 4중극, HS1, DX12, RK45, versions), list ordinals, and chapter/figure cross-references are not measured quantities. Additional bare counts and version requirements are explicitly registered below.",
-    "evidence": "Stored measurements only: this checker does not rerun SIMION, performance tests, visual QA, or installer builds. Source aliases below are shared selectors, not copied numeric expectations."
+    "coverage": "Every quantity token in English and Korean README prose (including both range endpoints), plus every numeric table 13 token, must have a claim. Code examples, link/image destinations, software/product/file-format identifiers (3D, 4중극, HS1, DX12, RK45, versions), list ordinals, and chapter/figure cross-references are not measured quantities. Additional bare counts and version requirements are explicitly registered below.",
+    "evidence": "Stored measurements only: this checker does not rerun SIMION, performance tests, visual QA, or installer builds. Source aliases below are shared selectors, not copied numeric expectations. Both README lists use the same sources, derivations, and rounding."
   },
   "sources": {
-    "refine_simion_s": {
-      "kind": "regex",
-      "file": "bench/simion-baseline.md",
-      "section": "Refine",
-      "pattern": "^\\| `_bench3d` sc3d_x2 \\|[^\\n]*?`--convergence 1e-7` \\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) s \\|"
-    },
-    "refine_nodes": {
-      "kind": "regex",
-      "file": "bench/simion-baseline.md",
-      "section": "Refine",
-      "pattern": "259x259x259 = \\*\\*([0-9.,eE+-]+)\\*\\*"
-    },
-    "refine_axis": {
-      "kind": "regex",
-      "file": "bench/simion-baseline.md",
-      "section": "Refine",
-      "pattern": "\\| (259)x259x259 ="
-    },
-    "refine_gpu_setup_ms": {
-      "kind": "regex",
-      "file": "bench/refine-real.md",
-      "section": "End-to-end performance",
-      "pattern": "^\\| Windows Vulkan \\| ([0-9.,eE+-]+) \\|"
-    },
-    "refine_gpu_solve_ms": {
-      "kind": "regex",
-      "file": "bench/refine-real.md",
-      "section": "End-to-end performance",
-      "pattern": "^\\| Windows Vulkan \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "refine_max_v": {
-      "kind": "regex",
-      "file": "bench/refine-real.md",
-      "section": "Large-array tight reference and CPU/GPU agreement",
-      "pattern": "^\\| sc3d_x2\\.pa(?:0|_|500) \\| ([0-9.,eE+-]+) \\| [^|]+\\| [0-9.eE+-]+ \\|",
-      "many": true
-    },
-    "refine_gpu_max_v": {
-      "kind": "regex",
-      "file": "bench/refine-real.md",
-      "section": "Large-array tight reference and CPU/GPU agreement",
-      "pattern": "^\\| sc3d_x2\\.pa(?:0|_|500) \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "einzel_default_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Main integration: all-corner collision defaults",
-      "pattern": "^\\| \\*\\*4 / 1e-8, selected\\*\\* \\| \\*\\*([0-9.,eE+-]+)\\*\\* \\|"
-    },
-    "einzel_default_rms": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Main integration: all-corner collision defaults",
-      "pattern": "^\\| einzel subset \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "einzel_simion_rms": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Main integration: all-corner collision defaults",
-      "pattern": "^\\| einzel subset \\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "einzel_simion_10k_s": {
-      "kind": "regex",
-      "file": "bench/simion-baseline.md",
-      "section": "Fly",
-      "pattern": "^\\| `_benchfly` einzel 10k \\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) s \\|"
-    },
-    "einzel_retained_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Retained one-cell baseline: preserved physical workloads",
-      "pattern": "^\\| einzel, preserved 1k subset \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "einzel_retained_simion_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Retained one-cell baseline: preserved physical workloads",
-      "pattern": "^\\| einzel, preserved 1k subset \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "einzel_retained_rms": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Retained one-cell baseline: preserved physical workloads",
-      "pattern": "^\\| einzel, preserved 1k subset \\| [^|]+\\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "einzel_subset_n": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Boundary-aware correction results",
-      "pattern": "^### Same ([0-9,]+) ions, same independent 8x reference"
-    },
-    "einzel_tqual": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Same 1,000 ions, same independent 8x reference",
-      "pattern": "^\\| SIMION coarse, T\\.Qual (\\d+) \\|"
-    },
-    "quad_simion_rms": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Physical geometry and the better field route",
-      "pattern": "^\\| SIMION T\\.Qual 209 coarse PA \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "quad_exact_rms": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Source-geometry cuts v3 (October 23, 2026)",
-      "pattern": "measures \\*\\*([0-9.,eE+-]+) mm endpoint RMS\\*\\*"
-    },
-    "quad_exact_s": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Source-geometry cuts v3 (October 23, 2026)",
-      "pattern": "median flight compute \\*\\*([0-9.,eE+-]+) s cuts"
-    },
-    "quad_ghost_rms_retained_reference": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Vacuum-continuation reconstruction comparison",
-      "pattern": "^\\| Current, retained 8x \\| ([0-9.,eE+-]+) \\|"
-    },
-    "quad_ghost_rms_regenerated_reference": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Vacuum-continuation reconstruction comparison",
-      "pattern": "^\\| Current, regenerated 8x \\| ([0-9.,eE+-]+) \\|"
-    },
-    "quad_ghost_reference_refinement_drift": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Vacuum-continuation reconstruction comparison",
-      "pattern": "^\\| Regenerated 4x versus regenerated 8x \\| ([0-9.,eE+-]+) \\|"
-    },
-    "quad_simion_s": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Compute time at achieved precision",
-      "pattern": "^\\| SIMION T\\.Qual 209, coarse PA \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "quad_ions": {
-      "kind": "regex",
-      "file": "bench/fly-real.md",
-      "section": "Source-geometry cuts v3 (October 23, 2026)",
-      "pattern": "zero exit-class changes out of ([0-9,]+)\\*\\*"
-    },
-    "mag_simion_s": {
-      "kind": "regex",
-      "file": "bench/magnetic-cpu.md",
-      "section": "Actual matched-population compute",
-      "pattern": "^\\| (?:magnet1|mag90|sector 2dp|sector 2dc|sector 3dp|Helmholtz|solenoid, mapped) \\|[^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "mag_cpu_s": {
-      "kind": "regex",
-      "file": "bench/magnetic-cpu.md",
-      "section": "Actual matched-population compute",
-      "pattern": "^\\| (?:magnet1|mag90|sector 2dp|sector 2dc|sector 3dp|Helmholtz|solenoid, mapped) \\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "hs1_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "HS1 and SDS statistical checks",
-      "pattern": "^\\| HS1 \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "hs1_simion_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "HS1 and SDS statistical checks",
-      "pattern": "^\\| HS1 \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "sds_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "HS1 and SDS statistical checks",
-      "pattern": "^\\| SDS \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "sds_simion_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "HS1 and SDS statistical checks",
-      "pattern": "^\\| SDS \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "collision_ions": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "HS1 and SDS statistical checks",
-      "pattern": "Both models retain (\\d+) ions"
-    },
-    "shown_simion_s": {
-      "kind": "csv",
-      "file": "docs/report/figures/data/F02-speed.csv",
-      "section": "shown=1 rows, simion_compute_s",
-      "where": {
-        "shown": "1"
-      },
-      "column": "simion_compute_s",
-      "many": true
-    },
-    "shown_ours_s": {
-      "kind": "csv",
-      "file": "docs/report/figures/data/F02-speed.csv",
-      "section": "shown=1 rows, ours_compute_s",
-      "where": {
-        "shown": "1"
-      },
-      "column": "ours_compute_s",
-      "many": true
-    },
-    "cut_errors": {
-      "kind": "regex",
-      "file": "docs/cutcell.md",
-      "section": "Equal memory budget",
-      "pattern": "^\\| SDF (?:128|256)\\^3 \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "stair_errors": {
-      "kind": "regex",
-      "file": "docs/cutcell.md",
-      "section": "Equal memory budget",
-      "pattern": "^\\| Staircase (?:129|257)\\^3 \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "dielectric_auto_simion_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Automatic selection at the default residual tolerance",
-      "pattern": "^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "dielectric_auto_solve_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Automatic selection at the default residual tolerance",
-      "pattern": "^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "dielectric_auto_setup_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Automatic selection at the default residual tolerance",
-      "pattern": "^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\|[^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "dielectric_auto_material_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Automatic selection at the default residual tolerance",
-      "pattern": "^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "nonlinear_cpu_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Speed at matched estimated physical accuracy",
-      "pattern": "median \\*\\*([0-9.,eE+-]+) s\\*\\*\\. Seven outer"
-    },
-    "nonlinear_gpu_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Speed at matched estimated physical accuracy",
-      "pattern": "median \\*\\*([0-9.,eE+-]+) s\\*\\*\\. Each process"
-    },
-    "nonlinear_simion_s": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Speed at matched estimated physical accuracy",
-      "pattern": "\\*\\*([0-9.,eE+-]+) s\\*\\* \\(96\\.138"
-    },
-    "nonlinear_cases": {
-      "kind": "regex",
-      "file": "docs/dielectric.md",
-      "section": "Speed at matched estimated physical accuracy",
-      "pattern": "SIMION's shipped 1x default",
-      "count": true
-    },
-    "beam_simion_s": {
-      "kind": "regex",
-      "file": "bench/space-charge.md",
-      "section": "Matched-precision compute verdict and defaults",
-      "pattern": "^\\| (?:repulsion1|mixed) \\| SIMION T\\.Qual=-9 \\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "beam_ours_s": {
-      "kind": "regex",
-      "file": "bench/space-charge.md",
-      "section": "Matched-precision compute verdict and defaults",
-      "pattern": "^\\| (?:repulsion1|mixed) \\| native numerical defaults \\| [^|]+\\| [^|]+\\| [^|]+\\| \\*\\*([0-9.,eE+-]+)\\*\\* \\|",
-      "many": true
-    },
-    "coulombic_ours_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Retained one-cell baseline: preserved physical workloads",
-      "pattern": "^\\| direct Coulombic, 103 ions \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "coulombic_simion_s": {
-      "kind": "regex",
-      "file": "bench/default-flight.md",
-      "section": "Retained one-cell baseline: preserved physical workloads",
-      "pattern": "^\\| direct Coulombic, 103 ions \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "potential_ours_s": {
-      "kind": "regex",
-      "file": "docs/magnetostatics.md",
-      "section": "Audit results, October 24, 2026",
-      "pattern": "^\\| (?!uniform_)[a-z0-9_]+ / [^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "potential_simion_s": {
-      "kind": "regex",
-      "file": "docs/magnetostatics.md",
-      "section": "Audit results, October 24, 2026",
-      "pattern": "^\\| (?!uniform_)[a-z0-9_]+ / [^|]+\\|[^|]+\\| ([0-9.,eE+-]+) \\|",
-      "many": true
-    },
-    "uniform_simion_s": {
-      "kind": "regex",
-      "file": "docs/magnetostatics.md",
-      "section": "Audit results, October 24, 2026",
-      "pattern": "^\\| uniform_2dp / Az \\| [^|]+\\| ([0-9.,eE+-]+) \\|"
-    },
-    "uniform_ms": {
-      "kind": "regex",
-      "file": "docs/magnetostatics.md",
-      "section": "Uniform Az root cause and fix",
-      "pattern": "^\\| Setup \\+ solve \\| [^|]+\\| ([0-9.,eE+-]+) ms \\|"
-    },
-    "potential_timed": {
-      "kind": "regex",
-      "file": "docs/magnetostatics.md",
-      "section": "Audit results, October 24, 2026",
-      "pattern": "^\\| [a-z0-9_]+ / [^|]+\\| [0-9.]+ \\| [0-9.]+ \\|",
-      "count": true
-    },
-    "pdf_pages": {
-      "kind": "regex",
-      "file": "docs/report/build/simrep-technical-report.pdf",
-      "section": "uncompressed PDF /Type /Page dictionaries",
-      "pattern": "/Type\\s*/Page\\b",
-      "count": true,
-      "encoding": "latin-1"
-    },
-    "reconstruction_order": {
-      "kind": "json",
-      "file": "docs/report/manuscript.json",
-      "section": "chapter 4, Smooth electric-field reconstruction paragraph",
-      "select": {
-        "chapter": "4. 이온 비행",
-        "type": "p",
-        "contains": "SimRep은 격자점마다",
-        "field": "text"
-      },
-      "pattern": "칸 안을 (\\d+)차 에르미트"
-    },
-    "crate_count": {
-      "kind": "json",
-      "file": "docs/report/manuscript.json",
-      "section": "chapter 2, table 2 rows",
-      "select": {
-        "chapter": "2. 프로그램 구성",
-        "type": "table",
-        "field": "rows"
-      },
-      "count": true
-    },
-    "tour_steps": {
-      "kind": "regex",
-      "file": "docs/dev/frontend.md",
-      "section": "5분 따라하기 (Tour)",
-      "pattern": "^\\| \\d+\\. ",
-      "count": true
-    },
-    "tour_second_step": {
-      "kind": "regex",
-      "file": "docs/dev/frontend.md",
-      "section": "5분 따라하기 (Tour)",
-      "pattern": "^\\| (\\d+)\\. 집속 전압"
-    },
-    "autosave_s": {
-      "kind": "regex",
-      "file": "docs/dev/frontend.md",
-      "section": "프로젝트 (.simrep)",
-      "pattern": "자동 저장: 변경 후 ([0-9.,eE+-]+) s 뒤"
-    },
-    "qa_surfaces": {
-      "kind": "regex",
-      "file": "docs/report/visual-qa/REPORT.md",
-      "section": "SimRep desktop app - visual QA report",
-      "pattern": "Korean UI, (\\d+) surfaces x"
-    },
-    "qa_width_small": {
-      "kind": "regex",
-      "file": "docs/report/visual-qa/REPORT.md",
-      "section": "SimRep desktop app - visual QA report",
-      "pattern": "light/dark x (\\d+)x800 CSS"
-    },
-    "qa_width_large": {
-      "kind": "regex",
-      "file": "docs/report/visual-qa/REPORT.md",
-      "section": "SimRep desktop app - visual QA report",
-      "pattern": "and (\\d+)x1080 CSS"
-    },
-    "installer_bytes": {
-      "kind": "regex",
-      "file": "docs/dev/frontend.md",
-      "section": "Windows 설치 패키지 (NSIS, 사용자별 설치)",
-      "pattern": "\\*\\*([0-9,]+) B \\(28\\.49 MiB\\)\\*\\*"
-    },
-    "python_min": {
-      "kind": "regex",
-      "file": "docs/python.md",
-      "section": "Python and NumPy API",
-      "pattern": "Python ([0-9.]+) or newer"
-    },
-    "esa_channels": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_channels \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_h_mm": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_h_mm \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_n_per_point": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_n_per_point \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_k_fit": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_k_fit \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_k_geometric": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_k_geometric \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_de_min": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_de_min \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_de_max": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_de_max \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_k_fixed_code": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_k_fixed_code \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_k_design": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_k_design \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_k_target": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_k_target \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_design_gap_mm": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_design_gap_mm \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_capture_u_v": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_capture_u_v \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_capture_e_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_capture_e_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_capture_rays": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_capture_rays \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_capture_pass": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_capture_pass \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_capture_fail": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "Values",
-      "pattern": "^\\| esa_capture_fail \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_n": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_n \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_same": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_same \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_common_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_common_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_only_simion": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_only_simion \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_only_stair": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_only_stair \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_hit_rms_mm": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_hit_rms_mm \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_pot_max_v": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_pot_max_v \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_simion_capture_rays": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_simion_capture_rays \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_simion_capture_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_simion_capture_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch1_simion_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch1_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch1_simion_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch1_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch1_stair_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch1_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch1_stair_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch1_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch1_exact_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch1_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch1_exact_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch1_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch16_simion_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch16_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch16_simion_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch16_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch16_stair_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch16_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch16_stair_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch16_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch16_exact_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch16_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch16_exact_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch16_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch32_simion_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch32_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch32_simion_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch32_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch32_stair_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch32_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch32_stair_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch32_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch32_exact_centroid_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch32_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_cmp_ch32_exact_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_cmp_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_h_mm": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_h_mm \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_n": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_n \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch1_stair_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch1_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch1_stair_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch1_stair_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch1_exact_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch1_exact_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch1_noins_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch1_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch1_noins_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch1_noins_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch16_stair_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch16_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch16_stair_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch16_stair_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch16_exact_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch16_exact_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch16_noins_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch16_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch16_noins_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch16_noins_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_stair_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_stair_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_stair_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_exact_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_exact_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_noins_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_noins_hits": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_noins_hits \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_exact_fwhm_bootstrap_sd_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_exact_fwhm_bootstrap_sd_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_simion_s": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_simion_s \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_simrep_1t_s": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_simrep_1t_s \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_simrep_16t_s": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_simrep_16t_s \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_threads_single": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_threads_single \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_threads_multi": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_threads_multi \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_runs": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_runs \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_simion_rms_mm": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_simion_rms_mm \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_fair_simrep_rms_mm": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_fair_simrep_rms_mm \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch1_exact_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch1_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch16_exact_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch16_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "esa_g62_ch32_exact_fwhm_ev": {
-      "kind": "regex",
-      "file": "bench/esa-application.md",
-      "section": "SIMION 2024 comparison",
-      "pattern": "^\\| esa_g62_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"
-    },
-    "default_keep_runs": {
-      "kind": "regex",
-      "file": "app/src/state/runFormat.ts",
-      "section": "DEFAULT_KEEP_RUNS",
-      "pattern": "export const DEFAULT_KEEP_RUNS = (\\d+);"
-    }
+    "esa_cmp_ch1_exact_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch1_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch16_exact_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch16_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch32_exact_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch32_exact_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "refine_simion_s": {"kind":"regex","file":"bench/simion-baseline.md","section":"Refine","pattern":"^\\| `_bench3d` sc3d_x2 \\|[^\\n]*?`--convergence 1e-7` \\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) s \\|"},
+    "refine_nodes": {"kind":"regex","file":"bench/simion-baseline.md","section":"Refine","pattern":"259x259x259 = \\*\\*([0-9.,eE+-]+)\\*\\*"},
+    "refine_axis": {"kind":"regex","file":"bench/simion-baseline.md","section":"Refine","pattern":"\\| (259)x259x259 ="},
+    "refine_gpu_setup_ms": {"kind":"regex","file":"bench/refine-real.md","section":"End-to-end performance","pattern":"^\\| Windows Vulkan \\| ([0-9.,eE+-]+) \\|"},
+    "refine_gpu_solve_ms": {"kind":"regex","file":"bench/refine-real.md","section":"End-to-end performance","pattern":"^\\| Windows Vulkan \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "refine_max_v": {"kind":"regex","file":"bench/refine-real.md","section":"Large-array tight reference and CPU/GPU agreement","pattern":"^\\| sc3d_x2\\.pa(?:0|_|500) \\| ([0-9.,eE+-]+) \\| [^|]+\\| [0-9.eE+-]+ \\|","many":true},
+    "refine_gpu_max_v": {"kind":"regex","file":"bench/refine-real.md","section":"Large-array tight reference and CPU/GPU agreement","pattern":"^\\| sc3d_x2\\.pa(?:0|_|500) \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "einzel_default_s": {"kind":"regex","file":"bench/default-flight.md","section":"Main integration: all-corner collision defaults","pattern":"^\\| \\*\\*4 / 1e-8, selected\\*\\* \\| \\*\\*([0-9.,eE+-]+)\\*\\* \\|"},
+    "einzel_default_rms": {"kind":"regex","file":"bench/default-flight.md","section":"Main integration: all-corner collision defaults","pattern":"^\\| einzel subset \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "einzel_simion_rms": {"kind":"regex","file":"bench/default-flight.md","section":"Main integration: all-corner collision defaults","pattern":"^\\| einzel subset \\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "einzel_simion_10k_s": {"kind":"regex","file":"bench/simion-baseline.md","section":"Fly","pattern":"^\\| `_benchfly` einzel 10k \\|[^|]+\\|[^|]+\\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) s \\|"},
+    "einzel_retained_s": {"kind":"regex","file":"bench/default-flight.md","section":"Retained one-cell baseline: preserved physical workloads","pattern":"^\\| einzel, preserved 1k subset \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "einzel_retained_simion_s": {"kind":"regex","file":"bench/default-flight.md","section":"Retained one-cell baseline: preserved physical workloads","pattern":"^\\| einzel, preserved 1k subset \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "einzel_retained_rms": {"kind":"regex","file":"bench/default-flight.md","section":"Retained one-cell baseline: preserved physical workloads","pattern":"^\\| einzel, preserved 1k subset \\| [^|]+\\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "einzel_subset_n": {"kind":"regex","file":"bench/fly-real.md","section":"Boundary-aware correction results","pattern":"^### Same ([0-9,]+) ions, same independent 8x reference"},
+    "einzel_tqual": {"kind":"regex","file":"bench/fly-real.md","section":"Same 1,000 ions, same independent 8x reference","pattern":"^\\| SIMION coarse, T\\.Qual (\\d+) \\|"},
+    "quad_simion_rms": {"kind":"regex","file":"bench/fly-real.md","section":"Physical geometry and the better field route","pattern":"^\\| SIMION T\\.Qual 209 coarse PA \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "quad_exact_rms": {"kind":"regex","file":"bench/fly-real.md","section":"Source-geometry cuts v3 (October 23, 2026)","pattern":"measures \\*\\*([0-9.,eE+-]+) mm endpoint RMS\\*\\*"},
+    "quad_exact_s": {"kind":"regex","file":"bench/fly-real.md","section":"Source-geometry cuts v3 (October 23, 2026)","pattern":"median flight compute \\*\\*([0-9.,eE+-]+) s cuts"},
+    "quad_ghost_rms_retained_reference": {"kind":"regex","file":"bench/fly-real.md","section":"Vacuum-continuation reconstruction comparison","pattern":"^\\| Current, retained 8x \\| ([0-9.,eE+-]+) \\|"},
+    "quad_ghost_rms_regenerated_reference": {"kind":"regex","file":"bench/fly-real.md","section":"Vacuum-continuation reconstruction comparison","pattern":"^\\| Current, regenerated 8x \\| ([0-9.,eE+-]+) \\|"},
+    "quad_ghost_reference_refinement_drift": {"kind":"regex","file":"bench/fly-real.md","section":"Vacuum-continuation reconstruction comparison","pattern":"^\\| Regenerated 4x versus regenerated 8x \\| ([0-9.,eE+-]+) \\|"},
+    "quad_simion_s": {"kind":"regex","file":"bench/fly-real.md","section":"Compute time at achieved precision","pattern":"^\\| SIMION T\\.Qual 209, coarse PA \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "quad_ions": {"kind":"regex","file":"bench/fly-real.md","section":"Source-geometry cuts v3 (October 23, 2026)","pattern":"zero exit-class changes out of ([0-9,]+)\\*\\*"},
+    "mag_simion_s": {"kind":"regex","file":"bench/magnetic-cpu.md","section":"Actual matched-population compute","pattern":"^\\| (?:magnet1|mag90|sector 2dp|sector 2dc|sector 3dp|Helmholtz|solenoid, mapped) \\|[^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "mag_cpu_s": {"kind":"regex","file":"bench/magnetic-cpu.md","section":"Actual matched-population compute","pattern":"^\\| (?:magnet1|mag90|sector 2dp|sector 2dc|sector 3dp|Helmholtz|solenoid, mapped) \\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "hs1_s": {"kind":"regex","file":"bench/default-flight.md","section":"HS1 and SDS statistical checks","pattern":"^\\| HS1 \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "hs1_simion_s": {"kind":"regex","file":"bench/default-flight.md","section":"HS1 and SDS statistical checks","pattern":"^\\| HS1 \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "sds_s": {"kind":"regex","file":"bench/default-flight.md","section":"HS1 and SDS statistical checks","pattern":"^\\| SDS \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "sds_simion_s": {"kind":"regex","file":"bench/default-flight.md","section":"HS1 and SDS statistical checks","pattern":"^\\| SDS \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "collision_ions": {"kind":"regex","file":"bench/default-flight.md","section":"HS1 and SDS statistical checks","pattern":"Both models retain (\\d+) ions"},
+    "shown_simion_s": {"kind":"csv","file":"docs/report/figures/data/F02-speed.csv","section":"shown=1 rows, simion_compute_s","where":{"shown":"1"},"column":"simion_compute_s","many":true},
+    "shown_ours_s": {"kind":"csv","file":"docs/report/figures/data/F02-speed.csv","section":"shown=1 rows, ours_compute_s","where":{"shown":"1"},"column":"ours_compute_s","many":true},
+    "cut_errors": {"kind":"regex","file":"docs/cutcell.md","section":"Equal memory budget","pattern":"^\\| SDF (?:128|256)\\^3 \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "stair_errors": {"kind":"regex","file":"docs/cutcell.md","section":"Equal memory budget","pattern":"^\\| Staircase (?:129|257)\\^3 \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "dielectric_auto_simion_s": {"kind":"regex","file":"docs/dielectric.md","section":"Automatic selection at the default residual tolerance","pattern":"^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "dielectric_auto_solve_s": {"kind":"regex","file":"docs/dielectric.md","section":"Automatic selection at the default residual tolerance","pattern":"^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\| ([0-9.,eE+-]+) \\|","many":true},
+    "dielectric_auto_setup_s": {"kind":"regex","file":"docs/dielectric.md","section":"Automatic selection at the default residual tolerance","pattern":"^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\|[^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "dielectric_auto_material_s": {"kind":"regex","file":"docs/dielectric.md","section":"Automatic selection at the default residual tolerance","pattern":"^\\| (?:plates_2dp|sphere_2dc|sphere_3dp) \\| [^|]+\\| Selected \\|[^|]+\\|[^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "nonlinear_cpu_s": {"kind":"regex","file":"docs/dielectric.md","section":"Speed at matched estimated physical accuracy","pattern":"median \\*\\*([0-9.,eE+-]+) s\\*\\*\\. Seven outer"},
+    "nonlinear_gpu_s": {"kind":"regex","file":"docs/dielectric.md","section":"Speed at matched estimated physical accuracy","pattern":"median \\*\\*([0-9.,eE+-]+) s\\*\\*\\. Each process"},
+    "nonlinear_simion_s": {"kind":"regex","file":"docs/dielectric.md","section":"Speed at matched estimated physical accuracy","pattern":"\\*\\*([0-9.,eE+-]+) s\\*\\* \\(96\\.138"},
+    "nonlinear_cases": {"kind":"regex","file":"docs/dielectric.md","section":"Speed at matched estimated physical accuracy","pattern":"SIMION's shipped 1x default","count":true},
+    "beam_simion_s": {"kind":"regex","file":"bench/space-charge.md","section":"Matched-precision compute verdict and defaults","pattern":"^\\| (?:repulsion1|mixed) \\| SIMION T\\.Qual=-9 \\| [^|]+\\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "beam_ours_s": {"kind":"regex","file":"bench/space-charge.md","section":"Matched-precision compute verdict and defaults","pattern":"^\\| (?:repulsion1|mixed) \\| native numerical defaults \\| [^|]+\\| [^|]+\\| [^|]+\\| \\*\\*([0-9.,eE+-]+)\\*\\* \\|","many":true},
+    "coulombic_ours_s": {"kind":"regex","file":"bench/default-flight.md","section":"Retained one-cell baseline: preserved physical workloads","pattern":"^\\| direct Coulombic, 103 ions \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "coulombic_simion_s": {"kind":"regex","file":"bench/default-flight.md","section":"Retained one-cell baseline: preserved physical workloads","pattern":"^\\| direct Coulombic, 103 ions \\| [^|]+\\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "potential_ours_s": {"kind":"regex","file":"docs/magnetostatics.md","section":"Audit results, October 24, 2026","pattern":"^\\| (?!uniform_)[a-z0-9_]+ / [^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "potential_simion_s": {"kind":"regex","file":"docs/magnetostatics.md","section":"Audit results, October 24, 2026","pattern":"^\\| (?!uniform_)[a-z0-9_]+ / [^|]+\\|[^|]+\\| ([0-9.,eE+-]+) \\|","many":true},
+    "uniform_simion_s": {"kind":"regex","file":"docs/magnetostatics.md","section":"Audit results, October 24, 2026","pattern":"^\\| uniform_2dp / Az \\| [^|]+\\| ([0-9.,eE+-]+) \\|"},
+    "uniform_ms": {"kind":"regex","file":"docs/magnetostatics.md","section":"Uniform Az root cause and fix","pattern":"^\\| Setup \\+ solve \\| [^|]+\\| ([0-9.,eE+-]+) ms \\|"},
+    "potential_timed": {"kind":"regex","file":"docs/magnetostatics.md","section":"Audit results, October 24, 2026","pattern":"^\\| [a-z0-9_]+ / [^|]+\\| [0-9.]+ \\| [0-9.]+ \\|","count":true},
+    "pdf_pages": {"kind":"regex","file":"docs/report/build/simrep-technical-report.pdf","section":"uncompressed PDF /Type /Page dictionaries","pattern":"/Type\\s*/Page\\b","count":true,"encoding":"latin-1"},
+    "reconstruction_order": {"kind":"json","file":"docs/report/manuscript.json","section":"chapter 4, Smooth electric-field reconstruction paragraph","select":{"chapter":"4. 이온 비행","type":"p","contains":"SimRep은 격자점마다","field":"text"},"pattern":"칸 안을 (\\d+)차 에르미트"},
+    "crate_count": {"kind":"json","file":"docs/report/manuscript.json","section":"chapter 2, table 2 rows","select":{"chapter":"2. 프로그램 구성","type":"table","field":"rows"},"count":true},
+    "tour_steps": {"kind":"regex","file":"docs/dev/frontend.md","section":"5분 따라하기 (Tour)","pattern":"^\\| \\d+\\. ","count":true},
+    "tour_second_step": {"kind":"regex","file":"docs/dev/frontend.md","section":"5분 따라하기 (Tour)","pattern":"^\\| (\\d+)\\. 집속 전압"},
+    "autosave_s": {"kind":"regex","file":"docs/dev/frontend.md","section":"프로젝트 (.simrep)","pattern":"자동 저장: 변경 후 ([0-9.,eE+-]+) s 뒤"},
+    "qa_surfaces": {"kind":"regex","file":"docs/report/visual-qa/REPORT.md","section":"SimRep desktop app - visual QA report","pattern":"Korean UI, (\\d+) surfaces x"},
+    "qa_width_small": {"kind":"regex","file":"docs/report/visual-qa/REPORT.md","section":"SimRep desktop app - visual QA report","pattern":"light/dark x (\\d+)x800 CSS"},
+    "qa_width_large": {"kind":"regex","file":"docs/report/visual-qa/REPORT.md","section":"SimRep desktop app - visual QA report","pattern":"and (\\d+)x1080 CSS"},
+    "installer_bytes": {"kind":"regex","file":"docs/dev/frontend.md","section":"Windows 설치 패키지 (NSIS, 사용자별 설치)","pattern":"\\*\\*([0-9,]+) B \\(28\\.49 MiB\\)\\*\\*"},
+    "python_min": {"kind":"regex","file":"docs/python.md","section":"Python and NumPy API","pattern":"Python ([0-9.]+) or newer"},
+    "esa_channels": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_channels \\| ([0-9.eE+-]+) \\|"},
+    "esa_h_mm": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_h_mm \\| ([0-9.eE+-]+) \\|"},
+    "esa_n_per_point": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_n_per_point \\| ([0-9.eE+-]+) \\|"},
+    "esa_k_fit": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_k_fit \\| ([0-9.eE+-]+) \\|"},
+    "esa_k_geometric": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_k_geometric \\| ([0-9.eE+-]+) \\|"},
+    "esa_de_min": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_de_min \\| ([0-9.eE+-]+) \\|"},
+    "esa_de_max": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_de_max \\| ([0-9.eE+-]+) \\|"},
+    "esa_k_fixed_code": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_k_fixed_code \\| ([0-9.eE+-]+) \\|"},
+    "esa_k_design": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_k_design \\| ([0-9.eE+-]+) \\|"},
+    "esa_k_target": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_k_target \\| ([0-9.eE+-]+) \\|"},
+    "esa_design_gap_mm": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_design_gap_mm \\| ([0-9.eE+-]+) \\|"},
+    "esa_capture_u_v": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_capture_u_v \\| ([0-9.eE+-]+) \\|"},
+    "esa_capture_e_ev": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_capture_e_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_capture_rays": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_capture_rays \\| ([0-9.eE+-]+) \\|"},
+    "esa_capture_pass": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_capture_pass \\| ([0-9.eE+-]+) \\|"},
+    "esa_capture_fail": {"kind":"regex","file":"bench/esa-application.md","section":"Values","pattern":"^\\| esa_capture_fail \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_n": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_n \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_same": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_same \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_common_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_common_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_only_simion": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_only_simion \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_only_stair": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_only_stair \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_hit_rms_mm": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_hit_rms_mm \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_pot_max_v": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_pot_max_v \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_simion_capture_rays": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_simion_capture_rays \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_simion_capture_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_simion_capture_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch1_simion_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch1_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch1_simion_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch1_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch1_stair_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch1_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch1_stair_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch1_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch16_simion_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch16_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch16_simion_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch16_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch16_stair_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch16_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch16_stair_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch16_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch32_simion_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch32_simion_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch32_simion_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch32_simion_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch32_stair_centroid_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch32_stair_centroid_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch32_stair_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch32_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch1_exact_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch1_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch16_exact_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch16_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_cmp_ch32_exact_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_cmp_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_h_mm": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_h_mm \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_n": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_n \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch1_stair_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch1_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch1_stair_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch1_stair_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch1_exact_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch1_exact_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch1_noins_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch1_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch1_noins_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch1_noins_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch16_stair_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch16_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch16_stair_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch16_stair_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch16_exact_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch16_exact_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch16_noins_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch16_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch16_noins_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch16_noins_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_stair_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_stair_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_stair_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_stair_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_exact_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_exact_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_noins_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_noins_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_noins_hits": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_noins_hits \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_exact_fwhm_bootstrap_sd_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_exact_fwhm_bootstrap_sd_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_simion_s": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_simion_s \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_simrep_1t_s": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_simrep_1t_s \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_simrep_16t_s": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_simrep_16t_s \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_threads_single": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_threads_single \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_threads_multi": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_threads_multi \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_runs": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_runs \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_simion_rms_mm": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_simion_rms_mm \\| ([0-9.eE+-]+) \\|"},
+    "esa_fair_simrep_rms_mm": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_fair_simrep_rms_mm \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch1_exact_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch1_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch16_exact_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch16_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "esa_g62_ch32_exact_fwhm_ev": {"kind":"regex","file":"bench/esa-application.md","section":"SIMION 2024 comparison","pattern":"^\\| esa_g62_ch32_exact_fwhm_ev \\| ([0-9.eE+-]+) \\|"},
+    "default_keep_runs": {"kind":"regex","file":"app/src/state/runFormat.ts","section":"DEFAULT_KEEP_RUNS","pattern":"export const DEFAULT_KEEP_RUNS = (\\d+);"}
   },
   "readme": [
-    {
-      "id": "readme-report-pages",
-      "fragment": "한국어, 39쪽",
-      "number": "39",
-      "derive": "pdf_pages",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-reconstruction-order",
-      "fragment": "매끄러운** 5차 재구성",
-      "number": "5",
-      "derive": "reconstruction_order",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-refine-nodes",
-      "fragment": "1,737만 점",
-      "number": "1,737",
-      "derive": "refine_nodes / 10000",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-refine-upper-bound",
-      "fragment": "엄격 설정 SIMION과 최대 6.42e-5 V 차이",
-      "number": "6.42e-5",
-      "derive": "max(max(refine_max_v), max(refine_gpu_max_v))",
-      "rounding": "1e-7",
-      "note": "Wording changed 2026-10-25 from the literal bound \"6.4e-5 V 이내\" (exceeded by 6.423e-5) to the rounded maximum."
-    },
-    {
-      "id": "readme-refine-gpu-speed",
-      "fragment": "19.3배",
-      "number": "19.3",
-      "derive": "refine_simion_s * 1000 / refine_gpu_solve_ms",
-      "rounding": "0.1",
-      "note": "Both the result table and the CLI comment repeat this same measured speed."
-    },
-    {
-      "id": "readme-refine-setup-speed",
-      "fragment": "준비 포함 9.1배",
-      "number": "9.1",
-      "derive": "refine_simion_s * 1000 / (refine_gpu_setup_ms + refine_gpu_solve_ms)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-einzel-accuracy",
-      "fragment": "오차가 4.9배 작음",
-      "number": "4.9",
-      "derive": "einzel_simion_rms / einzel_default_rms",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-einzel-speed",
-      "fragment": "11.5배",
-      "number": "11.5",
-      "derive": "einzel_simion_10k_s / einzel_default_s",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-quad-accuracy",
-      "fragment": "도착 위치 오차 약 700배 감소",
-      "number": "700",
-      "derive": "quad_simion_rms / quad_exact_rms",
-      "rounding": "1e2",
-      "note": "Approximate one-significant-figure ratio measured with the pre-2026-10-28 reconstruction, not an exact factor of 700 or a current-code remeasurement."
-    },
-    {
-      "id": "readme-quad-speed",
-      "fragment": "71배",
-      "number": "71",
-      "derive": "quad_simion_s / quad_exact_s",
-      "rounding": "1",
-      "note": "Retained pre-2026-10-28 reconstruction timing; current continuation measurements are separate."
-    },
-    {
-      "id": "readme-quad-historical-rms",
-      "fragment": "그 재구성의 RMS는 **0.0034 mm**",
-      "number": "0.0034",
-      "derive": "quad_exact_rms",
-      "rounding": "0.0001",
-      "note": "Explicitly labelled pre-2026-10-28 reconstruction."
-    },
-    {
-      "id": "readme-quad-ghost-retained-reference-rms",
-      "fragment": "이전 `8x` 기준해에 대해 **0.00386 mm**",
-      "number": "0.00386",
-      "derive": "quad_ghost_rms_retained_reference",
-      "rounding": "0.00001"
-    },
-    {
-      "id": "readme-quad-ghost-regenerated-reference-rms",
-      "fragment": "재구성한 `8x` 기준해에 대해 **0.00388 mm**",
-      "number": "0.00388",
-      "derive": "quad_ghost_rms_regenerated_reference",
-      "rounding": "0.00001"
-    },
-    {
-      "id": "readme-quad-ghost-reference-refinement-drift",
-      "fragment": "정련 차이는 **0.00055 mm**",
-      "number": "0.00055",
-      "derive": "quad_ghost_reference_refinement_drift",
-      "rounding": "0.00001",
-      "note": "Refinement sensitivity, not a calibrated standard uncertainty or rigorous bound."
-    },
-    {
-      "id": "readme-hs1-speed",
-      "fragment": "54배 / 251배",
-      "number": "54",
-      "derive": "hs1_simion_s / hs1_s",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-sds-speed",
-      "fragment": "54배 / 251배",
-      "number": "251",
-      "derive": "sds_simion_s / sds_s",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-magnetic-count",
-      "fragment": "자기장 예제 7개",
-      "number": "7",
-      "derive": "len(mag_cpu_s)",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-magnetic-min-speed",
-      "fragment": "1.4~48.7배",
-      "number": "1.4",
-      "derive": "min(mag_simion_s / mag_cpu_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-magnetic-max-speed",
-      "fragment": "1.4~48.7배",
-      "number": "48.7",
-      "derive": "max(mag_simion_s / mag_cpu_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-comparison-count",
-      "fragment": "정밀도를 맞춘 24개 비교",
-      "number": "24",
-      "derive": "len(shown_simion_s)",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-comparison-min-speed",
-      "fragment": "1.4~251배",
-      "number": "1.4",
-      "derive": "min(shown_simion_s / shown_ours_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-comparison-max-speed",
-      "fragment": "1.4~251배",
-      "number": "251",
-      "derive": "max(shown_simion_s / shown_ours_s)",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-quad-ion-count",
-      "fragment": "이온 1,000개의 도착 위치 오차",
-      "number": "1,000",
-      "derive": "quad_ions",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-tour-steps",
-      "fragment": "5단계 따라하기",
-      "number": "5",
-      "derive": "tour_steps",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-tour-screenshot-step",
-      "fragment": "따라하기 2단계",
-      "number": "2",
-      "derive": "tour_second_step",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-autosave-seconds",
-      "fragment": "변경 후 1.5초 자동 저장",
-      "number": "1.5",
-      "derive": "autosave_s",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-qa-surface-count",
-      "fragment": "42개 화면",
-      "number": "42",
-      "derive": "qa_surfaces",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-qa-small-width",
-      "fragment": "1280·1920 폭",
-      "number": "1280",
-      "derive": "qa_width_small",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-qa-large-width",
-      "fragment": "1280·1920 폭",
-      "number": "1920",
-      "derive": "qa_width_large",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-installer-mib",
-      "fragment": "약 28.5 MiB",
-      "number": "28.5",
-      "derive": "installer_bytes / (1024 * 1024)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-python-version",
-      "fragment": "Python 3.10 이상",
-      "number": "3.10",
-      "derive": "python_min",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-crate-count",
-      "fragment": "Rust 계산 코어 11개 크레이트",
-      "number": "11",
-      "derive": "crate_count",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-channels",
-      "fragment": "32개 로그 채널",
-      "number": "32",
-      "derive": "esa_channels",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-h",
-      "fragment": "격자 간격은 0.125 mm",
-      "number": "0.125",
-      "derive": "esa_h_mm",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-n",
-      "fragment": "전자 4,096개",
-      "number": "4,096",
-      "derive": "esa_n_per_point",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-kfit",
-      "fragment": "k = 0.0923 V/eV",
-      "number": "0.0923",
-      "derive": "esa_k_fit",
-      "rounding": "0.0001"
-    },
-    {
-      "id": "readme-esa-kgeo",
-      "fragment": "0.100 V/eV입니다",
-      "number": "0.100",
-      "derive": "esa_k_geometric",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-de-min",
-      "fragment": "0.10~0.22",
-      "number": "0.10",
-      "derive": "esa_de_min",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-de-max",
-      "fragment": "0.10~0.22",
-      "number": "0.22",
-      "derive": "esa_de_max",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-kfix",
-      "fragment": "0.0928 V/eV로",
-      "number": "0.0928",
-      "derive": "esa_k_fixed_code",
-      "rounding": "0.0001"
-    },
-    {
-      "id": "readme-esa-kdesign",
-      "fragment": "k = 0.1243 V/eV",
-      "number": "0.1243",
-      "derive": "esa_k_design",
-      "rounding": "0.0001"
-    },
-    {
-      "id": "readme-esa-ktarget",
-      "fragment": "목표 0.124 V/eV",
-      "number": "0.124",
-      "derive": "esa_k_target",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-kdiff",
-      "fragment": "0.25% 차이",
-      "number": "0.25",
-      "derive": "(esa_k_design - esa_k_target) / esa_k_target * 100",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-gap",
-      "fragment": "약 3.15 mm",
-      "number": "3.15",
-      "derive": "esa_design_gap_mm",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-capture-u",
-      "fragment": "판 전압차 376.6 V",
-      "number": "376.6",
-      "derive": "esa_capture_u_v",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-capture-e",
-      "fragment": "4.12 keV 전자",
-      "number": "4.12",
-      "derive": "esa_capture_e_ev / 1000",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-capture-rays",
-      "fragment": "궤도 60개",
-      "number": "60",
-      "derive": "esa_capture_rays",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-capture-pass",
-      "fragment": "초록 30개",
-      "number": "30",
-      "derive": "esa_capture_pass",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-capture-fail",
-      "fragment": "분홍 30개",
-      "number": "30",
-      "derive": "esa_capture_fail",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-capture-app-rays",
-      "fragment": "같은 전자 60개",
-      "number": "60",
-      "derive": "esa_capture_rays",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-h",
-      "fragment": "격자 0.125 mm 정규화본",
-      "number": "0.125",
-      "derive": "esa_h_mm",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-simion-n",
-      "fragment": "같은 전자 소스 4,096개",
-      "number": "4,096",
-      "derive": "esa_cmp_n",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-pot",
-      "fragment": "최대 20.3 µV",
-      "number": "20.3",
-      "derive": "esa_cmp_pot_max_v * 1000000",
-      "rounding": "0.1",
-      "relation": "upper_bound"
-    },
-    {
-      "id": "readme-esa-simion-cap-hits",
-      "fragment": "SIMION 검출 60개 전부",
-      "number": "60",
-      "derive": "esa_cmp_simion_capture_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-cap-miss",
-      "fragment": "비검출 60개를",
-      "number": "60",
-      "derive": "esa_cmp_simion_capture_rays - esa_cmp_simion_capture_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-n26",
-      "fragment": "채널 26에서 전자 4,096개",
-      "number": "4,096",
-      "derive": "esa_cmp_n",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-same",
-      "fragment": "4,092개가 SIMION과 같은",
-      "number": "4,092",
-      "derive": "esa_cmp_same",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-diff",
-      "fragment": "나머지 4개는",
-      "number": "4",
-      "derive": "esa_cmp_n - esa_cmp_same",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-only-sim",
-      "fragment": "SIMION만 검출 3개",
-      "number": "3",
-      "derive": "esa_cmp_only_simion",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-only-st",
-      "fragment": "SimRep만 검출 1개",
-      "number": "1",
-      "derive": "esa_cmp_only_stair",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-common",
-      "fragment": "둘 다 검출한 57개",
-      "number": "57",
-      "derive": "esa_cmp_common_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-hit-rms",
-      "fragment": "차이는 RMS 0.13 mm",
-      "number": "0.13",
-      "derive": "esa_cmp_hit_rms_mm",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-simion-cent-min",
-      "fragment": "0.3~0.5% 안에서",
-      "number": "0.3",
-      "derive": "min((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-simion-cent-max",
-      "fragment": "0.3~0.5% 안에서",
-      "number": "0.5",
-      "derive": "max((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)",
-      "rounding": "0.1",
-      "relation": "upper_bound"
-    },
-    {
-      "id": "readme-esa-simion-st-fwhm-min",
-      "fragment": "7.6~8.2% 좁습니다",
-      "number": "7.6",
-      "derive": "min((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-simion-st-fwhm-max",
-      "fragment": "7.6~8.2% 좁습니다",
-      "number": "8.2",
-      "derive": "max((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-simion-ex-fwhm-min",
-      "fragment": "19~35% 좁습니다",
-      "number": "19",
-      "derive": "min((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-ex-fwhm-max",
-      "fragment": "19~35% 좁습니다",
-      "number": "35",
-      "derive": "max((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-h",
-      "fragment": "격자 0.0625 mm에서",
-      "number": "0.0625",
-      "derive": "esa_g62_h_mm",
-      "rounding": "0.0001"
-    },
-    {
-      "id": "readme-esa-simion-g62-n",
-      "fragment": "전자 495,616개",
-      "number": "495,616",
-      "derive": "esa_g62_n",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch1-st-fwhm",
-      "fragment": "| 1 | 0.261 eV,",
-      "number": "0.261",
-      "derive": "esa_g62_ch1_stair_fwhm_ev",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch1-st-hits",
-      "fragment": "| 1 | 0.261 eV, 1,529개",
-      "number": "1,529",
-      "derive": "esa_g62_ch1_stair_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch1-ex-fwhm",
-      "fragment": "| 0.174 eV, 1,101개 |",
-      "number": "0.174",
-      "derive": "esa_g62_ch1_exact_fwhm_ev",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch1-ex-hits",
-      "fragment": "eV, 1,101개 | 0.258",
-      "number": "1,101",
-      "derive": "esa_g62_ch1_exact_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch1-ni-fwhm",
-      "fragment": "| 0.258 eV, 1,531개 |",
-      "number": "0.258",
-      "derive": "esa_g62_ch1_noins_fwhm_ev",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch1-ni-hits",
-      "fragment": "0.258 eV, 1,531개 |",
-      "number": "1,531",
-      "derive": "esa_g62_ch1_noins_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch16-st-fwhm",
-      "fragment": "| 16 | 38.2 eV,",
-      "number": "38.2",
-      "derive": "esa_g62_ch16_stair_fwhm_ev",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch16-st-hits",
-      "fragment": "| 16 | 38.2 eV, 1,527개",
-      "number": "1,527",
-      "derive": "esa_g62_ch16_stair_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch16-ex-fwhm",
-      "fragment": "| 25.8 eV, 1,114개 |",
-      "number": "25.8",
-      "derive": "esa_g62_ch16_exact_fwhm_ev",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch16-ex-hits",
-      "fragment": "eV, 1,114개 | 38.1",
-      "number": "1,114",
-      "derive": "esa_g62_ch16_exact_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch16-ni-fwhm",
-      "fragment": "| 38.1 eV, 1,537개 |",
-      "number": "38.1",
-      "derive": "esa_g62_ch16_noins_fwhm_ev",
-      "rounding": "0.1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch16-ni-hits",
-      "fragment": "38.1 eV, 1,537개 |",
-      "number": "1,537",
-      "derive": "esa_g62_ch16_noins_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch32-st-fwhm",
-      "fragment": "| 32 | 7,871 eV,",
-      "number": "7,871",
-      "derive": "esa_g62_ch32_stair_fwhm_ev",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch32-st-hits",
-      "fragment": "| 32 | 7,871 eV, 1,591개",
-      "number": "1,591",
-      "derive": "esa_g62_ch32_stair_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch32-ex-fwhm",
-      "fragment": "| 5,611 eV, 1,121개 |",
-      "number": "5,611",
-      "derive": "esa_g62_ch32_exact_fwhm_ev",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch32-ex-hits",
-      "fragment": "eV, 1,121개 | 7,980",
-      "number": "1,121",
-      "derive": "esa_g62_ch32_exact_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch32-ni-fwhm",
-      "fragment": "| 7,980 eV, 1,580개 |",
-      "number": "7,980",
-      "derive": "esa_g62_ch32_noins_fwhm_ev",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-g62-ch32-ni-hits",
-      "fragment": "7,980 eV, 1,580개 |",
-      "number": "1,580",
-      "derive": "esa_g62_ch32_noins_hits",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-ch32-bootstrap",
-      "fragment": "표준편차가 1,728 eV",
-      "number": "1,728",
-      "derive": "esa_g62_ch32_exact_fwhm_bootstrap_sd_ev",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-n",
-      "fragment": "(채널 26, 전자 4,096개)",
-      "number": "4,096",
-      "derive": "esa_cmp_n",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-runs",
-      "fragment": "계산 시간 (3회 중앙값)",
-      "number": "3",
-      "derive": "esa_fair_runs",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-sim-threads",
-      "fragment": "궤도 품질 9, 1스레드",
-      "number": "1",
-      "derive": "esa_fair_threads_single",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-sim-s",
-      "fragment": "| 8.08 s |",
-      "number": "8.08",
-      "derive": "esa_fair_simion_s",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-simion-fair-sim-ratio",
-      "fragment": "| 8.08 s | 1배 |",
-      "number": "1",
-      "derive": "esa_fair_simion_s / esa_fair_simion_s",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-1t-threads",
-      "fragment": "1e-3, 1스레드",
-      "number": "1",
-      "derive": "esa_fair_threads_single",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-1t-s",
-      "fragment": "| 0.475 s |",
-      "number": "0.475",
-      "derive": "esa_fair_simrep_1t_s",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-simion-fair-1t-ratio",
-      "fragment": "| 17배 |",
-      "number": "17",
-      "derive": "esa_fair_simion_s / esa_fair_simrep_1t_s",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-16t-threads",
-      "fragment": "1e-3, 16스레드",
-      "number": "16",
-      "derive": "esa_fair_threads_multi",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-16t-s",
-      "fragment": "| 0.040 s |",
-      "number": "0.040",
-      "derive": "esa_fair_simrep_16t_s",
-      "rounding": "0.001"
-    },
-    {
-      "id": "readme-esa-simion-fair-16t-ratio",
-      "fragment": "| 204배 |",
-      "number": "204",
-      "derive": "esa_fair_simion_s / esa_fair_simrep_16t_s",
-      "rounding": "1"
-    },
-    {
-      "id": "readme-esa-simion-fair-sim-rms",
-      "fragment": "RMS가 SIMION 0.13 mm",
-      "number": "0.13",
-      "derive": "esa_fair_simion_rms_mm",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-esa-simion-fair-st-rms",
-      "fragment": "SimRep 0.12 mm로",
-      "number": "0.12",
-      "derive": "esa_fair_simrep_rms_mm",
-      "rounding": "0.01"
-    },
-    {
-      "id": "readme-run-history-keep",
-      "fragment": "최근 50개",
-      "number": "50",
-      "derive": "default_keep_runs",
-      "rounding": "1"
-    }
+    {"id":"readme-report-pages","fragment":"Korean, 39 pages","number":"39","derive":"pdf_pages","rounding":"1"},
+    {"id":"readme-reconstruction-order","fragment":"**Smooth** 5th-order reconstruction","number":"5","derive":"reconstruction_order","rounding":"1"},
+    {"id":"readme-refine-nodes","fragment":"1,737 ten-thousand nodes","number":"1,737","derive":"refine_nodes / 10000","rounding":"1"},
+    {"id":"readme-refine-upper-bound","fragment":"Maximum difference from tightly converged SIMION: 6.42e-5 V","number":"6.42e-5","derive":"max(max(refine_max_v), max(refine_gpu_max_v))","rounding":"1e-7","note":"Rounded maximum, not a literal bound exceeded by 6.423e-5."},
+    {"id":"readme-refine-gpu-speed","fragment":"19.3x","number":"19.3","derive":"refine_simion_s * 1000 / refine_gpu_solve_ms","rounding":"0.1","note":"Repeated in the table and CLI comment."},
+    {"id":"readme-refine-setup-speed","fragment":"9.1x including preparation","number":"9.1","derive":"refine_simion_s * 1000 / (refine_gpu_setup_ms + refine_gpu_solve_ms)","rounding":"0.1"},
+    {"id":"readme-einzel-accuracy","fragment":"4.9x smaller error","number":"4.9","derive":"einzel_simion_rms / einzel_default_rms","rounding":"0.1"},
+    {"id":"readme-einzel-speed","fragment":"11.5x","number":"11.5","derive":"einzel_simion_10k_s / einzel_default_s","rounding":"0.1"},
+    {"id":"readme-quad-accuracy","fragment":"About 700x smaller endpoint error","number":"700","derive":"quad_simion_rms / quad_exact_rms","rounding":"1e2","note":"Approximate one-significant-figure ratio from pre-2026-10-28 reconstruction, not a current-code measurement."},
+    {"id":"readme-quad-speed","fragment":"71x","number":"71","derive":"quad_simion_s / quad_exact_s","rounding":"1","note":"Retained pre-2026-10-28 reconstruction timing."},
+    {"id":"readme-quad-historical-rms","fragment":"whose RMS was **0.0034 mm**","number":"0.0034","derive":"quad_exact_rms","rounding":"0.0001","note":"Explicitly labelled pre-2026-10-28 reconstruction."},
+    {"id":"readme-quad-ghost-retained-reference-rms","fragment":"**0.00386 mm** against the retained","number":"0.00386","derive":"quad_ghost_rms_retained_reference","rounding":"0.00001"},
+    {"id":"readme-quad-ghost-regenerated-reference-rms","fragment":"**0.00388 mm** against the regenerated","number":"0.00388","derive":"quad_ghost_rms_regenerated_reference","rounding":"0.00001"},
+    {"id":"readme-quad-ghost-reference-refinement-drift","fragment":"refinement difference is **0.00055 mm**","number":"0.00055","derive":"quad_ghost_reference_refinement_drift","rounding":"0.00001","note":"Reference refinement sensitivity, not calibrated uncertainty or a rigorous bound."},
+    {"id":"readme-hs1-speed","fragment":"54x / 251x","number":"54","derive":"hs1_simion_s / hs1_s","rounding":"1"},
+    {"id":"readme-sds-speed","fragment":"54x / 251x","number":"251","derive":"sds_simion_s / sds_s","rounding":"1"},
+    {"id":"readme-magnetic-count","fragment":"7 magnetic examples","number":"7","derive":"len(mag_cpu_s)","rounding":"1"},
+    {"id":"readme-magnetic-min-speed","fragment":"1.4–48.7x","number":"1.4","derive":"min(mag_simion_s / mag_cpu_s)","rounding":"0.1"},
+    {"id":"readme-magnetic-max-speed","fragment":"1.4–48.7x","number":"48.7","derive":"max(mag_simion_s / mag_cpu_s)","rounding":"0.1"},
+    {"id":"readme-comparison-count","fragment":"24 matched-accuracy comparisons","number":"24","derive":"len(shown_simion_s)","rounding":"1"},
+    {"id":"readme-comparison-min-speed","fragment":"1.4–251x","number":"1.4","derive":"min(shown_simion_s / shown_ours_s)","rounding":"0.1"},
+    {"id":"readme-comparison-max-speed","fragment":"1.4–251x","number":"251","derive":"max(shown_simion_s / shown_ours_s)","rounding":"1"},
+    {"id":"readme-quad-ion-count","fragment":"endpoint errors for 1,000 ions","number":"1,000","derive":"quad_ions","rounding":"1"},
+    {"id":"readme-tour-steps","fragment":"5-step tour","number":"5","derive":"tour_steps","rounding":"1"},
+    {"id":"readme-tour-screenshot-step","fragment":"Tour step 2","number":"2","derive":"tour_second_step","rounding":"1"},
+    {"id":"readme-autosave-seconds","fragment":"autosave 1.5 seconds","number":"1.5","derive":"autosave_s","rounding":"0.1"},
+    {"id":"readme-qa-surface-count","fragment":"42 surfaces","number":"42","derive":"qa_surfaces","rounding":"1"},
+    {"id":"readme-qa-small-width","fragment":"widths 1280 and 1920","number":"1280","derive":"qa_width_small","rounding":"1"},
+    {"id":"readme-qa-large-width","fragment":"widths 1280 and 1920","number":"1920","derive":"qa_width_large","rounding":"1"},
+    {"id":"readme-installer-mib","fragment":"about 28.5 MiB","number":"28.5","derive":"installer_bytes / (1024 * 1024)","rounding":"0.1"},
+    {"id":"readme-python-version","fragment":"Python 3.10 or newer","number":"3.10","derive":"python_min","rounding":"0.01"},
+    {"id":"readme-crate-count","fragment":"11 Rust core crates","number":"11","derive":"crate_count","rounding":"1"},
+    {"id":"readme-esa-channels","fragment":"32 logarithmic channels","number":"32","derive":"esa_channels","rounding":"1"},
+    {"id":"readme-esa-h","fragment":"grid spacing 0.125 mm","number":"0.125","derive":"esa_h_mm","rounding":"0.001"},
+    {"id":"readme-esa-n","fragment":"4,096 electrons per point","number":"4,096","derive":"esa_n_per_point","rounding":"1"},
+    {"id":"readme-esa-kfit","fragment":"k = 0.0923 V/eV","number":"0.0923","derive":"esa_k_fit","rounding":"0.0001"},
+    {"id":"readme-esa-kgeo","fragment":"0.100 V/eV.","number":"0.100","derive":"esa_k_geometric","rounding":"0.001"},
+    {"id":"readme-esa-de-min","fragment":"0.10–0.22","number":"0.10","derive":"esa_de_min","rounding":"0.01"},
+    {"id":"readme-esa-de-max","fragment":"0.10–0.22","number":"0.22","derive":"esa_de_max","rounding":"0.01"},
+    {"id":"readme-esa-kfix","fragment":"unchanged at 0.0928 V/eV","number":"0.0928","derive":"esa_k_fixed_code","rounding":"0.0001"},
+    {"id":"readme-esa-kdesign","fragment":"k = 0.1243 V/eV","number":"0.1243","derive":"esa_k_design","rounding":"0.0001"},
+    {"id":"readme-esa-ktarget","fragment":"target 0.124 V/eV","number":"0.124","derive":"esa_k_target","rounding":"0.001"},
+    {"id":"readme-esa-kdiff","fragment":"within 0.25%","number":"0.25","derive":"(esa_k_design - esa_k_target) / esa_k_target * 100","rounding":"0.01"},
+    {"id":"readme-esa-gap","fragment":"about 3.15 mm","number":"3.15","derive":"esa_design_gap_mm","rounding":"0.01"},
+    {"id":"readme-esa-capture-u","fragment":"plate voltage difference of 376.6 V","number":"376.6","derive":"esa_capture_u_v","rounding":"0.1"},
+    {"id":"readme-esa-capture-e","fragment":"4.12 keV electrons","number":"4.12","derive":"esa_capture_e_ev / 1000","rounding":"0.01"},
+    {"id":"readme-esa-capture-rays","fragment":"60 trajectories","number":"60","derive":"esa_capture_rays","rounding":"1"},
+    {"id":"readme-esa-capture-pass","fragment":"30 green trajectories","number":"30","derive":"esa_capture_pass","rounding":"1"},
+    {"id":"readme-esa-capture-fail","fragment":"30 pink trajectories","number":"30","derive":"esa_capture_fail","rounding":"1"},
+    {"id":"readme-esa-capture-app-rays","fragment":"and 60 electrons flown","number":"60","derive":"esa_capture_rays","rounding":"1"},
+    {"id":"readme-esa-simion-h","fragment":"normalized grid spacing 0.125 mm","number":"0.125","derive":"esa_h_mm","rounding":"0.001"},
+    {"id":"readme-esa-simion-n","fragment":"same source of 4,096 electrons","number":"4,096","derive":"esa_cmp_n","rounding":"1"},
+    {"id":"readme-esa-simion-pot","fragment":"maximum whole-grid potential difference was 20.3 µV","number":"20.3","derive":"esa_cmp_pot_max_v * 1000000","rounding":"0.1","relation":"upper_bound"},
+    {"id":"readme-esa-simion-cap-hits","fragment":"all 60 SIMION-detected electrons","number":"60","derive":"esa_cmp_simion_capture_hits","rounding":"1"},
+    {"id":"readme-esa-simion-cap-miss","fragment":"60 non-detected electrons","number":"60","derive":"esa_cmp_simion_capture_rays - esa_cmp_simion_capture_hits","rounding":"1"},
+    {"id":"readme-esa-simion-n26","fragment":"4,092 of 4,096 electrons","number":"4,096","derive":"esa_cmp_n","rounding":"1"},
+    {"id":"readme-esa-simion-same","fragment":"4,092 of 4,096 electrons","number":"4,092","derive":"esa_cmp_same","rounding":"1"},
+    {"id":"readme-esa-simion-diff","fragment":"remaining 4 differed","number":"4","derive":"esa_cmp_n - esa_cmp_same","rounding":"1"},
+    {"id":"readme-esa-simion-only-sim","fragment":"3 detected only by SIMION","number":"3","derive":"esa_cmp_only_simion","rounding":"1"},
+    {"id":"readme-esa-simion-only-st","fragment":"1 detected only by SimRep","number":"1","derive":"esa_cmp_only_stair","rounding":"1"},
+    {"id":"readme-esa-simion-common","fragment":"57 common detections","number":"57","derive":"esa_cmp_common_hits","rounding":"1"},
+    {"id":"readme-esa-simion-hit-rms","fragment":"position difference was RMS 0.13 mm","number":"0.13","derive":"esa_cmp_hit_rms_mm","rounding":"0.01"},
+    {"id":"readme-esa-simion-cent-min","fragment":"within 0.3–0.5%","number":"0.3","derive":"min((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)","rounding":"0.1"},
+    {"id":"readme-esa-simion-cent-max","fragment":"within 0.3–0.5%","number":"0.5","derive":"max((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)","rounding":"0.1","relation":"upper_bound"},
+    {"id":"readme-esa-simion-st-fwhm-min","fragment":"7.6–8.2% narrower","number":"7.6","derive":"min((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"0.1"},
+    {"id":"readme-esa-simion-st-fwhm-max","fragment":"7.6–8.2% narrower","number":"8.2","derive":"max((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"0.1"},
+    {"id":"readme-esa-simion-ex-fwhm-min","fragment":"19–35% narrower","number":"19","derive":"min((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"1"},
+    {"id":"readme-esa-simion-ex-fwhm-max","fragment":"19–35% narrower","number":"35","derive":"max((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"1"},
+    {"id":"readme-esa-simion-g62-h","fragment":"grid spacing 0.0625 mm","number":"0.0625","derive":"esa_g62_h_mm","rounding":"0.0001"},
+    {"id":"readme-esa-simion-g62-n","fragment":"495,616 electrons per channel","number":"495,616","derive":"esa_g62_n","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch1-st-fwhm","fragment":"| 1 | 0.261 eV,","number":"0.261","derive":"esa_g62_ch1_stair_fwhm_ev","rounding":"0.001"},
+    {"id":"readme-esa-simion-g62-ch1-st-hits","fragment":"| 1 | 0.261 eV, 1,529 hits","number":"1,529","derive":"esa_g62_ch1_stair_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch1-ex-fwhm","fragment":"| 0.174 eV, 1,101 hits |","number":"0.174","derive":"esa_g62_ch1_exact_fwhm_ev","rounding":"0.001"},
+    {"id":"readme-esa-simion-g62-ch1-ex-hits","fragment":"eV, 1,101 hits | 0.258","number":"1,101","derive":"esa_g62_ch1_exact_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch1-ni-fwhm","fragment":"| 0.258 eV, 1,531 hits |","number":"0.258","derive":"esa_g62_ch1_noins_fwhm_ev","rounding":"0.001"},
+    {"id":"readme-esa-simion-g62-ch1-ni-hits","fragment":"0.258 eV, 1,531 hits |","number":"1,531","derive":"esa_g62_ch1_noins_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch16-st-fwhm","fragment":"| 16 | 38.2 eV,","number":"38.2","derive":"esa_g62_ch16_stair_fwhm_ev","rounding":"0.1"},
+    {"id":"readme-esa-simion-g62-ch16-st-hits","fragment":"| 16 | 38.2 eV, 1,527 hits","number":"1,527","derive":"esa_g62_ch16_stair_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch16-ex-fwhm","fragment":"| 25.8 eV, 1,114 hits |","number":"25.8","derive":"esa_g62_ch16_exact_fwhm_ev","rounding":"0.1"},
+    {"id":"readme-esa-simion-g62-ch16-ex-hits","fragment":"eV, 1,114 hits | 38.1","number":"1,114","derive":"esa_g62_ch16_exact_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch16-ni-fwhm","fragment":"| 38.1 eV, 1,537 hits |","number":"38.1","derive":"esa_g62_ch16_noins_fwhm_ev","rounding":"0.1"},
+    {"id":"readme-esa-simion-g62-ch16-ni-hits","fragment":"38.1 eV, 1,537 hits |","number":"1,537","derive":"esa_g62_ch16_noins_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch32-st-fwhm","fragment":"| 32 | 7,871 eV,","number":"7,871","derive":"esa_g62_ch32_stair_fwhm_ev","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch32-st-hits","fragment":"| 32 | 7,871 eV, 1,591 hits","number":"1,591","derive":"esa_g62_ch32_stair_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch32-ex-fwhm","fragment":"| 5,611 eV, 1,121 hits |","number":"5,611","derive":"esa_g62_ch32_exact_fwhm_ev","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch32-ex-hits","fragment":"eV, 1,121 hits | 7,980","number":"1,121","derive":"esa_g62_ch32_exact_hits","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch32-ni-fwhm","fragment":"| 7,980 eV, 1,580 hits |","number":"7,980","derive":"esa_g62_ch32_noins_fwhm_ev","rounding":"1"},
+    {"id":"readme-esa-simion-g62-ch32-ni-hits","fragment":"7,980 eV, 1,580 hits |","number":"1,580","derive":"esa_g62_ch32_noins_hits","rounding":"1"},
+    {"id":"readme-esa-simion-ch32-bootstrap","fragment":"standard deviation is 1,728 eV","number":"1,728","derive":"esa_g62_ch32_exact_fwhm_bootstrap_sd_ev","rounding":"1"},
+    {"id":"readme-esa-simion-fair-n","fragment":"channel 26, 4,096 electrons","number":"4,096","derive":"esa_cmp_n","rounding":"1"},
+    {"id":"readme-esa-simion-fair-runs","fragment":"median of 3 runs","number":"3","derive":"esa_fair_runs","rounding":"1"},
+    {"id":"readme-esa-simion-fair-sim-threads","fragment":"trajectory quality 9, 1 thread","number":"1","derive":"esa_fair_threads_single","rounding":"1"},
+    {"id":"readme-esa-simion-fair-sim-s","fragment":"| 8.08 s |","number":"8.08","derive":"esa_fair_simion_s","rounding":"0.01"},
+    {"id":"readme-esa-simion-fair-sim-ratio","fragment":"| 8.08 s | 1x |","number":"1","derive":"esa_fair_simion_s / esa_fair_simion_s","rounding":"1"},
+    {"id":"readme-esa-simion-fair-1t-threads","fragment":"1e-3, 1 thread","number":"1","derive":"esa_fair_threads_single","rounding":"1"},
+    {"id":"readme-esa-simion-fair-1t-s","fragment":"| 0.475 s |","number":"0.475","derive":"esa_fair_simrep_1t_s","rounding":"0.001"},
+    {"id":"readme-esa-simion-fair-1t-ratio","fragment":"| 17x |","number":"17","derive":"esa_fair_simion_s / esa_fair_simrep_1t_s","rounding":"1"},
+    {"id":"readme-esa-simion-fair-16t-threads","fragment":"1e-3, 16 threads","number":"16","derive":"esa_fair_threads_multi","rounding":"1"},
+    {"id":"readme-esa-simion-fair-16t-s","fragment":"| 0.040 s |","number":"0.040","derive":"esa_fair_simrep_16t_s","rounding":"0.001"},
+    {"id":"readme-esa-simion-fair-16t-ratio","fragment":"| 204x |","number":"204","derive":"esa_fair_simion_s / esa_fair_simrep_16t_s","rounding":"1"},
+    {"id":"readme-esa-simion-fair-sim-rms","fragment":"RMS was SIMION 0.13 mm","number":"0.13","derive":"esa_fair_simion_rms_mm","rounding":"0.01"},
+    {"id":"readme-esa-simion-fair-st-rms","fragment":"SimRep 0.12 mm","number":"0.12","derive":"esa_fair_simrep_rms_mm","rounding":"0.01"},
+    {"id":"readme-run-history-keep","fragment":"latest 50 runs","number":"50","derive":"default_keep_runs","rounding":"1"}
+  ],
+  "readme_ko": [
+    {"id":"readme-ko-report-pages","fragment":"한국어, 39쪽","number":"39","derive":"pdf_pages","rounding":"1"},
+    {"id":"readme-ko-reconstruction-order","fragment":"매끄러운** 5차 재구성","number":"5","derive":"reconstruction_order","rounding":"1"},
+    {"id":"readme-ko-refine-nodes","fragment":"1,737만 점","number":"1,737","derive":"refine_nodes / 10000","rounding":"1"},
+    {"id":"readme-ko-refine-upper-bound","fragment":"엄격 설정 SIMION과 최대 6.42e-5 V 차이","number":"6.42e-5","derive":"max(max(refine_max_v), max(refine_gpu_max_v))","rounding":"1e-7","note":"Rounded maximum, not a literal upper bound."},
+    {"id":"readme-ko-refine-gpu-speed","fragment":"19.3배","number":"19.3","derive":"refine_simion_s * 1000 / refine_gpu_solve_ms","rounding":"0.1"},
+    {"id":"readme-ko-refine-setup-speed","fragment":"준비 포함 9.1배","number":"9.1","derive":"refine_simion_s * 1000 / (refine_gpu_setup_ms + refine_gpu_solve_ms)","rounding":"0.1"},
+    {"id":"readme-ko-einzel-accuracy","fragment":"오차가 4.9배 작음","number":"4.9","derive":"einzel_simion_rms / einzel_default_rms","rounding":"0.1"},
+    {"id":"readme-ko-einzel-speed","fragment":"11.5배","number":"11.5","derive":"einzel_simion_10k_s / einzel_default_s","rounding":"0.1"},
+    {"id":"readme-ko-quad-accuracy","fragment":"도착 위치 오차 약 700배 감소","number":"700","derive":"quad_simion_rms / quad_exact_rms","rounding":"1e2","note":"Approximate historical pre-2026-10-28 reconstruction ratio, not a current-code measurement."},
+    {"id":"readme-ko-quad-speed","fragment":"71배","number":"71","derive":"quad_simion_s / quad_exact_s","rounding":"1","note":"Historical pre-2026-10-28 reconstruction timing."},
+    {"id":"readme-ko-quad-historical-rms","fragment":"그 재구성의 RMS는 **0.0034 mm**","number":"0.0034","derive":"quad_exact_rms","rounding":"0.0001","note":"Explicitly labelled pre-2026-10-28 reconstruction."},
+    {"id":"readme-ko-quad-ghost-retained-reference-rms","fragment":"이전 `8x` 기준해에 대해 **0.00386 mm**","number":"0.00386","derive":"quad_ghost_rms_retained_reference","rounding":"0.00001"},
+    {"id":"readme-ko-quad-ghost-regenerated-reference-rms","fragment":"재구성한 `8x` 기준해에 대해 **0.00388 mm**","number":"0.00388","derive":"quad_ghost_rms_regenerated_reference","rounding":"0.00001"},
+    {"id":"readme-ko-quad-ghost-reference-refinement-drift","fragment":"정련 차이는 **0.00055 mm**","number":"0.00055","derive":"quad_ghost_reference_refinement_drift","rounding":"0.00001","note":"Refinement sensitivity, not calibrated uncertainty or a rigorous bound."},
+    {"id":"readme-ko-hs1-speed","fragment":"54배 / 251배","number":"54","derive":"hs1_simion_s / hs1_s","rounding":"1"},
+    {"id":"readme-ko-sds-speed","fragment":"54배 / 251배","number":"251","derive":"sds_simion_s / sds_s","rounding":"1"},
+    {"id":"readme-ko-magnetic-count","fragment":"자기장 예제 7개","number":"7","derive":"len(mag_cpu_s)","rounding":"1"},
+    {"id":"readme-ko-magnetic-min-speed","fragment":"1.4~48.7배","number":"1.4","derive":"min(mag_simion_s / mag_cpu_s)","rounding":"0.1"},
+    {"id":"readme-ko-magnetic-max-speed","fragment":"1.4~48.7배","number":"48.7","derive":"max(mag_simion_s / mag_cpu_s)","rounding":"0.1"},
+    {"id":"readme-ko-comparison-count","fragment":"정밀도를 맞춘 24개 비교","number":"24","derive":"len(shown_simion_s)","rounding":"1"},
+    {"id":"readme-ko-comparison-min-speed","fragment":"1.4~251배","number":"1.4","derive":"min(shown_simion_s / shown_ours_s)","rounding":"0.1"},
+    {"id":"readme-ko-comparison-max-speed","fragment":"1.4~251배","number":"251","derive":"max(shown_simion_s / shown_ours_s)","rounding":"1"},
+    {"id":"readme-ko-quad-ion-count","fragment":"이온 1,000개의 도착 위치 오차","number":"1,000","derive":"quad_ions","rounding":"1"},
+    {"id":"readme-ko-tour-steps","fragment":"5단계 따라하기","number":"5","derive":"tour_steps","rounding":"1"},
+    {"id":"readme-ko-tour-screenshot-step","fragment":"따라하기 2단계","number":"2","derive":"tour_second_step","rounding":"1"},
+    {"id":"readme-ko-autosave-seconds","fragment":"변경 후 1.5초 자동 저장","number":"1.5","derive":"autosave_s","rounding":"0.1"},
+    {"id":"readme-ko-qa-surface-count","fragment":"42개 화면","number":"42","derive":"qa_surfaces","rounding":"1"},
+    {"id":"readme-ko-qa-small-width","fragment":"1280·1920 폭","number":"1280","derive":"qa_width_small","rounding":"1"},
+    {"id":"readme-ko-qa-large-width","fragment":"1280·1920 폭","number":"1920","derive":"qa_width_large","rounding":"1"},
+    {"id":"readme-ko-installer-mib","fragment":"약 28.5 MiB","number":"28.5","derive":"installer_bytes / (1024 * 1024)","rounding":"0.1"},
+    {"id":"readme-ko-python-version","fragment":"Python 3.10 이상","number":"3.10","derive":"python_min","rounding":"0.01"},
+    {"id":"readme-ko-crate-count","fragment":"Rust 계산 코어 11개 크레이트","number":"11","derive":"crate_count","rounding":"1"},
+    {"id":"readme-ko-esa-channels","fragment":"32개 로그 채널","number":"32","derive":"esa_channels","rounding":"1"},
+    {"id":"readme-ko-esa-h","fragment":"격자 간격은 0.125 mm","number":"0.125","derive":"esa_h_mm","rounding":"0.001"},
+    {"id":"readme-ko-esa-n","fragment":"전자 4,096개","number":"4,096","derive":"esa_n_per_point","rounding":"1"},
+    {"id":"readme-ko-esa-kfit","fragment":"k = 0.0923 V/eV","number":"0.0923","derive":"esa_k_fit","rounding":"0.0001"},
+    {"id":"readme-ko-esa-kgeo","fragment":"0.100 V/eV입니다","number":"0.100","derive":"esa_k_geometric","rounding":"0.001"},
+    {"id":"readme-ko-esa-de-min","fragment":"0.10~0.22","number":"0.10","derive":"esa_de_min","rounding":"0.01"},
+    {"id":"readme-ko-esa-de-max","fragment":"0.10~0.22","number":"0.22","derive":"esa_de_max","rounding":"0.01"},
+    {"id":"readme-ko-esa-kfix","fragment":"0.0928 V/eV로","number":"0.0928","derive":"esa_k_fixed_code","rounding":"0.0001"},
+    {"id":"readme-ko-esa-kdesign","fragment":"k = 0.1243 V/eV","number":"0.1243","derive":"esa_k_design","rounding":"0.0001"},
+    {"id":"readme-ko-esa-ktarget","fragment":"목표 0.124 V/eV","number":"0.124","derive":"esa_k_target","rounding":"0.001"},
+    {"id":"readme-ko-esa-kdiff","fragment":"0.25% 차이","number":"0.25","derive":"(esa_k_design - esa_k_target) / esa_k_target * 100","rounding":"0.01"},
+    {"id":"readme-ko-esa-gap","fragment":"약 3.15 mm","number":"3.15","derive":"esa_design_gap_mm","rounding":"0.01"},
+    {"id":"readme-ko-esa-capture-u","fragment":"판 전압차 376.6 V","number":"376.6","derive":"esa_capture_u_v","rounding":"0.1"},
+    {"id":"readme-ko-esa-capture-e","fragment":"4.12 keV 전자","number":"4.12","derive":"esa_capture_e_ev / 1000","rounding":"0.01"},
+    {"id":"readme-ko-esa-capture-rays","fragment":"궤도 60개","number":"60","derive":"esa_capture_rays","rounding":"1"},
+    {"id":"readme-ko-esa-capture-pass","fragment":"초록 30개","number":"30","derive":"esa_capture_pass","rounding":"1"},
+    {"id":"readme-ko-esa-capture-fail","fragment":"분홍 30개","number":"30","derive":"esa_capture_fail","rounding":"1"},
+    {"id":"readme-ko-esa-capture-app-rays","fragment":"같은 전자 60개","number":"60","derive":"esa_capture_rays","rounding":"1"},
+    {"id":"readme-ko-esa-simion-h","fragment":"격자 0.125 mm 정규화본","number":"0.125","derive":"esa_h_mm","rounding":"0.001"},
+    {"id":"readme-ko-esa-simion-n","fragment":"같은 전자 소스 4,096개","number":"4,096","derive":"esa_cmp_n","rounding":"1"},
+    {"id":"readme-ko-esa-simion-pot","fragment":"최대 20.3 µV","number":"20.3","derive":"esa_cmp_pot_max_v * 1000000","rounding":"0.1","relation":"upper_bound"},
+    {"id":"readme-ko-esa-simion-cap-hits","fragment":"SIMION 검출 60개 전부","number":"60","derive":"esa_cmp_simion_capture_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-cap-miss","fragment":"비검출 60개를","number":"60","derive":"esa_cmp_simion_capture_rays - esa_cmp_simion_capture_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-n26","fragment":"채널 26에서 전자 4,096개","number":"4,096","derive":"esa_cmp_n","rounding":"1"},
+    {"id":"readme-ko-esa-simion-same","fragment":"4,092개가 SIMION과 같은","number":"4,092","derive":"esa_cmp_same","rounding":"1"},
+    {"id":"readme-ko-esa-simion-diff","fragment":"나머지 4개는","number":"4","derive":"esa_cmp_n - esa_cmp_same","rounding":"1"},
+    {"id":"readme-ko-esa-simion-only-sim","fragment":"SIMION만 검출 3개","number":"3","derive":"esa_cmp_only_simion","rounding":"1"},
+    {"id":"readme-ko-esa-simion-only-st","fragment":"SimRep만 검출 1개","number":"1","derive":"esa_cmp_only_stair","rounding":"1"},
+    {"id":"readme-ko-esa-simion-common","fragment":"둘 다 검출한 57개","number":"57","derive":"esa_cmp_common_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-hit-rms","fragment":"차이는 RMS 0.13 mm","number":"0.13","derive":"esa_cmp_hit_rms_mm","rounding":"0.01"},
+    {"id":"readme-ko-esa-simion-cent-min","fragment":"0.3~0.5% 안에서","number":"0.3","derive":"min((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)","rounding":"0.1"},
+    {"id":"readme-ko-esa-simion-cent-max","fragment":"0.3~0.5% 안에서","number":"0.5","derive":"max((esa_cmp_ch1_simion_centroid_ev - esa_cmp_ch1_stair_centroid_ev) / esa_cmp_ch1_simion_centroid_ev * 100, (esa_cmp_ch16_simion_centroid_ev - esa_cmp_ch16_stair_centroid_ev) / esa_cmp_ch16_simion_centroid_ev * 100, (esa_cmp_ch32_simion_centroid_ev - esa_cmp_ch32_stair_centroid_ev) / esa_cmp_ch32_simion_centroid_ev * 100)","rounding":"0.1","relation":"upper_bound"},
+    {"id":"readme-ko-esa-simion-st-fwhm-min","fragment":"7.6~8.2% 좁습니다","number":"7.6","derive":"min((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"0.1"},
+    {"id":"readme-ko-esa-simion-st-fwhm-max","fragment":"7.6~8.2% 좁습니다","number":"8.2","derive":"max((1 - esa_cmp_ch1_stair_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_stair_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_stair_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"0.1"},
+    {"id":"readme-ko-esa-simion-ex-fwhm-min","fragment":"19~35% 좁습니다","number":"19","derive":"min((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"1"},
+    {"id":"readme-ko-esa-simion-ex-fwhm-max","fragment":"19~35% 좁습니다","number":"35","derive":"max((1 - esa_cmp_ch1_exact_fwhm_ev / esa_cmp_ch1_simion_fwhm_ev) * 100, (1 - esa_cmp_ch16_exact_fwhm_ev / esa_cmp_ch16_simion_fwhm_ev) * 100, (1 - esa_cmp_ch32_exact_fwhm_ev / esa_cmp_ch32_simion_fwhm_ev) * 100)","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-h","fragment":"격자 0.0625 mm에서","number":"0.0625","derive":"esa_g62_h_mm","rounding":"0.0001"},
+    {"id":"readme-ko-esa-simion-g62-n","fragment":"전자 495,616개","number":"495,616","derive":"esa_g62_n","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch1-st-fwhm","fragment":"| 1 | 0.261 eV,","number":"0.261","derive":"esa_g62_ch1_stair_fwhm_ev","rounding":"0.001"},
+    {"id":"readme-ko-esa-simion-g62-ch1-st-hits","fragment":"| 1 | 0.261 eV, 1,529개","number":"1,529","derive":"esa_g62_ch1_stair_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch1-ex-fwhm","fragment":"| 0.174 eV, 1,101개 |","number":"0.174","derive":"esa_g62_ch1_exact_fwhm_ev","rounding":"0.001"},
+    {"id":"readme-ko-esa-simion-g62-ch1-ex-hits","fragment":"eV, 1,101개 | 0.258","number":"1,101","derive":"esa_g62_ch1_exact_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch1-ni-fwhm","fragment":"| 0.258 eV, 1,531개 |","number":"0.258","derive":"esa_g62_ch1_noins_fwhm_ev","rounding":"0.001"},
+    {"id":"readme-ko-esa-simion-g62-ch1-ni-hits","fragment":"0.258 eV, 1,531개 |","number":"1,531","derive":"esa_g62_ch1_noins_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch16-st-fwhm","fragment":"| 16 | 38.2 eV,","number":"38.2","derive":"esa_g62_ch16_stair_fwhm_ev","rounding":"0.1"},
+    {"id":"readme-ko-esa-simion-g62-ch16-st-hits","fragment":"| 16 | 38.2 eV, 1,527개","number":"1,527","derive":"esa_g62_ch16_stair_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch16-ex-fwhm","fragment":"| 25.8 eV, 1,114개 |","number":"25.8","derive":"esa_g62_ch16_exact_fwhm_ev","rounding":"0.1"},
+    {"id":"readme-ko-esa-simion-g62-ch16-ex-hits","fragment":"eV, 1,114개 | 38.1","number":"1,114","derive":"esa_g62_ch16_exact_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch16-ni-fwhm","fragment":"| 38.1 eV, 1,537개 |","number":"38.1","derive":"esa_g62_ch16_noins_fwhm_ev","rounding":"0.1"},
+    {"id":"readme-ko-esa-simion-g62-ch16-ni-hits","fragment":"38.1 eV, 1,537개 |","number":"1,537","derive":"esa_g62_ch16_noins_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch32-st-fwhm","fragment":"| 32 | 7,871 eV,","number":"7,871","derive":"esa_g62_ch32_stair_fwhm_ev","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch32-st-hits","fragment":"| 32 | 7,871 eV, 1,591개","number":"1,591","derive":"esa_g62_ch32_stair_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch32-ex-fwhm","fragment":"| 5,611 eV, 1,121개 |","number":"5,611","derive":"esa_g62_ch32_exact_fwhm_ev","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch32-ex-hits","fragment":"eV, 1,121개 | 7,980","number":"1,121","derive":"esa_g62_ch32_exact_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch32-ni-fwhm","fragment":"| 7,980 eV, 1,580개 |","number":"7,980","derive":"esa_g62_ch32_noins_fwhm_ev","rounding":"1"},
+    {"id":"readme-ko-esa-simion-g62-ch32-ni-hits","fragment":"7,980 eV, 1,580개 |","number":"1,580","derive":"esa_g62_ch32_noins_hits","rounding":"1"},
+    {"id":"readme-ko-esa-simion-ch32-bootstrap","fragment":"표준편차가 1,728 eV","number":"1,728","derive":"esa_g62_ch32_exact_fwhm_bootstrap_sd_ev","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-n","fragment":"(채널 26, 전자 4,096개)","number":"4,096","derive":"esa_cmp_n","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-runs","fragment":"계산 시간 (3회 중앙값)","number":"3","derive":"esa_fair_runs","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-sim-threads","fragment":"궤도 품질 9, 1스레드","number":"1","derive":"esa_fair_threads_single","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-sim-s","fragment":"| 8.08 s |","number":"8.08","derive":"esa_fair_simion_s","rounding":"0.01"},
+    {"id":"readme-ko-esa-simion-fair-sim-ratio","fragment":"| 8.08 s | 1배 |","number":"1","derive":"esa_fair_simion_s / esa_fair_simion_s","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-1t-threads","fragment":"1e-3, 1스레드","number":"1","derive":"esa_fair_threads_single","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-1t-s","fragment":"| 0.475 s |","number":"0.475","derive":"esa_fair_simrep_1t_s","rounding":"0.001"},
+    {"id":"readme-ko-esa-simion-fair-1t-ratio","fragment":"| 17배 |","number":"17","derive":"esa_fair_simion_s / esa_fair_simrep_1t_s","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-16t-threads","fragment":"1e-3, 16스레드","number":"16","derive":"esa_fair_threads_multi","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-16t-s","fragment":"| 0.040 s |","number":"0.040","derive":"esa_fair_simrep_16t_s","rounding":"0.001"},
+    {"id":"readme-ko-esa-simion-fair-16t-ratio","fragment":"| 204배 |","number":"204","derive":"esa_fair_simion_s / esa_fair_simrep_16t_s","rounding":"1"},
+    {"id":"readme-ko-esa-simion-fair-sim-rms","fragment":"RMS가 SIMION 0.13 mm","number":"0.13","derive":"esa_fair_simion_rms_mm","rounding":"0.01"},
+    {"id":"readme-ko-esa-simion-fair-st-rms","fragment":"SimRep 0.12 mm로","number":"0.12","derive":"esa_fair_simrep_rms_mm","rounding":"0.01"},
+    {"id":"readme-ko-run-history-keep","fragment":"최근 50개","number":"50","derive":"default_keep_runs","rounding":"1"}
   ],
   "report_table13": [
-    {
-      "id": "table13-refine-axis",
-      "cell": [
-        0,
-        1
-      ],
-      "fragment": "259³ 배열, GPU",
-      "number": "259",
-      "derive": "refine_axis",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-refine-upper-bound",
-      "cell": [
-        0,
-        2
-      ],
-      "fragment": "엄격 SIMION과 최대 6.42e-5 V 차이",
-      "number": "6.42e-5",
-      "derive": "max(max(refine_max_v), max(refine_gpu_max_v))",
-      "rounding": "1e-7",
-      "note": "Wording changed 2026-10-25 from the literal bound \"6.4e-5 V 이내\" (exceeded by 6.423e-5) to the rounded maximum."
-    },
-    {
-      "id": "table13-refine-solve-speed",
-      "cell": [
-        0,
-        3
-      ],
-      "fragment": "19.3 (준비 포함 9.1)",
-      "number": "19.3",
-      "derive": "refine_simion_s * 1000 / refine_gpu_solve_ms",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-refine-setup-speed",
-      "cell": [
-        0,
-        3
-      ],
-      "fragment": "19.3 (준비 포함 9.1)",
-      "number": "9.1",
-      "derive": "refine_simion_s * 1000 / (refine_gpu_setup_ms + refine_gpu_solve_ms)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-cutcell-min-accuracy",
-      "cell": [
-        1,
-        2
-      ],
-      "fragment": "오차 78~84배 감소",
-      "number": "78",
-      "derive": "min(stair_errors / cut_errors)",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-cutcell-max-accuracy",
-      "cell": [
-        1,
-        2
-      ],
-      "fragment": "오차 78~84배 감소",
-      "number": "84",
-      "derive": "max(stair_errors / cut_errors)",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-einzel-ion-thousands",
-      "cell": [
-        2,
-        1
-      ],
-      "fragment": "einzel 1천 개, CPU(보존 one-cell 설정), T.Qual 209 대비",
-      "number": "1",
-      "derive": "einzel_subset_n / 1000",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-einzel-tqual",
-      "cell": [
-        2,
-        1
-      ],
-      "fragment": "einzel 1천 개, CPU(보존 one-cell 설정), T.Qual 209 대비",
-      "number": "209",
-      "derive": "einzel_tqual",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-einzel-ours-rms",
-      "cell": [
-        2,
-        2
-      ],
-      "fragment": "RMS 0.226 대 1.106 mm",
-      "number": "0.226",
-      "derive": "einzel_retained_rms",
-      "rounding": "0.001",
-      "note": "Preserved one-cell row, not the current-default RMS used in the README comparison."
-    },
-    {
-      "id": "table13-einzel-simion-rms",
-      "cell": [
-        2,
-        2
-      ],
-      "fragment": "RMS 0.226 대 1.106 mm",
-      "number": "1.106",
-      "derive": "einzel_simion_rms",
-      "rounding": "0.001"
-    },
-    {
-      "id": "table13-einzel-retained-speed",
-      "cell": [
-        2,
-        3
-      ],
-      "fragment": "46",
-      "number": "46",
-      "derive": "einzel_retained_simion_s / einzel_retained_s",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-quad-ours-rms",
-      "cell": [
-        3,
-        2
-      ],
-      "fragment": "RMS 0.0034 대 2.38 mm",
-      "number": "0.0034",
-      "derive": "quad_exact_rms",
-      "rounding": "0.0001",
-      "note": "Historical pre-2026-10-28 reconstruction; current-code/reference sensitivity is stated beside the report table."
-    },
-    {
-      "id": "table13-quad-simion-rms",
-      "cell": [
-        3,
-        2
-      ],
-      "fragment": "RMS 0.0034 대 2.38 mm",
-      "number": "2.38",
-      "derive": "quad_simion_rms",
-      "rounding": "0.01"
-    },
-    {
-      "id": "table13-quad-speed",
-      "cell": [
-        3,
-        3
-      ],
-      "fragment": "71",
-      "number": "71",
-      "derive": "quad_simion_s / quad_exact_s",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-magnetic-count",
-      "cell": [
-        4,
-        1
-      ],
-      "fragment": "SIMION 예제 7개",
-      "number": "7",
-      "derive": "len(mag_cpu_s)",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-magnetic-min-speed",
-      "cell": [
-        4,
-        3
-      ],
-      "fragment": "1.4~48.7",
-      "number": "1.4",
-      "derive": "min(mag_simion_s / mag_cpu_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-magnetic-max-speed",
-      "cell": [
-        4,
-        3
-      ],
-      "fragment": "1.4~48.7",
-      "number": "48.7",
-      "derive": "max(mag_simion_s / mag_cpu_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-collision-ion-count",
-      "cell": [
-        5,
-        1
-      ],
-      "fragment": "HS1, SDS 4,096개",
-      "number": "4,096",
-      "derive": "collision_ions",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-hs1-speed",
-      "cell": [
-        5,
-        3
-      ],
-      "fragment": "54, 251",
-      "number": "54",
-      "derive": "hs1_simion_s / hs1_s",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-sds-speed",
-      "cell": [
-        5,
-        3
-      ],
-      "fragment": "54, 251",
-      "number": "251",
-      "derive": "sds_simion_s / sds_s",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-dielectric-linear-count",
-      "cell": [
-        6,
-        1
-      ],
-      "fragment": "선형 3개, 비선형 1개",
-      "number": "3",
-      "derive": "len(dielectric_auto_simion_s)",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-dielectric-nonlinear-count",
-      "cell": [
-        6,
-        1
-      ],
-      "fragment": "선형 3개, 비선형 1개",
-      "number": "1",
-      "derive": "nonlinear_cases",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-dielectric-min-speed",
-      "cell": [
-        6,
-        3
-      ],
-      "fragment": "1.8~23.4",
-      "number": "1.8",
-      "derive": "min(min(dielectric_auto_simion_s / (dielectric_auto_solve_s + dielectric_auto_setup_s + dielectric_auto_material_s)), nonlinear_simion_s / nonlinear_cpu_s, nonlinear_simion_s / nonlinear_gpu_s)",
-      "rounding": "0.1",
-      "note": "Includes all three linear auto choices and both qualified nonlinear devices. Phase sums follow the table's cited Automatic selection section; they are not whole-run medians."
-    },
-    {
-      "id": "table13-dielectric-max-speed",
-      "cell": [
-        6,
-        3
-      ],
-      "fragment": "1.8~23.4",
-      "number": "23.4",
-      "derive": "max(max(dielectric_auto_simion_s / (dielectric_auto_solve_s + dielectric_auto_setup_s + dielectric_auto_material_s)), nonlinear_simion_s / nonlinear_cpu_s, nonlinear_simion_s / nonlinear_gpu_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-beam-example-count",
-      "cell": [
-        7,
-        1
-      ],
-      "fragment": "Coulombic, beam 2개",
-      "number": "2",
-      "derive": "len(beam_simion_s)",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-spacecharge-min-speed",
-      "cell": [
-        7,
-        3
-      ],
-      "fragment": "2.0~3.7",
-      "number": "2.0",
-      "derive": "min(min(beam_simion_s / beam_ours_s), coulombic_simion_s / coulombic_ours_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-spacecharge-max-speed",
-      "cell": [
-        7,
-        3
-      ],
-      "fragment": "2.0~3.7",
-      "number": "3.7",
-      "derive": "max(max(beam_simion_s / beam_ours_s), coulombic_simion_s / coulombic_ours_s)",
-      "rounding": "0.1"
-    },
-    {
-      "id": "table13-potential-count",
-      "cell": [
-        8,
-        1
-      ],
-      "fragment": "계산 22건",
-      "number": "22",
-      "derive": "potential_timed",
-      "rounding": "1"
-    },
-    {
-      "id": "table13-potential-min-speed",
-      "cell": [
-        8,
-        3
-      ],
-      "fragment": "1.7~34",
-      "number": "1.7",
-      "derive": "min(min(potential_simion_s / potential_ours_s), uniform_simion_s * 1000 / uniform_ms)",
-      "rounding": "0.1",
-      "note": "The historical uniform Az row is replaced by the measured fix, not included as a losing control."
-    },
-    {
-      "id": "table13-potential-max-speed",
-      "cell": [
-        8,
-        3
-      ],
-      "fragment": "1.7~34",
-      "number": "34",
-      "derive": "max(max(potential_simion_s / potential_ours_s), uniform_simion_s * 1000 / uniform_ms)",
-      "rounding": "1"
-    }
+    {"id":"table13-refine-axis","cell":[0,1],"fragment":"259³ 배열, GPU","number":"259","derive":"refine_axis","rounding":"1"},
+    {"id":"table13-refine-upper-bound","cell":[0,2],"fragment":"엄격 SIMION과 최대 6.42e-5 V 차이","number":"6.42e-5","derive":"max(max(refine_max_v), max(refine_gpu_max_v))","rounding":"1e-7","note":"Rounded maximum, not a literal upper bound exceeded by 6.423e-5."},
+    {"id":"table13-refine-solve-speed","cell":[0,3],"fragment":"19.3 (준비 포함 9.1)","number":"19.3","derive":"refine_simion_s * 1000 / refine_gpu_solve_ms","rounding":"0.1"},
+    {"id":"table13-refine-setup-speed","cell":[0,3],"fragment":"19.3 (준비 포함 9.1)","number":"9.1","derive":"refine_simion_s * 1000 / (refine_gpu_setup_ms + refine_gpu_solve_ms)","rounding":"0.1"},
+    {"id":"table13-cutcell-min-accuracy","cell":[1,2],"fragment":"오차 78~84배 감소","number":"78","derive":"min(stair_errors / cut_errors)","rounding":"1"},
+    {"id":"table13-cutcell-max-accuracy","cell":[1,2],"fragment":"오차 78~84배 감소","number":"84","derive":"max(stair_errors / cut_errors)","rounding":"1"},
+    {"id":"table13-einzel-ion-thousands","cell":[2,1],"fragment":"einzel 1천 개, CPU(보존 one-cell 설정), T.Qual 209 대비","number":"1","derive":"einzel_subset_n / 1000","rounding":"1"},
+    {"id":"table13-einzel-tqual","cell":[2,1],"fragment":"einzel 1천 개, CPU(보존 one-cell 설정), T.Qual 209 대비","number":"209","derive":"einzel_tqual","rounding":"1"},
+    {"id":"table13-einzel-ours-rms","cell":[2,2],"fragment":"RMS 0.226 대 1.106 mm","number":"0.226","derive":"einzel_retained_rms","rounding":"0.001","note":"Preserved one-cell row, not the current-default README RMS."},
+    {"id":"table13-einzel-simion-rms","cell":[2,2],"fragment":"RMS 0.226 대 1.106 mm","number":"1.106","derive":"einzel_simion_rms","rounding":"0.001"},
+    {"id":"table13-einzel-retained-speed","cell":[2,3],"fragment":"46","number":"46","derive":"einzel_retained_simion_s / einzel_retained_s","rounding":"1"},
+    {"id":"table13-quad-ours-rms","cell":[3,2],"fragment":"RMS 0.0034 대 2.38 mm","number":"0.0034","derive":"quad_exact_rms","rounding":"0.0001","note":"Historical pre-2026-10-28 reconstruction; current-code/reference sensitivity is stated beside the report table."},
+    {"id":"table13-quad-simion-rms","cell":[3,2],"fragment":"RMS 0.0034 대 2.38 mm","number":"2.38","derive":"quad_simion_rms","rounding":"0.01"},
+    {"id":"table13-quad-speed","cell":[3,3],"fragment":"71","number":"71","derive":"quad_simion_s / quad_exact_s","rounding":"1"},
+    {"id":"table13-magnetic-count","cell":[4,1],"fragment":"SIMION 예제 7개","number":"7","derive":"len(mag_cpu_s)","rounding":"1"},
+    {"id":"table13-magnetic-min-speed","cell":[4,3],"fragment":"1.4~48.7","number":"1.4","derive":"min(mag_simion_s / mag_cpu_s)","rounding":"0.1"},
+    {"id":"table13-magnetic-max-speed","cell":[4,3],"fragment":"1.4~48.7","number":"48.7","derive":"max(mag_simion_s / mag_cpu_s)","rounding":"0.1"},
+    {"id":"table13-collision-ion-count","cell":[5,1],"fragment":"HS1, SDS 4,096개","number":"4,096","derive":"collision_ions","rounding":"1"},
+    {"id":"table13-hs1-speed","cell":[5,3],"fragment":"54, 251","number":"54","derive":"hs1_simion_s / hs1_s","rounding":"1"},
+    {"id":"table13-sds-speed","cell":[5,3],"fragment":"54, 251","number":"251","derive":"sds_simion_s / sds_s","rounding":"1"},
+    {"id":"table13-dielectric-linear-count","cell":[6,1],"fragment":"선형 3개, 비선형 1개","number":"3","derive":"len(dielectric_auto_simion_s)","rounding":"1"},
+    {"id":"table13-dielectric-nonlinear-count","cell":[6,1],"fragment":"선형 3개, 비선형 1개","number":"1","derive":"nonlinear_cases","rounding":"1"},
+    {"id":"table13-dielectric-min-speed","cell":[6,3],"fragment":"1.8~23.4","number":"1.8","derive":"min(min(dielectric_auto_simion_s / (dielectric_auto_solve_s + dielectric_auto_setup_s + dielectric_auto_material_s)), nonlinear_simion_s / nonlinear_cpu_s, nonlinear_simion_s / nonlinear_gpu_s)","rounding":"0.1","note":"All three linear auto choices and both qualified nonlinear devices; phase sums are not whole-run medians."},
+    {"id":"table13-dielectric-max-speed","cell":[6,3],"fragment":"1.8~23.4","number":"23.4","derive":"max(max(dielectric_auto_simion_s / (dielectric_auto_solve_s + dielectric_auto_setup_s + dielectric_auto_material_s)), nonlinear_simion_s / nonlinear_cpu_s, nonlinear_simion_s / nonlinear_gpu_s)","rounding":"0.1"},
+    {"id":"table13-beam-example-count","cell":[7,1],"fragment":"Coulombic, beam 2개","number":"2","derive":"len(beam_simion_s)","rounding":"1"},
+    {"id":"table13-spacecharge-min-speed","cell":[7,3],"fragment":"2.0~3.7","number":"2.0","derive":"min(min(beam_simion_s / beam_ours_s), coulombic_simion_s / coulombic_ours_s)","rounding":"0.1"},
+    {"id":"table13-spacecharge-max-speed","cell":[7,3],"fragment":"2.0~3.7","number":"3.7","derive":"max(max(beam_simion_s / beam_ours_s), coulombic_simion_s / coulombic_ours_s)","rounding":"0.1"},
+    {"id":"table13-potential-count","cell":[8,1],"fragment":"계산 22건","number":"22","derive":"potential_timed","rounding":"1"},
+    {"id":"table13-potential-min-speed","cell":[8,3],"fragment":"1.7~34","number":"1.7","derive":"min(min(potential_simion_s / potential_ours_s), uniform_simion_s * 1000 / uniform_ms)","rounding":"0.1","note":"Historical uniform Az row replaced by the measured fix, not included as a losing control."},
+    {"id":"table13-potential-max-speed","cell":[8,3],"fragment":"1.7~34","number":"34","derive":"max(max(potential_simion_s / potential_ours_s), uniform_simion_s * 1000 / uniform_ms)","rounding":"1"}
   ]
 }
