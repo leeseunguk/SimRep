@@ -1,3 +1,6 @@
+#[path = "sdf_auto.rs"]
+pub(crate) mod sdf_auto;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter, Write};
@@ -82,7 +85,8 @@ pub struct FlyOptions {
     /// Add exact collisions to the staircase field.
     #[arg(long, value_parser = ["insulators", "all"], requires = "pa")]
     surface_collisions: Option<String>,
-    #[arg(long, hide = true, default_value = "exact", value_parser = ["exact", "sdf"])]
+    /// Collision surfaces: exact (default), sampled sdf, or opt-in measured auto.
+    #[arg(long, default_value = "exact", value_parser = ["exact", "sdf", "auto"])]
     surface_backend: String,
     #[arg(long, hide = true, default_value_t = 2)]
     surface_sdf_resolution_divisor: u32,
@@ -469,7 +473,10 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     } else {
         None
     };
-    if adaptive_manifest.is_some() && options.device == FlyDevice::Gpu {
+    if adaptive_manifest.is_some()
+        && options.device == FlyDevice::Gpu
+        && options.surface_backend != "auto"
+    {
         return Err("adaptive fields require --device cpu or auto".into());
     }
     let mut run: VoltageRun = match &options.run_file {
@@ -579,10 +586,11 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     if !beam_mode && options.beam_current_a.is_some() {
         return Err("--beam-current-a requires --charge-mode beam".into());
     }
-    if beam_mode && options.device == FlyDevice::Gpu {
+    if beam_mode && options.device == FlyDevice::Gpu && options.surface_backend != "auto" {
         return Err("leader-plane beam integration requires --device cpu or auto".into());
     }
     if options.device == FlyDevice::Gpu
+        && options.surface_backend != "auto"
         && matches!(options.space_charge, Some(SpaceChargeMethod::Direct))
     {
         return Err("direct Coulomb physics requires --device cpu or auto".into());
@@ -595,7 +603,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     }
     if options.surface_collisions.is_some()
         && options.device == FlyDevice::Gpu
-        && options.surface_backend != "sdf"
+        && options.surface_backend == "exact"
     {
         return Err("--surface-collisions requires --device cpu or auto".into());
     }
@@ -668,7 +676,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     };
     if let Some(surface) = &surface {
         if options.device == FlyDevice::Gpu
-            && options.surface_backend != "sdf"
+            && options.surface_backend == "exact"
             && !matches!(options.space_charge, Some(SpaceChargeMethod::Pic))
         {
             return Err("surface collisions require CPU; use --device cpu or auto, or --no-cuts for staircase GPU flying".into());
@@ -758,7 +766,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
             .iter()
             .chain(&magnetic.support)
             .any(|pa| pa.has_material_cells());
-    if cpu_only_magnetic && options.device == FlyDevice::Gpu {
+    if cpu_only_magnetic && options.device == FlyDevice::Gpu && options.surface_backend != "auto" {
         return Err(
             "vector potentials and magnetic material cells require --device cpu or auto".into(),
         );
@@ -865,6 +873,44 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         }
     };
     let init = Instant::now();
+    let surface_auto = options.surface_backend == "auto";
+    let (auto_gpu, auto_reason) = if surface_auto {
+        let (gpu, reason) = sdf_auto::select(
+            sdf_auto::Policy {
+                device: match options.device {
+                    FlyDevice::Cpu => "cpu",
+                    FlyDevice::Auto => "auto",
+                    FlyDevice::Gpu => "gpu",
+                },
+                vulkan: options.backend.backends().contains(wgpu::Backends::VULKAN),
+                surfaces: surface.is_some(),
+                physics_supported: !beam_mode
+                    && options.space_charge.is_none()
+                    && adaptive_manifest.is_none()
+                    && !cpu_only_magnetic
+                    && !has_magnetic
+                    && magnetic.support.is_none()
+                    && collision.is_none(),
+                ions: total_ions,
+                divisor: options.surface_sdf_resolution_divisor,
+            },
+            || match options.gpu_adapter.as_deref() {
+                Some(selector) => pollster::block_on(crate::gpu_adapter::selected(
+                    wgpu::Backends::VULKAN,
+                    selector,
+                )),
+                None => pollster::block_on(Gpu::new(wgpu::Backends::VULKAN)),
+            },
+        )?;
+        (gpu, Some(reason))
+    } else {
+        (None, None)
+    };
+    let executed_surface_backend = if surface_auto {
+        if auto_gpu.is_some() { "sdf" } else { "exact" }
+    } else {
+        options.surface_backend.as_str()
+    };
     let request_gpu = !beam_mode && options.device.requests_gpu(total_ions, crossover);
     let mut reason = if adaptive_manifest.is_some() {
         "adaptive fields require CPU".to_owned()
@@ -887,7 +933,9 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     } else {
         "no measured GPU crossover for this collision profile".to_owned()
     };
-    let gpu = if (surface.is_none()
+    let gpu = if surface_auto {
+        auto_gpu
+    } else if (surface.is_none()
         || options.surface_backend == "sdf" && options.device == FlyDevice::Gpu
         || options.surface_collisions.is_none()
             && matches!(options.space_charge, Some(SpaceChargeMethod::Pic)))
@@ -936,6 +984,10 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         None
     };
     let initialization = init.elapsed();
+    if let Some(auto_reason) = auto_reason {
+        reason = auto_reason;
+        eprintln!("{reason}");
+    }
     let use_gpu = gpu.is_some();
     eprintln!(
         "device: {}, requested: {:?}, auto_gpu_threshold: {:?} (measured compute-only class calibration); {}",
@@ -1010,7 +1062,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         }
         read_electric(&adjustments)?
     };
-    let sdf = if options.surface_backend == "sdf" {
+    let sdf = if executed_surface_backend == "sdf" {
         Some(std::sync::Arc::new(
             simrep_fly::surface_sdf::SdfVolumes::build(
                 surface.as_ref().unwrap(),
@@ -1415,14 +1467,14 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         "schema_version": 1, "simrep_version": env!("CARGO_PKG_VERSION"), "ion_count": particles.len(), "total_ions": total_ions, "run_hash": run_hash,
         "shard": options.shard.map(|s| serde_json::json!({"index": s.index, "count": s.count, "ions": particles.len()})),
         "splat_counts": counts, "arrivals": arrivals.len(), "arrival_tof_us": flight_shards::tof_stats(&arrivals), "compute_ms": flight.as_secs_f64() * 1000.0, "prep_ms": setup.as_secs_f64() * 1000.0, "ghost_fill": ghost_fill,
-        "requested": { "device": format!("{:?}", options.device).to_lowercase(), "precision": "f64", "backend": format!("{:?}", options.backend).to_lowercase(), "gpu_adapter": options.gpu_adapter, "surface_mode": if options.no_cuts { "staircase" } else if options.cuts.is_some() { "continuous" } else if options.nearest_node_collisions { "nearest-node" } else { "auto" } },
-        "executed": { "device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision, "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()), "gpu_adapter": gpu.as_ref().map(|g| &g.info.name), "surface_mode": surface_mode, "surface_backend": if cuts_path.is_some() { options.surface_backend.as_str() } else { "staircase" },
+        "requested": { "device": format!("{:?}", options.device).to_lowercase(), "precision": "f64", "backend": format!("{:?}", options.backend).to_lowercase(), "gpu_adapter": options.gpu_adapter, "surface_backend": options.surface_backend, "surface_mode": if options.no_cuts { "staircase" } else if options.cuts.is_some() { "continuous" } else if options.nearest_node_collisions { "nearest-node" } else { "auto" } },
+        "executed": { "device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision, "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()), "gpu_adapter": gpu.as_ref().map(|g| &g.info.name), "surface_mode": surface_mode, "surface_backend": if cuts_path.is_some() || surface_auto { executed_surface_backend } else { "staircase" },
             "surface_sdf_resolution_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| &v["resolution_mm"]).collect::<Vec<_>>()),
             "surface_sdf_lipschitz": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "lipschitz": v["lipschitz"]})).collect::<Vec<_>>()),
             "surface_sdf_interp_error_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "interp_error_mm": v["interp_error_mm"]})).collect::<Vec<_>>()),
             "surface_sdf_error_bound_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "error_bound_mm": v["error_bound_mm"]})).collect::<Vec<_>>()), "surface_collisions": options.surface_collisions, "cuts_path": cuts_path, "cuts_source": cuts_source },
-        "reason": if options.device == FlyDevice::Auto { reason.as_str() } else { "explicit --device" },
-        "fallback_reason": if gpu.as_ref().is_some_and(|g| !g.has_f64()) { Some(if options.space_charge.is_some() { "adapter lacks native f64; GPU f32 corrections with CPU f64 flight/residual" } else { "adapter lacks native f64; GPU f32 flight with two-float TOF" }) } else { (options.device == FlyDevice::Auto && !use_gpu).then_some(reason.as_str()) },
+        "reason": if surface_auto || options.device == FlyDevice::Auto { reason.as_str() } else { "explicit --device" },
+        "fallback_reason": if surface_auto { None } else if gpu.as_ref().is_some_and(|g| !g.has_f64()) { Some(if options.space_charge.is_some() { "adapter lacks native f64; GPU f32 corrections with CPU f64 flight/residual" } else { "adapter lacks native f64; GPU f32 flight with two-float TOF" }) } else { (options.device == FlyDevice::Auto && !use_gpu).then_some(reason.as_str()) },
         "output_paths": options.output.iter().collect::<Vec<_>>(),
     });
     eprintln!(

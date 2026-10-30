@@ -77,6 +77,13 @@ rk45|boris`, `--tolerance`, `--output results.csv`.
 `--surface-backend sdf` flies sampled collision surfaces on CPU or explicit GPU;
 `--surface-sdf-resolution-divisor N` sets the sampling refinement. The reported
 certified interpolation bound describes an approximation; CPU exact is the reference.
+`--surface-backend auto` (`surface_backend="auto"` in Python) explicitly opts in
+to measured GPU SDF selection; the default remains `exact`. The policy requires
+device auto/gpu, a hardware Vulkan adapter, supported GPU SDF physics, and the
+precision/divisor crossover. The f64/f32, N=2/4 table currently contains only
+`None`, so it chooses CPU exact. `SIMREP_SDF_GPU_CROSSOVER=<ions>` overrides the
+threshold for experiments, never the adapter or physics checks. Record any
+future measured threshold in `docs/dev/sdf-auto-crossover.md` before enabling it.
 
 ### Portable flight shards
 
@@ -134,7 +141,9 @@ by global ion index while preserving sample order. It also writes `OUT.csv.json`
 - Exact-surface flying supports explicit GPU with `--surface-backend sdf`,
   including `--no-cuts --surface-collisions insulators|all`. The default exact
   backend, direct Coulomb, beam mode and `transparent_faces` remain CPU paths.
-  Auto surface flight stays on CPU. SDF flight needs 10 storage bindings;
+  Opt-in `--surface-backend auto` selects GPU SDF only above its measured
+  precision/divisor crossover on hardware Vulkan; otherwise it selects CPU
+  exact, even with `--device gpu`. SDF flight needs 10 storage bindings;
   native f64 uses f64 samples and the portable path uses f32 samples.
 
 ## Units and conventions
@@ -190,10 +199,18 @@ local `ions`). Requested/executed selections add `gpu_adapter` (selector/name,
 or null). File-based CLI flights include their provenance sidecar in `output_paths`.
 
 A selection is `{device, precision, backend}` (`backend` is null for CPU);
-flight selections add `surface_mode`. Compare `requested` with `executed`
-to detect a device or precision change, and read `fallback_reason` for why.
-Benchmarks (`fly-bench`, `refine-bench`, `refine-sdf`) also emit JSON; see
-`crates/simrep-cli/src/json.rs` and `crates/simrep-cli/tests/json_cli.rs`.
+flight selections add `surface_mode` and `surface_backend`. Compare `requested`
+with `executed` to detect a device or precision change, and read
+`fallback_reason` for why. Benchmarks (`fly-bench`, `refine-bench`, `refine-sdf`)
+also emit JSON; see `crates/simrep-cli/src/json.rs` and
+`crates/simrep-cli/tests/json_cli.rs`.
+
+`--surface-backend auto` reports `requested.surface_backend: "auto"`,
+`executed.surface_backend: "exact"` or `"sdf"`, and `fallback_reason: null`.
+Its `reason` describes the policy decision, for example
+`auto: CPU exact (no measured GPU SDF crossover)`; a GPU decision includes
+the ion count, crossover, precision and resolution divisor. This is a selected
+execution path, not an error fallback.
 
 Example:
 

@@ -37,6 +37,19 @@ cycles, residual, convergence, separate compute/preparation times and paths.
 An in-memory cuts dictionary has no path. `no_cuts=True` silences the warning.
 Native errors still raise `ValueError`, rather than returning error dictionaries.
 
+`simrep.fly(..., surface_backend="auto")` opts in to the CLI's shared automatic
+SDF policy. The default remains `surface_backend="exact"`. Auto resolves to
+GPU `sdf` only for device auto/gpu, a hardware Vulkan adapter (not software or
+DX12), supported physics, and an ion count meeting the precision/divisor
+crossover. Precision follows native adapter capability (f64, otherwise f32);
+the table covers resolution divisors 2 and 4. All entries are currently `None`,
+so auto selects CPU exact. `SIMREP_SDF_GPU_CROSSOVER=<ions>` is an experimental
+threshold override; it never overrides hardware/physics eligibility. See
+`docs/dev/sdf-auto-crossover.md` for the measurement record.
+The report preserves `requested.surface_backend="auto"`, reports resolved
+`executed.surface_backend` and `reason` (also on stderr), and has
+`fallback_reason=None` for this policy decision.
+
 | CLI command / option | Python function / argument | Status |
 | --- | --- | --- |
 | `aperture-check --pa PA --line X0,Y0,Z0,X1,Y1,Z1` | `aperture_check(pa, lines, cuts=None, step_mm=None)` | Shared; source-coordinate axis-aligned grid-node probes |

@@ -526,7 +526,7 @@ pub fn fly<'py>(
             let surface = if s.surface_collisions.as_deref() == Some("insulators") { surface.select_collision_only(true) } else { surface };
             field = if s.surface_collisions.is_some() { field.with_collision_surface(Arc::new(surface))? } else { field.with_surface(Arc::new(surface))? };
         }
-        if !matches!(s.surface_backend.as_str(), "exact" | "sdf") { return Err("surface_backend must be exact or sdf".into()); }
+        if !matches!(s.surface_backend.as_str(), "exact" | "sdf" | "auto") { return Err("surface_backend must be exact, sdf or auto".into()); }
         if s.surface_backend == "sdf" { field = field.with_surface_sdf_resolution(s.surface_sdf_resolution_divisor)?; }
         let magnetic = magnetic(&s)?;
         let collision = collision(&s)?;
@@ -534,14 +534,14 @@ pub fn fly<'py>(
         if !matches!(s.charge_mode.as_str(), "factor" | "coulombic" | "beam") { return Err("charge_mode must be factor, coulombic or beam".into()); }
         if beam_mode && (s.beam_current_a.is_none() || s.space_charge.is_some()) { return Err("beam needs beam_current_a and cannot be combined with space_charge".into()); }
         if !beam_mode && s.beam_current_a.is_some() { return Err("beam_current_a requires charge_mode='beam'".into()); }
-        if beam_mode && s.device == "gpu" { return Err("leader-plane beam integration requires device='cpu' or 'auto'".into()); }
-        if s.device == "gpu" && s.space_charge.as_deref() == Some("direct") { return Err("direct Coulomb physics requires device='cpu' or 'auto'".into()); }
+        if beam_mode && s.device == "gpu" && s.surface_backend != "auto" { return Err("leader-plane beam integration requires device='cpu' or 'auto'".into()); }
+        if s.device == "gpu" && s.space_charge.as_deref() == Some("direct") && s.surface_backend != "auto" { return Err("direct Coulomb physics requires device='cpu' or 'auto'".into()); }
         if (beam_mode || s.space_charge.is_some()) && collision.is_some() { return Err("space charge does not support collision models".into()); }
-        if s.surface_collisions.is_some() && s.device == "gpu" && s.surface_backend != "sdf" { return Err("surface_collisions requires device=cpu or auto".into()); }
+        if s.surface_collisions.is_some() && s.device == "gpu" && s.surface_backend == "exact" { return Err("surface_collisions requires device=cpu or auto".into()); }
         let cpu_only = beam_mode || s.transparent_faces.contains(&true)
             || ((s.surface_collisions.is_some() || ((s.cuts.is_some() || s.cuts_json.is_some()) && s.space_charge.as_deref() != Some("pic")))
                 && (s.surface_backend != "sdf" || s.device == "auto"));
-        if s.device == "gpu" && cpu_only { return Err("surface collisions and transparent faces require device='cpu' or 'auto'".into()); }
+        if s.device == "gpu" && cpu_only && s.surface_backend != "auto" { return Err("surface collisions and transparent faces require device='cpu' or 'auto'".into()); }
         let has_magnetic = magnetic.uniform_gauss != [0.0; 3] || !magnetic.arrays.is_empty()
             || !magnetic.coils.is_empty() || magnetic.support.is_some();
         let hs = Hs1::default();
@@ -578,7 +578,28 @@ pub fn fly<'py>(
         } else {
             "no measured GPU crossover for this collision profile".to_owned()
         };
-        let gpu = match s.device.as_str() {
+        if !matches!(s.device.as_str(), "auto" | "cpu" | "gpu") { return Err("device must be auto, cpu or gpu".into()); }
+        let surface_auto = s.surface_backend == "auto";
+        let gpu = if surface_auto {
+            let (gpu, reason) = crate::fly_cmd::sdf_auto::select(
+                crate::fly_cmd::sdf_auto::Policy {
+                    device: &s.device,
+                    vulkan: backends(&s.backend)?.contains(wgpu::Backends::VULKAN),
+                    surfaces: s.cuts.is_some() || s.cuts_json.is_some(),
+                    physics_supported: !beam_mode && s.space_charge.is_none()
+                        && !has_magnetic && collision.is_none()
+                        && !s.transparent_faces.contains(&true)
+                        && magnetic.vector_potentials.is_empty()
+                        && !magnetic.arrays.iter().chain(&magnetic.support).any(|pa| pa.has_material_cells()),
+                    ions: particles.len(),
+                    divisor: s.surface_sdf_resolution_divisor,
+                },
+                || pollster::block_on(Gpu::new(wgpu::Backends::VULKAN)),
+            )?;
+            auto_reason = reason;
+            if gpu.is_some() { field = field.with_surface_sdf_resolution(s.surface_sdf_resolution_divisor)?; }
+            gpu
+        } else { match s.device.as_str() {
             "cpu" => None,
             "auto" if cpu_only || crossover.is_none_or(|n| particles.len() < n) => None,
             "gpu" | "auto" => {
@@ -600,8 +621,10 @@ pub fn fly<'py>(
                     && (collision.is_none() || g.info.name == "NVIDIA GeForce RTX 3070")))
             }
             _ => return Err("device must be auto, cpu or gpu".into()),
-        };
-        if s.device == "auto" {
+        }};
+        let executed_surface_backend = if surface_auto { if gpu.is_some() { "sdf" } else { "exact" } } else { s.surface_backend.as_str() };
+        if surface_auto { eprintln!("{auto_reason}"); }
+        if s.device == "auto" && !surface_auto {
             eprintln!("auto: {} ({auto_reason})", if gpu.is_some() { "GPU" } else { "CPU" });
         }
         if let Some(gpu) = &gpu {
@@ -698,7 +721,7 @@ pub fn fly<'py>(
                 if indices.binary_search(&index).is_err() { result.trajectory = None; }
             }
         }
-        let report = serde_json::json!({"compute_ms":compute_ms,"setup_ms":setup_ms,"total_ms":start.elapsed().as_secs_f64()*1000.0,"device":if gpu.is_some() {"gpu"} else {"cpu"},"relativistic":o_relativistic(&s),"surface_backend":s.surface_backend,"precision":gpu.as_ref().map_or("f64", |g| if g.has_f64() { "f64" } else { "f32" }),"executed":{"device":if gpu.is_some(){"gpu"}else{"cpu"},"precision":gpu.as_ref().map_or("f64",|g|if g.has_f64(){"f64"}else{"f32"}),"surface_backend":if s.cuts.is_some()||s.cuts_json.is_some(){s.surface_backend.as_str()}else{"staircase"}},"coil_map_calibration":coil_map_calibration,"trajectory_indices":indices}).to_string();
+        let report = serde_json::json!({"compute_ms":compute_ms,"setup_ms":setup_ms,"total_ms":start.elapsed().as_secs_f64()*1000.0,"device":if gpu.is_some() {"gpu"} else {"cpu"},"relativistic":o_relativistic(&s),"surface_backend":executed_surface_backend,"requested":{"device":s.device,"surface_backend":s.surface_backend},"reason":if surface_auto || s.device == "auto" {auto_reason.as_str()} else {"explicit --device"},"fallback_reason":if surface_auto {None} else {(s.device == "auto" && gpu.is_none()).then_some(auto_reason.as_str())},"precision":gpu.as_ref().map_or("f64", |g| if g.has_f64() { "f64" } else { "f32" }),"executed":{"device":if gpu.is_some(){"gpu"}else{"cpu"},"precision":gpu.as_ref().map_or("f64",|g|if g.has_f64(){"f64"}else{"f32"}),"surface_backend":if s.cuts.is_some()||s.cuts_json.is_some()||surface_auto{executed_surface_backend}else{"staircase"}},"coil_map_calibration":coil_map_calibration,"trajectory_indices":indices}).to_string();
         Ok((particles, results, terminations, report))
     }).map_err(error)?;
     result_arrays(
