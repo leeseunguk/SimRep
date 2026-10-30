@@ -71,7 +71,7 @@ function sources() {
 
 // Presence is not enough: reject label-only, short excerpts and link-only files.
 function fullText(text) {
-  return text.length > 500 && /permission is hereby granted[\s\S]*without warranty|permission is hereby granted[\s\S]*as.is|redistribution and use[\s\S]*disclaim|apache license[\s\S]*terms and conditions[\s\S]*end of terms|mozilla public license[\s\S]*definitions[\s\S]*exhibit|gnu (lesser |library )?general public license[\s\S]*terms and conditions[\s\S]*end of terms|this is free and unencumbered software[\s\S]*as.is|permission to use, copy[\s\S]*disclaims|copyright[\s\S]*provided.*as.is|permission is granted to anyone[\s\S]*this notice may not be removed|prosperity public license[\s\S]*agreement[\s\S]*no liability/i.test(text)
+  return text.length > 500 && /permission is hereby granted[\s\S]*without warranty|permission is hereby granted[\s\S]*as.is|redistribution and use[\s\S]*disclaim|apache license[\s\S]*terms and conditions[\s\S]*(?:end of terms|9\. accepting warranty[\s\S]*your accepting any such warranty or additional liability)|mozilla public license[\s\S]*definitions[\s\S]*exhibit|gnu (lesser |library )?general public license[\s\S]*terms and conditions[\s\S]*end of terms|this is free and unencumbered software[\s\S]*as.is|permission to use, copy[\s\S]*disclaims|copyright[\s\S]*provided.*as.is|permission is granted to anyone[\s\S]*this notice may not be removed|prosperity public license[\s\S]*agreement[\s\S]*no liability/i.test(text)
 }
 
 const supplements = readJson(path.join(sourcesDir, 'package-map.json'))
@@ -86,23 +86,12 @@ function packageNotice(pkg, kind, location, src) {
     texts.push({ source: src[id].url, text: src[id].text })
   }
   const commercial = /^@anthropic-ai\/claude-agent-sdk(?:-(?:linux|win32|darwin)-(?:x64|arm64)(?:-musl)?)?$/.test(pkg.name) && pkg.version === '0.3.311'
-  let fallback = false
   if (!texts.some(file => fullText(file.text)) && !commercial) {
-    const ids = license.match(/[A-Za-z0-9][A-Za-z0-9.+-]*/g).filter(id => !['OR', 'AND', 'WITH'].includes(id))
-    const authors = pkg.authors || (pkg.author ? [pkg.author] : [])
-    const names = authors.map(author => typeof author === 'string' ? author : author.name).filter(Boolean)
-    if (!names.length) throw new Error(`No full licence text or author: ${pkg.name}@${pkg.version} (${location})`)
-    for (const id of new Set(ids)) {
-      const entry = src[`spdx-${id}`]
-      if (!entry) throw new Error(`No full licence text or SPDX source: ${pkg.name}@${pkg.version}: ${id}`)
-      const text = entry.text.replace(/Copyright \(c\) <year> <copyright holders>/g, `Copyright: ${names.join('; ')}`)
-      texts.push({ source: `${entry.url}; copyright attribution from package metadata`, text: `Copyright: ${names.join('; ')}\n\n${text}` })
-    }
-    fallback = true
+    throw new Error(`No full licence text: ${pkg.name}@${pkg.version} (${location}); add a version-pinned upstream notice source`)
   }
   if (commercial && !files.some(file => /Anthropic PBC.*All rights reserved/s.test(file.text))) throw new Error('Missing Anthropic commercial notice')
   if (!texts.length) throw new Error(`No full notice: ${pkg.name}@${pkg.version}`)
-  return { kind, name: pkg.name, version: pkg.version, license: commercial ? 'LicenseRef-Anthropic-Commercial' : license, location, packageNoticeFiles: files.length, fallback, texts }
+  return { kind, name: pkg.name, version: pkg.version, license: commercial ? 'LicenseRef-Anthropic-Commercial' : license, location, packageNoticeFiles: files.length, texts }
 }
 
 export function npmNotices(dir, kind = 'npm', src = sources()) {
@@ -180,9 +169,8 @@ export function generate() {
   const unique = [...new Map(records.map(record => [`${record.kind}:${record.location}`, record])).values()]
   unique.sort((a, b) => `${a.kind}:${a.location}`.localeCompare(`${b.kind}:${b.location}`, 'en'))
   const inventory = unique.map(({ texts, ...record }) => ({ ...record, texts: texts.map(({ source, text }) => ({ source, sha256: hash(text), bytes: Buffer.byteLength(text) })) }))
-  const text = 'SimRep Windows installer - complete third-party notices\nGenerated from the staged payload and locked Cargo dependency closures.\nSPDX expressions identify terms, not a replacement for the full texts below.\nFallback entries explicitly identify missing package notice files and metadata attribution.\nThis software is based in part on the work of the Independent JPEG Group.\n\n' + unique.map(record => [
+  const text = 'SimRep Windows installer - complete third-party notices\nGenerated from the staged payload and locked Cargo dependency closures.\nSPDX expressions identify terms, not a replacement for the full texts below.\nThis software is based in part on the work of the Independent JPEG Group.\n\n' + unique.map(record => [
     '='.repeat(78), `Package: ${record.name}`, `Version: ${record.version}`, `SPDX: ${record.license}`, `Kind: ${record.kind}`, `Payload: ${record.location}`,
-    ...(record.fallback ? ['Package contains no complete licence text in the inventoried notice files; SPDX standard text with package metadata attribution follows.'] : []),
     ...record.texts.map(file => `\n--- ${file.source} ---\n${file.text}`),
   ].join('\n')).join('\n\n') + '\n'
   return { text, manifest: JSON.stringify({ schema_version: 1, target: 'x86_64-pc-windows-msvc', records: inventory }, null, 2) + '\n', counts: Object.fromEntries([...new Set(unique.map(record => record.kind))].map(kind => [kind, unique.filter(record => record.kind === kind).length])) }

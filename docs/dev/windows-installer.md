@@ -52,10 +52,12 @@ package instance (including nested/native packages), the frontend production
 dependency closure, and both locked Windows Cargo closures with CAD enabled.
 Build and proc-macro crates are included conservatively. It copies every
 LICENSE/LICENCE/COPYING/NOTICE/COPYRIGHT text and text in licence directories,
-supplements known omissions with version-mapped upstream snapshots, and
-otherwise uses checked-in SPDX standard text with the package's metadata author
-attribution, explicitly marking the missing package text. Missing metadata/text,
-empty notices, unmapped DLLs, and changed source snapshot checksums fail the build.
+and supplements known omissions with version-mapped upstream snapshots.
+A package without complete shipped or mapped licence text fails generation
+with its name and version; author metadata is never used to invent copyright
+attribution. Empty notices, unmapped DLLs, and changed source snapshot checksums
+also fail the build. Release commit resolution and source limitations are
+recorded in `tools/win/notice-sources/release-sources.md`.
 Node's entire upstream LICENSE includes its embedded third parties. Every staged
 OCCT/dependency/CRT DLL must have a full-text mapping. The linked Rust standard
 library's complete copyright inventory is included too. Commercial provider
@@ -79,12 +81,20 @@ payload location, notice source, size and SHA-256. `node ai/license-check.mjs`
 uses the same full-text npm check; `node tools/win/installer-notices.mjs --check`
 compares the entire output with the current payload. Maintainers can refresh
 reviewed supplemental/SPDX snapshots with `node tools/win/refresh-notice-sources.mjs`
-(on Linux with Python 3 for Microsoft's DOCX). Review the package-to-notice map,
+(on Linux with Python 3 for Microsoft's DOCX). Optional trailing source IDs
+refresh only those entries. Review the package-to-notice map,
 source manifest and texts before accepting a refresh; builds do not fetch
 unpinned licence content. Node's complete licence is also installed as
 `runtime/LICENSE`. Node plus its licence add 91,586,176 uncompressed bytes.
 Measure compressed and installed sizes in the accompanying QA report rather
 than reusing a historical CAD-only size.
+
+Notice-only changes require regenerating and verifying the staged notices
+before packaging a new installer. An existing installer does not acquire the
+updated texts. Full generation uses staged Windows runtime/native resources;
+on Linux without that stage, run `node --test ai/test/installer-notices.test.mjs`
+and `node ai/license-check.mjs` instead. Those checks do not certify an existing
+Windows installer.
 
 The per-user NSIS installer supports `/S /D=C:\path` (the `/D` argument must be
 last). Close the app and its owned WebView/AI process tree before
@@ -100,3 +110,14 @@ closed stdin and an explicit timeout; pass cross-boundary environment variables
 through `WSLENV`. Keep app/build processes inside a bounded foreground call and
 terminate only stuck task-owned trees with `taskkill /T /F`.
 `tools/win/winproc.ps1 cleanup` reports and removes orphan conhosts, never live user jobs.
+
+
+### Attribution notes
+
+- `proxy-agent-negotiate@1.1.0` ships no licence file, and its upstream package directory
+  (`TooTallNate/proxy-agents/packages/negotiate` at 065d1ffc) contains none either. Its
+  `package.json` declares `MIT` with author Nathan Rajlich, and every sibling package in the
+  same monorepo carries the identical MIT text "Copyright (c) 2013 Nathan Rajlich". The
+  installer therefore ships the sibling `packages/proxy-agent/LICENSE` pinned by commit. This
+  is a documented inference, not a file published for this package; replace it if upstream
+  adds a licence to `packages/negotiate`.

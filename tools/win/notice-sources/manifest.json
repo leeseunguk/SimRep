@@ -138,5 +138,45 @@
     "url": "https://sourceforge.net/projects/freeimage/files/Source%20Distribution/3.17.0/FreeImage3170.zip",
     "file": "sdk-embedded.json",
     "sha256": "59f8c0492da64775f84b9516e3710201311cf21f87bec55c9dc47a3e08ea6c64"
+  },
+  "aws-sdk-license": {
+    "url": "https://raw.githubusercontent.com/aws/aws-sdk-js-v3/e5988ecad1aded47fa75f5e18c9cc00ddcb608de/LICENSE",
+    "file": "aws-sdk-license.txt",
+    "sha256": "edea91454b811f127fbdea3d86f378f6719bd372ed440abf82b232f6fca06c3d"
+  },
+  "aws-sdk-notice": {
+    "url": "https://raw.githubusercontent.com/aws/aws-sdk-js-v3/e5988ecad1aded47fa75f5e18c9cc00ddcb608de/codegen/NOTICE",
+    "file": "aws-sdk-notice.txt",
+    "sha256": "a5278a326e43ef07c991ee861eac83a0789c642edf82d84a84be361a8a8c548e"
+  },
+  "lambda-invoke-store-license": {
+    "url": "https://raw.githubusercontent.com/awslabs/aws-lambda-invoke-store/4b2c7152b3f48975059585a09a59c8007ab008fa/LICENSE",
+    "file": "lambda-invoke-store-license.txt",
+    "sha256": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b"
+  },
+  "lambda-invoke-store-notice": {
+    "url": "https://raw.githubusercontent.com/awslabs/aws-lambda-invoke-store/4b2c7152b3f48975059585a09a59c8007ab008fa/NOTICE",
+    "file": "lambda-invoke-store-notice.txt",
+    "sha256": "d4290ed64c2edd0fce1d84e3f9dfb2881240fe534def76b8cd29ed6af683e287"
+  },
+  "data-uri-to-buffer-license": {
+    "url": "https://raw.githubusercontent.com/TooTallNate/node-data-uri-to-buffer/85cd8c854aefbf1bb636789d80364cfac8ea1583/README.md",
+    "file": "data-uri-to-buffer-license.txt",
+    "sha256": "a7cc4332acfa1f9b6530e01aac77fefe74f2efa32579215fddaa473013f9a25c"
+  },
+  "proxy-agent-negotiate-license": {
+    "url": "https://raw.githubusercontent.com/TooTallNate/proxy-agents/b7e5f7ccce1a3ac5b339cc4c587974e8989cbc16/packages/proxy-agent/LICENSE",
+    "file": "proxy-agent-negotiate-license.txt",
+    "sha256": "8d8c55319c7729d57be811c747452636688d54f19701ee0752b6b15ad3771d9a"
+  },
+  "standardwebhooks-license": {
+    "url": "https://raw.githubusercontent.com/standard-webhooks/standard-webhooks/b4d2c14fc5b4ccff3ff271e3b087dff812254c59/libraries/LICENSE",
+    "file": "standardwebhooks-license.txt",
+    "sha256": "5ec8c7b26b64d881a6706617bed25c049f97f2f35de034c756de8546fd6dbe27"
+  },
+  "alloc-stdlib-license": {
+    "url": "https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/0a81fd6928ea3b33c8cd484aa4575d50ffb98012/LICENSE",
+    "file": "alloc-stdlib-license.txt",
+    "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae"
   }
 }

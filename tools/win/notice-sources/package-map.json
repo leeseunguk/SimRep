@@ -12,5 +12,13 @@
   "@openai/codex@0.164.0-darwin-arm64": ["codex-license", "codex-notice", "spdx-MIT"],
   "webview2-com@0.39.1": ["webview2-license"],
   "webview2-com-sys@0.39.1": ["webview2-license"],
-  "webview2-com-macros@0.8.1": ["webview2-macros-license"]
+  "webview2-com-macros@0.8.1": ["webview2-macros-license"],
+  "@aws-sdk/credential-provider-http@3.972.79": ["aws-sdk-license", "aws-sdk-notice"],
+  "@aws-sdk/credential-provider-login@3.972.84": ["aws-sdk-license", "aws-sdk-notice"],
+  "@aws-sdk/nested-clients@3.997.51": ["aws-sdk-license", "aws-sdk-notice"],
+  "@aws/lambda-invoke-store@0.3.0": ["lambda-invoke-store-license", "lambda-invoke-store-notice"],
+  "data-uri-to-buffer@4.0.1": ["data-uri-to-buffer-license"],
+  "proxy-agent-negotiate@1.1.0": ["proxy-agent-negotiate-license"],
+  "standardwebhooks@1.1.1": ["standardwebhooks-license"],
+  "alloc-stdlib@0.3.0": ["alloc-stdlib-license"]
 }
