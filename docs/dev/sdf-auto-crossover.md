@@ -33,3 +33,24 @@ Under opt-in `surface_backend=auto`, absence of a measured crossover resolves
 to CPU exact, including with device gpu. This policy decision has a null
 `fallback_reason`; `reason` explains the selected path. Other resolution
 divisors also stay CPU exact because they have no table key.
+
+
+## Measurement 2026-10-30 (RTX 3070, Vulkan) - decision: keep every entry `None`
+
+Revision: 889d102 (kernel ca4ce86 + dispatch 889d102). Adapter: NVIDIA GeForce RTX 3070, Vulkan, Windows 11;
+native f64 via SHADER_F64. Workload: einzel `refine-geometry` example (electrodes 1=1:0, 2=2:60, 3=3:0),
+deterministic beams of 2,400 / 24,000 / 240,000 electrons with angular spread (most hit electrodes),
+detector plane x = 58 mm, electric-only physics. `compute_ms` medians of 5 serial runs under a shared
+timing lock; other user jobs (Opera FEA) were running, so timings are contended.
+
+| Ions | N | CPU exact | GPU SDF f64 | GPU SDF f32 |
+|---:|---:|---:|---:|---:|
+| 2,400 | 2 | 22.1 | 462.0 | 64.1 |
+| 24,000 | 2 | 214.1 | 1,436.0 | 206.7 |
+| 240,000 | 2 | 2,126.2 | 11,705.2 | 1,680.0 |
+| 240,000 | 4 | 2,126.2 | 12,089.5 | 2,481.0 |
+
+CPU exact is from the same machine and beams (all threads). GPU SDF outcomes matched CPU SDF for
+120/120 flights. The best GPU SDF speedup over CPU exact was 1.39x (f32, 240,000 ions, N=2), below the
+1.5x threshold required for an automatic switch, and native f64 never beat CPU exact. No crossover is
+enabled. Re-measure on an idle GPU or a faster adapter before entering a number.
