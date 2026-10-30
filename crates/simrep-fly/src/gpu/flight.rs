@@ -1,6 +1,7 @@
 //! Queued flights own their mutable GPU state until collection or drop.
 use super::surface::SdfRemainder;
 use super::*;
+mod dispatch;
 
 #[derive(Default)]
 pub(super) struct IonBufferPool {
@@ -297,7 +298,7 @@ impl<'a> PreparedField<'a> {
         };
         let capacity = prepared.max_ions_per_dispatch();
         let initial_count = if prepared.sdf.is_some() {
-            capacity.min(4096).min(particles.len())
+            capacity.min(dispatch::INITIAL_IONS).min(particles.len())
         } else {
             particles.len()
         };
@@ -511,7 +512,7 @@ impl<'a> PreparedField<'a> {
         ];
         timings.setup = start.elapsed();
         if self.sdf.is_some() {
-            self.params.physics_padding[2] = 32;
+            self.params.physics_padding[2] = dispatch::INITIAL_TRIALS;
         }
         let start = Instant::now();
         let gpu = self.gpu;
@@ -738,6 +739,7 @@ impl PendingBatch {
         self.output_size + self.sample_size + timestamp_bytes
     }
     fn map(&mut self, gpu: &Gpu, encoder: wgpu::CommandEncoder, size: u64) {
+        dispatch::trace_submit(size);
         self.started = Instant::now();
         self.submission = Some(gpu.queue.submit([encoder.finish()]));
         let (tx, rx) = mpsc::channel();
@@ -764,6 +766,7 @@ impl PendingBatch {
             self.needs_unmap = false;
         }
         result?;
+        dispatch::trace_wait(self.started);
         Ok(())
     }
     fn dispatch(&mut self, gpu: &Gpu, mut encoder: wgpu::CommandEncoder, combine: Option<u32>) {
@@ -870,9 +873,9 @@ impl PendingBatch {
             }
             self.timestamp_count = 2;
             if self.sdf {
-                let trials = ((f64::from(self.trials_per_dispatch) * 0.18
+                let trials = ((f64::from(self.trials_per_dispatch) * dispatch::TRIAL_TARGET_SECONDS
                     / dispatch_time.as_secs_f64().max(1e-9)) as u32)
-                    .clamp(1, 256)
+                    .clamp(1, dispatch::MAX_TRIALS)
                     .min(self.trials_per_dispatch.saturating_mul(2));
                 let offset = if gpu.wide {
                     std::mem::offset_of!(Parameters<f64>, physics_padding)
