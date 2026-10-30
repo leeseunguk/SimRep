@@ -1,4 +1,5 @@
 //! Queued flights own their mutable GPU state until collection or drop.
+use super::surface::SdfRemainder;
 use super::*;
 
 #[derive(Default)]
@@ -31,9 +32,10 @@ struct Sampling {
 }
 
 /// Submitted GPU work. Collection waits, resumes bounded physics dispatches,
-/// and decodes ordered results. No mutable PreparedField borrow is retained.
-/// Dropping discards the result and returns scratch buffers for queue-ordered
-/// reuse; it does not cancel work already submitted to the GPU.
+/// and decodes ordered results. SDF flights submit their first chunk immediately
+/// and adapt subsequent chunks during collection. No mutable PreparedField borrow
+/// is retained. Dropping discards the result and returns scratch buffers for
+/// queue-ordered reuse; it does not cancel work already submitted to the GPU.
 #[must_use = "collect the submitted flight to retrieve its results"]
 pub struct PendingFlight<'a> {
     gpu: &'a Gpu,
@@ -41,13 +43,16 @@ pub struct PendingFlight<'a> {
     relativistic: bool,
     pool: Arc<Mutex<IonBufferPool>>,
     batches: Vec<PendingBatch>,
+    sdf: Option<SdfRemainder<'a>>,
 }
-struct PendingBatch {
-    buffers: IonBuffers,
+pub(super) struct PendingBatch {
+    pub(super) buffers: IonBuffers,
     bindings: wgpu::BindGroup,
     pipeline: wgpu::ComputePipeline,
     combine_pipeline: wgpu::ComputePipeline,
     physics: bool,
+    sdf: bool,
+    trials_per_dispatch: u32,
     groups: u32,
     timestamp_count: u32,
     output_size: u64,
@@ -56,9 +61,11 @@ struct PendingBatch {
     sampling: Option<Sampling>,
     submission: Option<wgpu::SubmissionIndex>,
     mapping: Option<mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>>,
-    needs_unmap: bool,
+    pub(super) needs_unmap: bool,
     started: Instant,
     fly_ticks: u64,
+    // Maximum GPU cost normalized to 32 trials for independent ion sizing.
+    pub(super) longest_dispatch: Duration,
     timings: Timings,
 }
 impl PendingFlight<'_> {
@@ -66,8 +73,19 @@ impl PendingFlight<'_> {
         let mut results =
             Vec::with_capacity(self.batches.iter().map(|b| b.birth_times.len()).sum());
         let mut timings = Timings::default();
+        let mut longest_dispatch = Duration::ZERO;
         for batch in &mut self.batches {
             let mut report = batch.collect(self.gpu, self.field, self.relativistic)?;
+            longest_dispatch = longest_dispatch.max(batch.longest_dispatch);
+            results.append(&mut report.results);
+            timings.setup += report.timings.setup;
+            timings.upload += report.timings.upload;
+            timings.combine += report.timings.combine;
+            timings.fly += report.timings.fly;
+            timings.readback += report.timings.readback;
+        }
+        if let Some(sdf) = self.sdf.take() {
+            let mut report = sdf.collect(results.len(), longest_dispatch)?;
             results.append(&mut report.results);
             timings.setup += report.timings.setup;
             timings.upload += report.timings.upload;
@@ -256,9 +274,35 @@ impl<'a> PreparedField<'a> {
             relativistic: options.relativistic,
             pool: Arc::clone(&self.ion_buffers),
             batches: Vec::new(),
+            sdf: None,
         };
-        for (batch_index, particles) in particles.chunks(self.max_ions_per_dispatch()).enumerate() {
-            let begin = batch_index * self.max_ions_per_dispatch();
+        let mut sdf = if self.sdf.is_some() && !particles.is_empty() {
+            Some(SdfRemainder {
+                prepared: self.sdf_snapshot(),
+                particles: Vec::new(),
+                options: options.clone(),
+                launch,
+                indices: sampling.map_or_else(Vec::new, |s| s.ion_indices.to_vec()),
+                sampling: sampling.map(|s| (s.every, s.max_samples_per_ion)),
+                begin: 0,
+                ion_offset,
+                ion_stride,
+            })
+        } else {
+            None
+        };
+        let prepared = match &mut sdf {
+            Some(sdf) => &mut sdf.prepared,
+            None => self,
+        };
+        let capacity = prepared.max_ions_per_dispatch();
+        let initial_count = if prepared.sdf.is_some() {
+            capacity.min(4096).min(particles.len())
+        } else {
+            particles.len()
+        };
+        for (batch_index, particles) in particles[..initial_count].chunks(capacity).enumerate() {
+            let begin = batch_index * capacity;
             let indices: Vec<_> = sampling
                 .map(|s| {
                     s.ion_indices
@@ -274,7 +318,7 @@ impl<'a> PreparedField<'a> {
                 every: s.every,
                 max_samples_per_ion: s.max_samples_per_ion,
             });
-            pending.batches.push(self.submit_batch(
+            pending.batches.push(prepared.submit_batch(
                 particles,
                 options,
                 launch,
@@ -283,9 +327,14 @@ impl<'a> PreparedField<'a> {
                 ion_stride,
             )?);
         }
+        if let Some(mut sdf) = sdf {
+            sdf.particles = particles[initial_count..].to_vec();
+            sdf.begin = initial_count;
+            pending.sdf = Some(sdf);
+        }
         Ok(pending)
     }
-    fn submit_batch(
+    pub(super) fn submit_batch(
         &mut self,
         particles: &[Particle],
         options: &FlightOptions,
@@ -461,6 +510,9 @@ impl<'a> PreparedField<'a> {
             },
         ];
         timings.setup = start.elapsed();
+        if self.sdf.is_some() {
+            self.params.physics_padding[2] = 32;
+        }
         let start = Instant::now();
         let gpu = self.gpu;
         let buffers = self.take_buffers(particles.len(), sample_size.max(64))?;
@@ -505,14 +557,21 @@ impl<'a> PreparedField<'a> {
         let mut batch = PendingBatch {
             buffers,
             bindings,
-            pipeline: self.waveform_pipeline.as_ref().unwrap_or(&gpu.fly).clone(),
+            pipeline: self
+                .waveform_pipeline
+                .as_ref()
+                .or(gpu.fly.as_ref())
+                .expect("prepared flight pipeline")
+                .clone(),
             combine_pipeline: self
                 .sdf
                 .as_ref()
                 .and_then(|s| s.combine.as_ref())
                 .unwrap_or(&gpu.combine)
                 .clone(),
-            physics: self.physics_enabled,
+            physics: self.physics_enabled || self.sdf.is_some() && gpu.wide,
+            sdf: self.sdf.is_some() && gpu.wide,
+            trials_per_dispatch: self.params.physics_padding[2],
             groups,
             timestamp_count: if combine { 4 } else { 2 },
             output_size,
@@ -527,6 +586,7 @@ impl<'a> PreparedField<'a> {
             needs_unmap: false,
             started: Instant::now(),
             fly_ticks: 0,
+            longest_dispatch: Duration::ZERO,
             timings,
         };
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
@@ -761,7 +821,7 @@ impl PendingBatch {
         };
         self.map(gpu, encoder, read_size);
     }
-    fn collect(
+    pub(super) fn collect(
         &mut self,
         gpu: &Gpu,
         field: &InstanceField,
@@ -769,7 +829,8 @@ impl PendingBatch {
     ) -> GpuResult<FlightReport> {
         loop {
             self.wait(gpu)?;
-            self.timings.fly += self.started.elapsed();
+            let mut dispatch_time = self.started.elapsed();
+            self.timings.fly += dispatch_time;
             if !self.physics {
                 break;
             }
@@ -779,9 +840,23 @@ impl PendingBatch {
             let active = bytemuck::cast_slice::<_, u32>(&mapped[..4])[0] != 0;
             if self.buffers.timestamps.is_some() {
                 let ticks: &[u64] = bytemuck::cast_slice(&mapped[32..]);
-                self.fly_ticks += ticks[(self.timestamp_count - 1) as usize]
+                let ticks_elapsed = ticks[(self.timestamp_count - 1) as usize]
                     - ticks[(self.timestamp_count - 2) as usize];
+                let scale = f64::from(gpu.queue.get_timestamp_period()) * 1e-9;
+                dispatch_time = Duration::from_secs_f64(ticks_elapsed as f64 * scale);
+                self.fly_ticks += ticks_elapsed;
+                if self.timestamp_count == 4 {
+                    self.timings.combine +=
+                        Duration::from_secs_f64((ticks[1] - ticks[0]) as f64 * scale);
+                }
             }
+            let cost = if self.sdf {
+                dispatch_time.mul_f64(32.0 / f64::from(self.trials_per_dispatch))
+            } else {
+                dispatch_time
+            };
+            self.longest_dispatch = self.longest_dispatch.max(cost);
+            surface::trace_dispatch(self.birth_times.len(), dispatch_time);
             drop(mapped);
             self.buffers.readback.unmap();
             self.needs_unmap = false;
@@ -792,6 +867,24 @@ impl PendingBatch {
                 self.map(gpu, encoder, size);
                 self.wait(gpu)?;
                 break;
+            }
+            self.timestamp_count = 2;
+            if self.sdf {
+                let trials = ((f64::from(self.trials_per_dispatch) * 0.18
+                    / dispatch_time.as_secs_f64().max(1e-9)) as u32)
+                    .clamp(1, 256)
+                    .min(self.trials_per_dispatch.saturating_mul(2));
+                let offset = if gpu.wide {
+                    std::mem::offset_of!(Parameters<f64>, physics_padding)
+                } else {
+                    std::mem::offset_of!(Parameters<f32>, physics_padding)
+                } + 2 * std::mem::size_of::<u32>();
+                gpu.queue.write_buffer(
+                    &self.buffers.uniform,
+                    offset as u64,
+                    bytemuck::bytes_of(&trials),
+                );
+                self.trials_per_dispatch = trials;
             }
             self.dispatch(
                 gpu,
@@ -830,6 +923,12 @@ impl PendingBatch {
             }
         }
         let array = field.grid.array();
+        if !self.physics {
+            self.longest_dispatch = timings.fly;
+            if field.surface_sdf.is_some() {
+                surface::trace_dispatch(self.birth_times.len(), timings.fly);
+            }
+        }
         let spacing = [array.dx_mm, array.dy_mm, array.dz_mm];
         let sampling = self.sampling.as_ref();
         let output: Vec<EndState> = if gpu.wide {

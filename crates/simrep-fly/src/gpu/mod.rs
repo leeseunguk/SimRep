@@ -106,7 +106,7 @@ pub struct Gpu {
     queue: wgpu::Queue,
     layout: wgpu::BindGroupLayout,
     combine: wgpu::ComputePipeline,
-    fly: wgpu::ComputePipeline,
+    fly: Option<wgpu::ComputePipeline>,
     wide: bool,
 }
 
@@ -263,7 +263,13 @@ impl Gpu {
             })
         };
         let combine = pipeline("combine");
-        let fly = pipeline("fly");
+        // FXC fails even on the baseline staircase flight shader. Defer the
+        // refusal until prepare, where the message can distinguish SDF flight.
+        let fly = if info.backend == wgpu::Backend::Dx12 {
+            None
+        } else {
+            Some(pipeline("fly"))
+        };
         if let Some(e) = scope.pop().await {
             return Err(e.into());
         }
@@ -321,6 +327,13 @@ impl Gpu {
         nodal: bool,
         cache: bool,
     ) -> GpuResult<PreparedField<'a>> {
+        if self.info.backend == wgpu::Backend::Dx12 {
+            return Err(if field.surface_sdf.is_some() {
+                "GPU SDF surfaces are not supported on the DX12 backend (FXC cannot compile the shader); use --backend vulkan (default) or --device cpu"
+            } else {
+                "GPU flights are not supported on the DX12 backend (FXC cannot compile the flight shader); use --backend vulkan (default) or --device cpu"
+            }.into());
+        }
         let start = Instant::now();
         let surface_bases = field
             .surface
@@ -785,8 +798,10 @@ impl PreparedField<'_> {
         }
     }
 
-    /// Select a partition size without changing per-ion arithmetic or RNG.
+    /// Select a partition ceiling without changing per-ion arithmetic or RNG.
     /// Native f64 defaults to 32768; hardware Preview defaults to 131072.
+    /// SDF starts at 4096 ions and adapts below this ceiling to
+    /// target GPU dispatches below 250 ms.
     /// Zero is invalid; values above the device limits are clamped. Larger
     /// electric batches can exceed the operating system's watchdog budget.
     pub fn set_max_ions_per_dispatch(&mut self, capacity: usize) -> GpuResult<()> {
@@ -1061,6 +1076,12 @@ impl PreparedField<'_> {
                     "fn next_voltage_event(t: f32) -> f32 { return 3.402823e38; }",
                     &edges,
                 );
+            if self.sdf.is_some() && self.gpu.wide {
+                source = source.replace(
+                    "if PHYSICS && trials >= root.physics_padding.z",
+                    "if true && trials >= root.physics_padding.z",
+                );
+            }
             if let Some(expressions) = &self.magnetic_expressions {
                 source = source.replace(
                     "fn analytic_magnetic(position: vec3<f32>, time: f32) -> vec3<f32> { return vec3<f32>(0.0); }",

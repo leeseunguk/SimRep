@@ -495,7 +495,7 @@ fn kernel_experiments() {
                 ),
             ),
         ),
-        ("unroll_x", gpu.fly.clone()),
+        ("unroll_x", gpu.fly.clone().expect("Vulkan flight pipeline")),
     ];
     for (name, relative) in [
         ("einzel", "einzel/einzel.pa0"),
