@@ -1,4 +1,5 @@
 import type { TranscriptItem } from "./model";
+import { redact } from "../ai/history";
 
 /**
  * Appendix slot of the report: whoever owns the AI chat registers a source of transcript items
@@ -16,5 +17,5 @@ export function registerTranscript(get: () => TranscriptItem[] | null): () => vo
 
 export function reportTranscript(): TranscriptItem[] | null {
   const items = source?.() ?? null;
-  return items?.length ? items : null;
+  return items?.length ? redact(items) : null;
 }

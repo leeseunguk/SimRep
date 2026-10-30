@@ -3,6 +3,7 @@
 import { readFile, readdir, lstat } from 'node:fs/promises'
 import path from 'node:path'
 import { optimizeTool } from './optimize.mjs'
+import { workflowDeadline } from './deadline.mjs'
 import { inspectWorkspace } from '../ai/harness/workspace.mjs'
 import { loadSkill, selectRecipe, skillCatalog } from '../ai/harness/skills.mjs'
 
@@ -55,7 +56,9 @@ export function passband(x, y) {
 }
 
 // Each column is aligned by ion ID, so one bootstrap draw is shared across voltages.
-export function particlePassband(x, outcomes, bootstrap = { resamples: 200, seed: 1 }) {
+export function particlePassband(x, outcomes, bootstrap = { resamples: 200, seed: 1 }, deadline = Infinity) {
+  const checkDeadline = () => requireCondition(Date.now() < deadline, 'optimization timeout')
+  checkDeadline()
   const n = outcomes[0].length
   requireCondition(n > 0 && outcomes.length === x.length && outcomes.every(row => row.length === n), 'particle outcomes must align across scan points')
   const counts = outcomes.map(row => row.reduce((sum, hit) => sum + hit, 0))
@@ -71,9 +74,16 @@ export function particlePassband(x, outcomes, bootstrap = { resamples: 200, seed
   const random = () => { state = (state + 0x6D2B79F5) >>> 0; let t = state; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
   const samples = { centroid_v: [], fwhm_v: [], dE_over_E: [] }
   for (let b = 0; b < bootstrap.resamples; b++) {
+    checkDeadline()
     const weights = new Uint32Array(n)
-    for (let j = 0; j < n; j++) weights[Math.floor(random() * n)]++
-    const curve = outcomes.map(row => row.reduce((sum, hit, j) => sum + hit * weights[j], 0) / n)
+    for (let j = 0; j < n; j++) {
+      if (j % 1024 === 0) checkDeadline()
+      weights[Math.floor(random() * n)]++
+    }
+    const curve = outcomes.map(row => row.reduce((sum, hit, j) => {
+      if (j % 1024 === 0) checkDeadline()
+      return sum + hit * weights[j]
+    }, 0) / n)
     let estimate
     try { estimate = passband(x, curve) } catch (error) {
       if (!/no transmitted particles|peak is not bracketed|passband centroid must be nonzero/.test(error.message)) throw error
@@ -222,6 +232,7 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
       voltage_convention: { type: 'string', enum: ['absolute_electrode', 'plate_difference', 'single_plate'] },
       bootstrap: { anyOf: [{ type: 'boolean', enum: [false] }, object({ resamples: { type: 'integer', minimum: 2, maximum: 10000 }, seed: { type: 'integer', minimum: 0, maximum: 4294967295 } })] },
     }, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'beam', 'plane', 'aperture', 'duration_us', 'out'], false, async args => {
+      const deadline = workflowDeadline.getStore() ?? Date.now() + timeoutSeconds * 1000
       only(args, ['pa', 'energies_ev', 'channel_voltages', 'electrode', 'fixed_voltage', 'beam', 'plane', 'aperture', 'bounds', 'origin', 'duration_us', 'out', 'voltage_convention', 'bootstrap'])
       requireCondition(args.voltage_convention === undefined || ['absolute_electrode', 'plate_difference', 'single_plate'].includes(args.voltage_convention), 'invalid voltage_convention')
       let bootstrap = false
@@ -280,7 +291,7 @@ export function workflowTools({ workspace, inputFile, insideWorkspace, prepareOu
           transmission.push(hits.reduce((sum, hit) => sum + hit, 0) / hits.length)
           runs.push(run)
         }
-        channels.push({ energy_ev: energy, voltages_v: args.channel_voltages, transmission, ...particlePassband(args.channel_voltages, outcomes, bootstrap) })
+        channels.push({ energy_ev: energy, voltages_v: args.channel_voltages, transmission, ...particlePassband(args.channel_voltages, outcomes, bootstrap, deadline) })
       }
       return json({ schema_version: 1, channels, k_v_per_ev: channels.reduce((sum, channel) => sum + channel.centroid_v * channel.energy_ev, 0) / channels.reduce((sum, channel) => sum + channel.energy_ev ** 2, 0),
         voltage_convention: args.voltage_convention ?? 'absolute_electrode',

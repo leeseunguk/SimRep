@@ -2,6 +2,8 @@
 import { readFile, writeFile, mkdir, rename, readdir, lstat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import path from 'node:path'
+import { inputFingerprint } from './input-fingerprint.mjs'
+import { withinWorkflowDeadline, workflowDeadline } from './deadline.mjs'
 
 const fail = message => { throw new Error(message) }
 const check = (condition, message) => { if (!condition) fail(message) }
@@ -26,7 +28,7 @@ export function optimizeTool({ inputFile, insideWorkspace, prepareOutput, runToo
       template: { type: 'string' }, parameters: { type: 'array', minItems: 1, maxItems: 6, items: { type: 'object', additionalProperties: false, required: ['name', 'min', 'max', 'initial'], properties: { name: { type: 'string' }, min: { type: 'number' }, max: { type: 'number' }, initial: { type: 'number' }, step: { type: 'number' } } } },
       electrodes: { type: 'array', items: { type: 'string' }, minItems: 1 }, objective: { type: 'object', description: 'flight_scalar: key, fly, target?, minimize?; analyzer: analyzer_scan inputs, targets and weights.' }, out: { type: 'string' }, refine: { type: 'object', description: 'Optional refine_geometry settings, excluding input, electrode, out and gap_check.' }, fixed: { type: 'object', description: 'Fixed named numeric placeholders; gap_check is always error.' }, budget: { type: 'integer', minimum: 1, maximum: 100, default: 20 }, method: { type: 'string', enum: ['nelder-mead', 'grid'] }, xtol: { type: 'number', exclusiveMinimum: 0 }, ftol: { type: 'number', exclusiveMinimum: 0 }, confirm_grid: { type: 'boolean' }
     } },
-    async run(args) {
+    run: withinWorkflowDeadline(timeoutSeconds, async args => {
       keys(args, ['template','parameters','electrodes','objective','out','refine','fixed','budget','method','xtol','ftol','confirm_grid'])
       const template = await readFile(inputFile(args.template, 'template'), 'utf8')
       check(/\.gem$/i.test(args.template), 'template must be a GEM file')
@@ -51,12 +53,13 @@ export function optimizeTool({ inputFile, insideWorkspace, prepareOutput, runToo
       else fail('objective.kind must be flight_scalar or analyzer')
       const root = insideWorkspace(args.out, 'out'); await mkdir(root, { recursive: true }); insideWorkspace(root, 'out')
       const historyPath = prepareOutput(path.join(root, 'history.json'), 'history')
-      const fingerprint = createHash('sha256').update(JSON.stringify({ template, parameters: args.parameters, electrodes: args.electrodes, objective, refine, fixed, method, xtol, ftol })).digest('hex')
+      const dependencies = await inputFingerprint({ objective, refine }, inputFile)
+      const fingerprint = createHash('sha256').update(JSON.stringify({ template, parameters: args.parameters, electrodes: args.electrodes, objective, refine, fixed, method, xtol, ftol, dependencies })).digest('hex')
       let history = []
       try { const saved = JSON.parse(await readFile(inputFile(historyPath, 'history'), 'utf8')); check(saved.fingerprint === fingerprint && Array.isArray(saved.history), 'history does not match this design'); history = saved.history } catch (error) { if (error.code !== 'ENOENT' && !String(error.message).includes('does not exist:')) throw error }
       check(history.length <= budget, 'budget is smaller than existing history')
       let cursor = 0, expired = false
-      const deadline = Date.now() + timeoutSeconds * 1000
+      const deadline = workflowDeadline.getStore()
       const save = async () => { const tmp = prepareOutput(path.join(root, 'history.tmp'), 'history'); await writeFile(tmp, JSON.stringify({ fingerprint, history }, null, 2)); await rename(tmp, historyPath) }
       const evaluate = async (point, confirmation = false) => {
         if (Date.now() >= deadline) { expired = true; return null }
@@ -109,6 +112,6 @@ export function optimizeTool({ inputFile, insideWorkspace, prepareOutput, runToo
       let confirmation = null
       if (args.confirm_grid && best && !expired) { confirmation = await evaluate(args.parameters.map(p => best.parameters[p.name]), true); if (confirmation && finite(confirmation.objective)) confirmation.change = confirmation.objective-best.objective }
       return { text: JSON.stringify({ schema_version: 1, best_parameters: best?.parameters ?? null, best_objective: best?.objective ?? '+inf', history, converged, verdict: converged ? 'converged' : 'budget_exhausted', ...(expired && { timeout: true }), recommendation_note: 'A non-converged result is a candidate, not an optimum. Quantities not in the objective were not checked.', confirmation, history_file: historyPath }), isError: false }
-    },
+    }),
   }
 }

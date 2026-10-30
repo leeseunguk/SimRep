@@ -6,8 +6,10 @@
 //! backslashes, and no step through a symbolic link (the folder itself included), so nothing outside
 //! `X.simrep.d/` can be read, written, listed or deleted through them.
 
-use std::io::Read;
+use std::hash::BuildHasher;
+use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -15,7 +17,20 @@ use tauri::ipc::Response;
 
 use crate::pa::PaError;
 
+#[cfg(unix)]
+#[path = "projectdir/unix.rs"]
+mod platform;
+#[cfg(windows)]
+#[path = "projectdir/windows.rs"]
+mod platform;
+
 const PROJECT_EXTENSION: &str = "simrep";
+// Native resource budgets, independent of the WebView or externally supplied project files.
+// Keep these constants together so installations can tune their storage policy at build time.
+pub const MAX_READ_BYTES: u64 = 64 * 1024 * 1024;
+pub const MAX_METADATA_READ_BYTES: u64 = 1024 * 1024;
+pub const MAX_LIST_ENTRIES: usize = 10_000;
+pub const MAX_LIST_DEPTH: usize = 64;
 
 fn refused(detail: impl Into<String>) -> PaError {
     PaError::new("unexpected", detail)
@@ -63,15 +78,27 @@ fn rel_parts(rel: &str, allow_empty: bool) -> Result<Vec<String>, PaError> {
 }
 
 fn is_symlink(path: &Path) -> bool {
-    std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink())
+    std::fs::symlink_metadata(path).is_ok_and(|m| {
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            m.file_attributes() & 0x400 != 0
+        }
+        #[cfg(not(windows))]
+        {
+            m.file_type().is_symlink()
+        }
+    })
 }
 
 /// The absolute path of `rel`, after checking that no existing step (the data folder included)
-/// is a symbolic link.
+/// is a symbolic link or Windows reparse point.
 fn resolve(project: &str, rel: &str, allow_empty: bool) -> Result<PathBuf, PaError> {
     let mut path = data_dir(project)?;
     if is_symlink(&path) {
-        return Err(refused("the project data folder is a symbolic link"));
+        return Err(refused(
+            "the project data folder is a symbolic link or reparse point",
+        ));
     }
     for part in rel_parts(rel, allow_empty)? {
         path.push(part);
@@ -82,29 +109,56 @@ fn resolve(project: &str, rel: &str, allow_empty: bool) -> Result<PathBuf, PaErr
     Ok(path)
 }
 
-fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), PaError> {
-    let mut tmp = path.as_os_str().to_owned();
-    tmp.push(".tmp");
-    std::fs::write(&tmp, bytes)?;
-    std::fs::rename(&tmp, path)?;
-    Ok(())
-}
-
 /// Writes `bytes` to `rel` inside the data folder, creating the folder and parents on demand.
 pub fn write(project: &str, rel: &str, bytes: &[u8]) -> Result<(), PaError> {
     let path = resolve(project, rel, false)?;
-    let root = data_dir(project)?;
-    let parent = path.parent().unwrap_or(&root);
-    std::fs::create_dir_all(parent)?;
-    // create_dir_all may have created steps; check again that none is a link (a race with a
-    // link created meanwhile is out of scope: the folder belongs to the user).
-    resolve(project, rel, false)?;
-    write_atomic(&path, bytes)
+    let parent = path.parent().unwrap();
+    let dir = platform::Directory::open(parent, true)?;
+    static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+    let random = std::collections::hash_map::RandomState::new()
+        .hash_one((std::process::id(), SEQUENCE.fetch_add(1, Ordering::Relaxed)));
+    let temp = format!(".simrep-{random:016x}.tmp");
+    // O_CREAT|O_EXCL|O_NOFOLLOW on Unix; CREATE_NEW with reparse rejection on Windows.
+    let mut file = dir.create_temp(temp.as_ref())?;
+    let result = (|| {
+        file.write_all(bytes)?;
+        drop(file);
+        resolve(project, rel, false)?;
+        // Reopen the entire chain immediately before rename; mutations still use
+        // the original directory handle, not the checked pathname (Unix), or a
+        // chain locked against rename/delete (Windows).
+        dir.verify(parent)?;
+        dir.rename(temp.as_ref(), path.file_name().unwrap())?;
+        Ok(())
+    })();
+    if result.is_err() {
+        let _ = dir.remove(temp.as_ref());
+    }
+    result
 }
 
 pub fn read(project: &str, rel: &str) -> Result<Vec<u8>, PaError> {
     let path = resolve(project, rel, false)?;
-    Ok(std::fs::read(path)?)
+    let limit = if rel.starts_with("ai/") || rel.ends_with("/run.json") {
+        MAX_METADATA_READ_BYTES
+    } else {
+        MAX_READ_BYTES
+    };
+    let file = std::fs::File::open(path)?;
+    if file.metadata()?.len() > limit {
+        return Err(refused(format!(
+            "project file exceeds read limit of {limit} bytes"
+        )));
+    }
+    // The bounded reader also handles a file that grows after metadata was read.
+    let mut bytes = Vec::new();
+    file.take(limit + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
+        return Err(refused(format!(
+            "project file exceeds read limit of {limit} bytes"
+        )));
+    }
+    Ok(bytes)
 }
 
 #[derive(Debug, Serialize, PartialEq)]
@@ -118,10 +172,18 @@ pub struct Entry {
 /// sorted by path. Symbolic links are skipped. A missing folder lists nothing.
 pub fn list(project: &str, prefix: &str) -> Result<Vec<Entry>, PaError> {
     let start = resolve(project, prefix, true)?;
-    let base = rel_parts(prefix, true)?.join("/");
+    let parts = rel_parts(prefix, true)?;
+    let base = parts.join("/");
     let mut out = Vec::new();
-    let mut stack = vec![(start, base)];
-    while let Some((dir, rel)) = stack.pop() {
+    let mut seen = 0;
+    let mut stack = vec![(start, base, parts.len())];
+    while let Some((dir, rel, depth)) = stack.pop() {
+        if depth > MAX_LIST_DEPTH {
+            return Err(refused(format!(
+                "project listing exceeds depth limit of {MAX_LIST_DEPTH}"
+            )));
+        }
+        resolve(project, &rel, true)?;
         let entries = match std::fs::read_dir(&dir) {
             Ok(e) => e,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
@@ -129,6 +191,12 @@ pub fn list(project: &str, prefix: &str) -> Result<Vec<Entry>, PaError> {
             Err(e) => return Err(e.into()),
         };
         for entry in entries {
+            seen += 1;
+            if seen > MAX_LIST_ENTRIES {
+                return Err(refused(format!(
+                    "project listing exceeds entry limit of {MAX_LIST_ENTRIES}"
+                )));
+            }
             let entry = entry?;
             let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
                 continue;
@@ -138,9 +206,12 @@ pub fn list(project: &str, prefix: &str) -> Result<Vec<Entry>, PaError> {
             } else {
                 format!("{rel}/{name}")
             };
+            if is_symlink(&entry.path()) {
+                continue;
+            }
             let kind = entry.file_type()?;
             if kind.is_dir() {
-                stack.push((entry.path(), path));
+                stack.push((entry.path(), path, depth + 1));
             } else if kind.is_file() && !name.ends_with(".tmp") {
                 out.push(Entry {
                     path,
@@ -156,11 +227,12 @@ pub fn list(project: &str, prefix: &str) -> Result<Vec<Entry>, PaError> {
 /// Deletes a file or a whole folder (a run) inside the data folder; a missing one is fine.
 pub fn delete(project: &str, rel: &str) -> Result<(), PaError> {
     let path = resolve(project, rel, false)?;
-    let result = match std::fs::symlink_metadata(&path) {
-        Ok(m) if m.is_dir() => std::fs::remove_dir_all(&path),
-        Ok(_) => std::fs::remove_file(&path),
-        Err(e) => Err(e),
-    };
+    let parent = path.parent().unwrap();
+    let result = (|| {
+        let dir = platform::Directory::open(parent, false)?;
+        dir.verify(parent)?;
+        dir.remove(path.file_name().unwrap())
+    })();
     match result {
         Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
         _ => Ok(()),

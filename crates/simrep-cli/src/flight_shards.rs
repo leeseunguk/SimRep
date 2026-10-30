@@ -228,7 +228,31 @@ pub struct TrajectoryFile {
 }
 
 pub fn write_metadata(path: &Path, metadata: &FlightFile) -> GpuResult<()> {
-    fs::write(sidecar(path), serde_json::to_vec_pretty(metadata)?)?;
+    let path = sidecar(path);
+    let bytes = serde_json::to_vec_pretty(metadata)?;
+    match fs::symlink_metadata(&path) {
+        Ok(metadata) => {
+            let is_link = metadata.file_type().is_symlink();
+            #[cfg(windows)]
+            let is_link = {
+                use std::os::windows::fs::MetadataExt;
+                is_link || metadata.file_attributes() & 0x400 != 0
+            };
+            if is_link {
+                return Err("flight sidecar must not be a symbolic link or reparse point".into());
+            }
+            // Unlink an old regular sidecar instead of opening/truncating its inode.
+            // A link substituted here can only be unlinked, never followed.
+            fs::remove_file(&path)?;
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
+    }
+    // Rust's create_new is exclusive and refuses existing files AND dangling
+    // symlinks (O_CREAT|O_EXCL on Unix, CREATE_NEW on Windows). A replacement
+    // between inspection and creation therefore fails without touching its target.
+    let mut file = fs::File::create_new(path)?;
+    std::io::Write::write_all(&mut file, &bytes)?;
     Ok(())
 }
 

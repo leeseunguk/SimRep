@@ -5,6 +5,7 @@ import { flightVelocities, type FlyRequest } from "../scene/backend";
 import type { Flight } from "../scene/flight";
 import { flyRequest, setFlightListener } from "../scene/simulation";
 import { deleteProjectFile, fileSha256, listProjectFiles, readProjectFile, readProjectText, writeProjectFile } from "./projectDir";
+import { fieldFingerprint } from "./fieldFingerprint";
 import {
   DEFAULT_KEEP_RUNS,
   DEFAULT_RUN_CAP_MB,
@@ -132,7 +133,7 @@ export async function loadRun(id: string): Promise<LoadedRun | null> {
 
 // ------------------------------------------------------------------------- building runs
 
-/** The inputs of a fly request (the PA's sha256 computed by the caller). */
+/** The inputs of a fly request (the complete field fingerprint computed by the caller). */
 export async function inputsOf(request: FlyRequest, pa: { path: string; sha256: string }): Promise<RunInputs> {
   const source =
     request.source.kind === "file" ? { ...request.source, sha256: await fileSha256(request.source.path).catch(() => null) } : request.source;
@@ -192,20 +193,9 @@ export function plotsOf(run: RunData): RunPlots {
   return { histogram: histogramData, detectorMap };
 }
 
-/** sha256 per array state: a refine (or reopening) gives the array a new `fast` / `info` object. */
-const shaCache = new WeakMap<object, { path: string; sha: string }>();
-async function paSha(o: PaObject, path: string): Promise<string> {
-  const key = o.fast ?? o.info;
-  const hit = shaCache.get(key);
-  if (hit?.path === path) return hit.sha;
-  const sha = await fileSha256(path);
-  shaCache.set(key, { path, sha });
-  return sha;
-}
-
 async function buildRecord(o: PaObject, request: FlyRequest, flight: Flight, velocities: Float64Array | null): Promise<StoredRun | null> {
   if (!o.path) return null;
-  const sha256 = await paSha(o, o.path);
+  const sha256 = await fieldFingerprint(o.path, o.info, o.fast, request.surfaces);
   const inputs = await inputsOf(request, { path: o.path, sha256 });
   const h = flight.header;
   const app = useApp.getState();
@@ -449,20 +439,21 @@ export function shownRun(o: PaObject): string | null {
 export type RestoreOutcome = "loaded" | "stale" | "missing";
 
 /**
- * Opening a project: shows run `runId` for array `o` if its inputs still match (same PA contents,
+ * Opening a project: shows run `runId` for array `o` if its inputs still match (same field contents,
  * same settings hash); "stale" / "missing" mean the caller flies again.
  */
 export async function restoreRun(o: PaObject, runId: string): Promise<RestoreOutcome> {
   const r = useRuns.getState().runs.find((x) => x.id === runId);
   if (!r || !o.path) return "missing";
+  const request = flyRequest(o);
   let sha: string;
   try {
-    sha = await fileSha256(o.path);
-    shaCache.set(o.fast ?? o.info, { path: o.path, sha });
+    sha = await fieldFingerprint(o.path, o.info, o.fast, request.surfaces);
   } catch {
+    useRuns.setState((s) => ({ stale: { ...s.stale, [r.id]: true } }));
     return "stale";
   }
-  const hash = await settingsHash(await inputsOf(flyRequest(o), { path: o.path, sha256: sha }));
+  const hash = await settingsHash(await inputsOf(request, { path: o.path, sha256: sha }));
   const verdict = runMatches(r, sha, hash);
   if (verdict === "stale") useRuns.setState((s) => ({ stale: { ...s.stale, [r.id]: true } }));
   if (verdict !== "match") return verdict === "stale" ? "stale" : "missing";

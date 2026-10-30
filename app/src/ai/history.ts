@@ -9,8 +9,9 @@ import * as projectDir from "../state/projectDir";
  * Saved AI chats: one `ai/<chat-id>.json` per conversation in the open project's data folder
  * (`<X>.simrep.d/`, state/projectDir.ts). A saved chat holds what the panel showed (messages, tool
  * calls with their compact card summary, approvals), who answered (provider, model) and when.
- * It never holds credentials, account ids or e-mails, or file contents: every string passes
- * `redact`, tool arguments are compacted, and a tool result is only its card summary.
+ * Known credential/identity keys and text patterns are redacted before clipping. This is
+ * best-effort filtering, not detection of arbitrary secrets. Tool arguments are compacted,
+ * and a tool result is only its card summary, never the original file contents.
  */
 export const HISTORY_DIR = "ai";
 export const CHAT_FORMAT = "simrep-ai-chat";
@@ -61,37 +62,46 @@ export interface SavedChat {
 
 const REDACTED = "[redacted]";
 /** Object keys whose values are credentials or identities; dropped wherever they appear. */
-const SECRET_KEY = /token|secret|passw(or)?d|api[-_]?key|authorization|cookie|credential|private[-_]?key|^e-?mail$|^account(_?id)?$/i;
+const SECRET_KEY = /token|secret|passw(or)?d|api[-_]?key|authorization|cookie|credential|private[-_]?key|^e-?mail$|^(account|user|client)([-_]?id)?$|^session$/i;
 const PATTERNS: [RegExp, string][] = [
   // JWTs (OAuth id/access tokens).
   [/\beyJ[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}\.[A-Za-z0-9_-]{4,}/g, REDACTED],
-  [/\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, `Bearer ${REDACTED}`],
+  [/\b(Basic|Bearer)\s+[A-Za-z0-9._~+/=-]+/gi, `$1 ${REDACTED}`],
   // Provider key formats: OpenAI / Anthropic, GitHub, Slack, AWS, Google.
   [/\b(?:sk|pk|rk)-(?:ant-|proj-|live-|test-)?[A-Za-z0-9_-]{16,}/g, REDACTED],
   [/\bgh[pousr]_[A-Za-z0-9]{20,}/g, REDACTED],
   [/\bxox[abpr]-[A-Za-z0-9-]{10,}/g, REDACTED],
   [/\bAKIA[0-9A-Z]{16}\b/g, REDACTED],
   [/\bAIza[0-9A-Za-z_-]{30,}/g, REDACTED],
-  // key=value / "key": "value" pairs naming a credential.
-  [/\b(access_token|refresh_token|id_token|client_secret|api[_-]?key|password|token)(["']?\s*[:=]\s*["']?)[^\s"'&,;}]{6,}/gi, `$1$2${REDACTED}`],
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[redacted email]"],
 ];
 
 export function redactText(s: string): string {
-  return PATTERNS.reduce((acc, [re, by]) => acc.replace(re, by), s);
+  const value = (_match: string, prefix: string, secret: string) => {
+    const quote = secret[0] === '"' || secret[0] === "'" ? secret[0] : "";
+    return `${prefix}${quote}${REDACTED}${quote}`;
+  };
+  // Quoted values can contain spaces; unquoted cookie headers run to the end
+  // of their line, including additional cookies/attributes after a semicolon.
+  s = s.replace(/\b((?:set[-_])?cookie["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n"'}]+)/gi, value);
+  s = PATTERNS.reduce((acc, [re, by]) => acc.replace(re, by), s);
+  return s.replace(/\b((?:(?:account|user|client)[-_]?id|client[-_]?secret|access[-_]?token|refresh[-_]?token|id[-_]?token|x[-_]?api[-_]?key|api[-_]?key|password|authorization|session|token)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'&,;}]+)/gi, value);
 }
 
 /** A copy of `v` with credential-named keys dropped and every string redacted. */
-export function redact<T>(v: T): T {
-  if (typeof v === "string") return redactText(v) as T;
-  if (Array.isArray(v)) return v.map(redact) as T;
-  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).filter(([k]) => !SECRET_KEY.test(k)).map(([k, x]) => [k, redact(x)])) as T;
+export function redact<T>(v: T, identities: readonly string[] = []): T {
+  if (typeof v === "string") return redactText(identities.reduce((s, id) => id ? s.split(id).join(REDACTED) : s, v)) as T;
+  if (Array.isArray(v)) return v.map((x) => redact(x, identities)) as T;
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).filter(([k]) => !SECRET_KEY.test(k)).map(([k, x]) => [k, redact(x, identities)])) as T;
   return v;
 }
 
 // --------------------------------------------------------------------------- serialization
 
-const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, max - 1)}…` : s);
+const clip = (s: string, max: number) => {
+  s = redactText(s);
+  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
+};
 
 /** Tool arguments as short scalars: long strings (file contents) are clipped, deep values dropped. */
 export function compactArgs(v: Record<string, unknown>, depth = 0): Record<string, unknown> {
@@ -125,7 +135,8 @@ export interface SaveMeta {
 
 /** The chat as its saved, redacted JSON object. Open approvals and running tools are closed. */
 export function serializeChat(chat: ChatState, meta: SaveMeta): SavedChat {
-  const items = chat.items.map((i): SavedItem => {
+  const identities = chat.session?.account ? [chat.session.account] : [];
+  const items = redact(chat.items, identities).map((i): SavedItem => {
     switch (i.kind) {
       case "user":
         return { kind: "user", text: clip(i.text, TEXT_MAX), ...(i.at !== undefined && { at: i.at }) };
@@ -158,7 +169,7 @@ export function serializeChat(chat: ChatState, meta: SaveMeta): SavedChat {
     ...(meta.continuedFrom && { continuedFrom: meta.continuedFrom }),
     items,
     approvals,
-  });
+  }, identities);
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -231,7 +242,7 @@ export function parseChat(text: string): SavedChat | null {
 
 /** A saved chat as a transcript the panel renders read-only (no session). */
 export function toChatState(saved: SavedChat): ChatState {
-  const items = saved.items.map((i, n): ChatItem => {
+  const items = redact(saved).items.map((i, n): ChatItem => {
     const id = n + 1;
     switch (i.kind) {
       case "user":
@@ -280,7 +291,7 @@ export function continueSummary(saved: SavedChat, max = SUMMARY_MAX): string {
         return `Reply ${i.status}`;
     }
   };
-  const lines = saved.items.map(line).filter((l): l is string => l !== null);
+  const lines = redact(saved).items.map(line).filter((l): l is string => l !== null);
   const firstUser = lines.findIndex((l) => l.startsWith("User: "));
   const picked: string[] = [];
   let used = head.length;
@@ -304,12 +315,12 @@ export function continueSummary(saved: SavedChat, max = SUMMARY_MAX): string {
 }
 
 /**
- * A saved (already redacted) chat as the report's transcript appendix (report/transcript.ts):
+ * A saved chat as the report's transcript appendix (report/transcript.ts):
  * messages, tool calls with their card summary, approvals, errors and ended replies, in `lang`.
  */
 export function transcriptOf(saved: SavedChat, lang: Lang): TranscriptItem[] {
   const t = (key: MessageKey, params?: Record<string, string>) => translate(lang, key, params);
-  return saved.items.flatMap((i): TranscriptItem[] => {
+  return redact(saved).items.flatMap((i): TranscriptItem[] => {
     switch (i.kind) {
       case "user":
         return [{ role: "user", text: i.text }];
@@ -362,12 +373,17 @@ export async function listChats(): Promise<SavedChat[]> {
   const entries = await f.listProjectFiles(HISTORY_DIR);
   // Only direct children `ai/<id>.json`.
   const ids = [...new Set(entries.map((e) => e.path).filter((p) => p.startsWith(`${HISTORY_DIR}/`) && !p.slice(HISTORY_DIR.length + 1).includes("/")).map((p) => p.slice(HISTORY_DIR.length + 1)).filter((n) => n.endsWith(".json")).map((n) => n.slice(0, -5)).filter(validChatId))];
-  const chats = await Promise.all(ids.map(async (id) => {
-    const text = await f.readProjectText(relOf(id)).catch(() => null);
-    const chat = text === null ? null : parseChat(text);
-    return chat && chat.id === id ? chat : null;
-  }));
-  return chats.filter((c): c is SavedChat => c !== null).sort((a, b) => b.updatedAt - a.updatedAt);
+  const chats: SavedChat[] = [];
+  // Bound concurrent native reads for externally supplied project folders.
+  for (let start = 0; start < ids.length; start += 8) {
+    const batch = await Promise.all(ids.slice(start, start + 8).map(async (id) => {
+      const text = await f.readProjectText(relOf(id)).catch(() => null);
+      const chat = text === null ? null : parseChat(text);
+      return chat && chat.id === id ? chat : null;
+    }));
+    chats.push(...batch.filter((c): c is SavedChat => c !== null));
+  }
+  return chats.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function deleteChat(id: string): Promise<void> {

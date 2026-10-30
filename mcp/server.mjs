@@ -17,7 +17,7 @@
 // unless it stays inside SIMREP_WORKSPACE, including after symlink resolution.
 import { spawn } from 'node:child_process'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { createReadStream, existsSync, mkdirSync, realpathSync, statSync, writeFileSync } from 'node:fs'
+import { createReadStream, existsSync, lstatSync, mkdirSync, realpathSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import readline from 'node:readline'
@@ -127,12 +127,37 @@ function inputFile(rel, what) {
 }
 
 function prepareOutput(rel, what) {
-  const abs = insideWorkspace(rel, what)
+  if (typeof rel !== 'string' || !rel || rel.includes('\0')) throw new ToolError(`${what} is required and must not contain NUL`)
+  const lexical = path.resolve(WORKSPACE, rel)
+  if (!isInside(lexical)) throw new ToolError(`${what} must stay inside the workspace`)
+  // lstat also sees dangling links, unlike existsSync/realpath. Output names must
+  // not redirect through any link, even one whose target is inside the workspace.
+  let cursor = WORKSPACE
+  for (const part of path.relative(WORKSPACE, lexical).split(path.sep).filter(Boolean)) {
+    cursor = path.join(cursor, part)
+    try {
+      if (lstatSync(cursor).isSymbolicLink()) throw new ToolError(`${what} must not be a workspace symbolic link`)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
+  }
+  const abs = insideWorkspace(lexical, what)
   const parent = path.dirname(abs)
   if (!existsSync(parent)) mkdirSync(parent, { recursive: true })
   const realParent = realpathSync(parent)
   if (!isInside(realParent)) throw new ToolError(`${what} parent is outside the workspace`)
   return abs
+}
+
+function withExtension(file, ext) {
+  const parsed = path.parse(file)
+  return path.join(parsed.dir, `${parsed.name}.${ext}`)
+}
+
+function preparePaFamily(file) {
+  for (const ext of ['pa#', 'pa0', 'pa_', 'cuts.json']) prepareOutput(withExtension(file, ext), `derived ${ext} output`)
+  // Electrode numbers are bounded by the native format, including sparse bases.
+  for (let n = 1; n <= 1000; n++) prepareOutput(withExtension(file, `pa${n}`), 'derived basis output')
 }
 
 function only(args, keys) {
@@ -511,9 +536,8 @@ const TOOLS = [
     },
     async run(args) {
       only(args, ['input', 'output'])
-      const argv = ['gem2pa', inputFile(reqString(args, 'input'), 'input')]
-      if (args.output !== undefined) argv.push(prepareOutput(reqString(args, 'output'), 'output'))
-      return simrep(argv)
+      const input = inputFile(reqString(args, 'input'), 'input')
+      return simrep(['gem2pa', input, prepareOutput(args.output === undefined ? withExtension(input, 'pa#') : reqString(args, 'output'), 'output')])
     },
   },
   {
@@ -580,7 +604,10 @@ const TOOLS = [
     },
     async run(args) {
       only(args, ['file', 'device', 'backend', 'tolerance', 'max_cycles', 'permittivity', 'magnetic_material'])
-      const argv = ['refine', inputFile(reqString(args, 'file'), 'file'), ...deviceFlags(args, ['auto', 'cpu', 'gpu'])]
+      const file = inputFile(reqString(args, 'file'), 'file')
+      if (path.extname(file).toLowerCase() === '.pa#') preparePaFamily(file)
+      else prepareOutput(file, 'refined output')
+      const argv = ['refine', file, ...deviceFlags(args, ['auto', 'cpu', 'gpu'])]
       if (args.permittivity !== undefined) argv.push('--permittivity', inputFile(reqString(args, 'permittivity'), 'permittivity'))
       if (args.magnetic_material !== undefined) argv.push('--magnetic-material', inputFile(reqString(args, 'magnetic_material'), 'magnetic_material'))
       return simrep(argv)
@@ -621,11 +648,13 @@ const TOOLS = [
     },
     async run(args) {
       only(args, ['input', 'electrode', 'insulator', 'out', 'device', 'backend', 'grid', 'spacing', 'origin', 'tolerance', 'max_cycles', 'units', 'repair', 'cad_mode', 'cad_tolerance', 'gap_check'])
+      const out = prepareOutput(reqString(args, 'out'), 'out')
+      preparePaFamily(out)
       const argv = [
         'refine-geometry',
         inputFile(reqString(args, 'input'), 'input'),
         ...deviceFlags(args, ['cpu', 'gpu']),
-        '--out', prepareOutput(reqString(args, 'out'), 'out'),
+        '--out', out,
       ]
       for (const item of assignmentList(args.electrode, 'part=number:voltage', /^[^=]+=\d+:[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/, 'electrode')) {
         argv.push('--electrode', item)
@@ -752,6 +781,11 @@ const TOOLS = [
       if ((args.particles === undefined) === (args.beam === undefined)) {
         throw new ToolError('provide exactly one of particles or beam')
       }
+      let output
+      if (args.output !== undefined) {
+        output = prepareOutput(reqString(args, 'output'), 'output')
+        prepareOutput(`${output}.json`, 'flight sidecar output')
+      }
       const particles = args.beam ? writeBeam(args.beam) : inputFile(reqString(args, 'particles'), 'particles')
       const argv = ['fly', '--particles', particles]
       if (args.pa !== undefined) argv.push('--pa', inputFile(reqString(args, 'pa'), 'pa'))
@@ -788,7 +822,7 @@ const TOOLS = [
       if (args.temperature_k !== undefined) flag(argv, '--temperature-k', finite(args.temperature_k, 'temperature_k'))
       if (args.gas_mass_amu !== undefined) flag(argv, '--gas-mass-amu', finite(args.gas_mass_amu, 'gas_mass_amu'))
       if (args.mbmr !== undefined) argv.push('--mbmr', inputFile(reqString(args, 'mbmr'), 'mbmr'))
-      if (args.output !== undefined) argv.push('--output', prepareOutput(reqString(args, 'output'), 'output'))
+      flag(argv, '--output', output)
       if (args.duration_us !== undefined) flag(argv, '--duration-us', finite(args.duration_us, 'duration_us'))
       if (args.origin !== undefined) argv.push('--origin', numbers(args.origin, 3, 'origin'))
       if (args.tolerance !== undefined) flag(argv, '--tolerance', finite(args.tolerance, 'tolerance'))
@@ -1056,9 +1090,15 @@ function failure(id, code, message) {
   send({ jsonrpc: '2.0', id, error: { code, message } })
 }
 
+const NOTIFICATIONS = new Set(['notifications/initialized', 'notifications/cancelled', 'notifications/progress'])
 async function handle(msg) {
+  if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return failure(null, -32600, 'invalid request')
   const { id, method, params } = msg
   const isNotification = id === undefined || id === null
+  if (isNotification) {
+    if (!NOTIFICATIONS.has(method)) console.error(JSON.stringify({ type: 'audit', event: 'rejected', method: method === 'tools/call' ? 'tools/call' : 'unknown', reason: 'request_id_required' }))
+    return
+  }
   switch (method) {
     case 'initialize':
       return result(id, {
@@ -1105,7 +1145,6 @@ async function handle(msg) {
     case 'ping':
       return result(id, {})
     default:
-      if (isNotification) return
       return failure(id, -32601, `method not found: ${method}`)
   }
 }
@@ -1123,7 +1162,7 @@ rl.on('line', (line) => {
     return send({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' } })
   }
   void handle(msg).catch((error) => {
-    if (msg.id !== undefined && msg.id !== null) failure(msg.id, -32603, String(error?.message ?? error))
+    if (msg?.id !== undefined && msg.id !== null) failure(msg.id, -32603, String(error?.message ?? error))
   })
 })
 rl.on('close', () => process.exit(0))

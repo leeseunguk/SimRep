@@ -23,13 +23,16 @@ async function gate(message) {
   return response.json()
 }
 
+const NOTIFICATIONS = new Set(['notifications/initialized', 'notifications/cancelled', 'notifications/progress'])
 const lines = readline.createInterface({ input: process.stdin })
 lines.on('line', line => {
   void (async () => {
     let message
     try { message = JSON.parse(line) } catch { return }
-    if (message.id === undefined) {
-      mcp.send(message)
+    if (!message || typeof message !== 'object' || Array.isArray(message)) return
+    if (message.id === undefined || message.id === null) {
+      if (NOTIFICATIONS.has(message.method)) mcp.send(message)
+      else console.error(JSON.stringify({ type: 'audit', event: 'rejected', method: message.method === 'tools/call' ? 'tools/call' : 'unknown', reason: 'request_id_required' }))
       return
     }
     try {

@@ -12,6 +12,9 @@ use simrep_fly::{
 };
 use simrep_geom::{SampledSdf, Sdf, SignedDistance};
 
+#[path = "common/narrow_cylindrical.rs"]
+mod narrow_cylindrical;
+
 fn build(
     shape: Arc<dyn SignedDistance>,
     dims: [usize; 3],
@@ -35,13 +38,18 @@ fn compare(label: &str, sdf: &SdfVolumes, segments: &[(Vector, Vector)]) {
     for precision in [Precision::Precise, Precision::Preview] {
         let gpu = GpuSdf::new(sdf, precision).unwrap();
         let hits = gpu.first_hits(segments).unwrap();
+        assert_eq!(hits.len(), cpu.len());
         let mut agreement = 0;
         let mut max_dt = 0.0_f64;
         let mut max_mm = 0.0_f64;
         for (i, (&reference, &actual)) in cpu.iter().zip(&hits).enumerate() {
-            if reference.map(|h| h.1) == actual.map(|h| h.1) {
-                agreement += 1;
-            }
+            assert_eq!(
+                reference.map(|h| h.1),
+                actual.map(|h| h.1),
+                "{label} segment {i}: {:?}",
+                segments[i]
+            );
+            agreement += 1;
             if let (Some((a, _)), Some((b, _))) = (reference, actual) {
                 assert!(b.is_finite() && (0.0..=1.0).contains(&b));
                 let length = (0..3)
@@ -50,22 +58,14 @@ fn compare(label: &str, sdf: &SdfVolumes, segments: &[(Vector, Vector)]) {
                     .sqrt();
                 max_dt = max_dt.max((a - b).abs());
                 max_mm = max_mm.max((a - b).abs() * length);
-            }
-            if gpu.has_f64() {
-                assert_eq!(
-                    reference.map(|h| h.1),
-                    actual.map(|h| h.1),
-                    "{label} segment {i}: {:?}",
-                    segments[i]
+                let tolerance = if gpu.has_f64() { 1e-9 } else { 1e-3 };
+                assert!(
+                    (a - b).abs() <= tolerance,
+                    "{label} segment {i}: CPU={a:.17e} GPU={b:.17e} tolerance={tolerance}"
                 );
-                if let (Some((a, _)), Some((b, _))) = (reference, actual) {
-                    assert!(
-                        (a - b).abs() <= 1e-9,
-                        "{label} segment {i}: CPU={a:.17e} GPU={b:.17e}"
-                    );
-                }
             }
         }
+        assert_eq!(agreement, segments.len());
         println!(
             "SDF_AGREEMENT case={label} precision={} adapter={:?} count={} agreement={agreement} max_dt={max_dt:.17e} max_error_mm={max_mm:.17e}",
             if gpu.has_f64() { "f64" } else { "f32" },
@@ -87,6 +87,11 @@ fn gpu_sdf_reference_agreement() {
         probe.has_f64()
     );
     drop(probe);
+    let (quartic, from, to) = narrow_cylindrical::fixture();
+    let first = quartic.first_hit(from, to).unwrap();
+    assert_eq!(first.1, 1);
+    assert!((first.0 - 0.05).abs() < 1e-9);
+    compare("cylindrical_quartic_first_entry", &quartic, &[(from, to)]);
     let cylinder = build(
         Arc::new(Sdf::Cylinder {
             center: [0.0; 3],
@@ -292,9 +297,7 @@ fn gpu_sdf_million_segments() {
             .zip(&hits)
             .filter(|(a, b)| a.map(|h| h.1) == b.map(|h| h.1))
             .count();
-        if gpu.has_f64() {
-            assert_eq!(agreement, segments.len());
-        }
+        assert_eq!(agreement, segments.len());
         println!(
             "SDF_TIMING adapter={:?} software={} precision={} count={} cpu_threads=16 cpu_compute_ms={cpu_ms:.6} gpu_compute_ms={gpu_compute_ms:.6} gpu_total_ms={gpu_total_ms:.6} agreement={agreement}",
             gpu.adapter_info(),

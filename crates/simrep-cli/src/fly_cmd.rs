@@ -428,6 +428,24 @@ struct VoltageRun {
     physics: crate::physics_cmd::PhysicsRun,
 }
 
+// Adapter names/selectors remain portable; the resolved numerical execution
+// path (including software vs hardware class) does not.
+fn execution_identity(
+    precision: &str,
+    adapter: Option<(wgpu::Backend, wgpu::DeviceType)>,
+) -> serde_json::Value {
+    match adapter {
+        Some((backend, class)) => serde_json::json!({
+            "device": "gpu", "precision": precision,
+            "backend": format!("{backend:?}").to_lowercase(),
+            "adapter_class": format!("{class:?}").to_lowercase(),
+        }),
+        None => serde_json::json!({
+            "device": "cpu", "precision": precision, "backend": "cpu", "adapter_class": "cpu",
+        }),
+    }
+}
+
 pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     let start = Instant::now();
     if options.shard.is_some()
@@ -1458,8 +1476,10 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
     } else {
         "f32"
     };
-    let execution =
-        serde_json::json!({"device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision});
+    let execution = execution_identity(
+        precision,
+        gpu.as_ref().map(|g| (g.info.backend, g.info.device_type)),
+    );
     let run_hash = flight_shards::sha256(&serde_json::to_vec(
         &serde_json::json!({"inputs": identity, "execution": execution}),
     )?);
@@ -1468,7 +1488,7 @@ pub fn run(mut options: FlyOptions) -> GpuResult<()> {
         "shard": options.shard.map(|s| serde_json::json!({"index": s.index, "count": s.count, "ions": particles.len()})),
         "splat_counts": counts, "arrivals": arrivals.len(), "arrival_tof_us": flight_shards::tof_stats(&arrivals), "compute_ms": flight.as_secs_f64() * 1000.0, "prep_ms": setup.as_secs_f64() * 1000.0, "ghost_fill": ghost_fill,
         "requested": { "device": format!("{:?}", options.device).to_lowercase(), "precision": "f64", "backend": format!("{:?}", options.backend).to_lowercase(), "gpu_adapter": options.gpu_adapter, "surface_backend": options.surface_backend, "surface_mode": if options.no_cuts { "staircase" } else if options.cuts.is_some() { "continuous" } else if options.nearest_node_collisions { "nearest-node" } else { "auto" } },
-        "executed": { "device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision, "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()), "gpu_adapter": gpu.as_ref().map(|g| &g.info.name), "surface_mode": surface_mode, "surface_backend": if cuts_path.is_some() || surface_auto { executed_surface_backend } else { "staircase" },
+        "executed": { "device": if use_gpu { "gpu" } else { "cpu" }, "precision": precision, "backend": gpu.as_ref().map(|g| format!("{:?}", g.info.backend).to_lowercase()), "gpu_adapter": gpu.as_ref().map(|g| &g.info.name), "adapter_class": execution["adapter_class"], "surface_mode": surface_mode, "surface_backend": if cuts_path.is_some() || surface_auto { executed_surface_backend } else { "staircase" },
             "surface_sdf_resolution_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| &v["resolution_mm"]).collect::<Vec<_>>()),
             "surface_sdf_lipschitz": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "lipschitz": v["lipschitz"]})).collect::<Vec<_>>()),
             "surface_sdf_interp_error_mm": sdf_report.as_ref().map(|r| r.iter().map(|v| serde_json::json!({"number": v["number"], "interp_error_mm": v["interp_error_mm"]})).collect::<Vec<_>>()),
@@ -1614,6 +1634,33 @@ mod tests {
     struct TestCli {
         #[command(flatten)]
         fly: FlyOptions,
+    }
+    #[test]
+    fn resolved_backend_and_adapter_class_separate_shard_identities() {
+        let hash = |backend, class| {
+            flight_shards::sha256(
+                &serde_json::to_vec(&serde_json::json!({
+                    "inputs": {"requested_backend": "auto"},
+                    "execution": execution_identity("f64", Some((backend, class))),
+                }))
+                .unwrap(),
+            )
+        };
+        let vulkan = hash(wgpu::Backend::Vulkan, wgpu::DeviceType::DiscreteGpu);
+        assert_ne!(
+            vulkan,
+            hash(wgpu::Backend::Dx12, wgpu::DeviceType::DiscreteGpu)
+        );
+        assert_ne!(
+            vulkan,
+            hash(wgpu::Backend::Metal, wgpu::DeviceType::DiscreteGpu)
+        );
+        assert_ne!(
+            vulkan,
+            hash(wgpu::Backend::Vulkan, wgpu::DeviceType::IntegratedGpu)
+        );
+        assert_ne!(vulkan, hash(wgpu::Backend::Vulkan, wgpu::DeviceType::Cpu));
+        assert_eq!(execution_identity("f64", None)["backend"], "cpu");
     }
     #[test]
     fn placement_and_voltages_parse_without_losing_negative_values() {

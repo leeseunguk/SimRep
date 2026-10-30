@@ -531,9 +531,9 @@ fn poly_eval(p: &[f64], s: f64) -> f64 {
     p.iter().rev().fold(0.0, |acc, c| acc * s + c)
 }
 
-/// Real roots of p in [lo, hi] plus its critical points there (a superset of
-/// the sign changes, including double roots): the interval is split at the
-/// derivative's roots into monotone pieces and each bracketing piece bisected.
+/// Sorted, distinct real roots of p in [lo, hi] plus its critical points there
+/// (a superset of the sign changes, including double roots): the interval is split
+/// at the derivative's roots into monotone pieces and each bracketing piece bisected.
 fn poly_roots(p: &[f64], lo: f64, hi: f64) -> Vec<f64> {
     let mut p = p.to_vec();
     while p.len() > 1 && p.last() == Some(&0.0) {
@@ -580,6 +580,10 @@ fn poly_roots(p: &[f64], lo: f64, hi: f64) -> Vec<f64> {
         roots.push(0.5 * (a + b));
     }
     roots.retain(|r| (lo..=hi).contains(r));
+    // Recursive callers use these as interval edges, not merely as probes.
+    // Appending new roots after the critical points breaks that ordering.
+    roots.sort_by(f64::total_cmp);
+    roots.dedup();
     roots
 }
 

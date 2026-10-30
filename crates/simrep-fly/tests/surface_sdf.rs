@@ -3,6 +3,32 @@ use simrep_fly::{surface::SurfaceModel, surface_sdf::SdfVolumes};
 use simrep_geom::{SampledSdf, Sdf, SignedDistance};
 use std::sync::Arc;
 
+#[path = "common/narrow_cylindrical.rs"]
+mod narrow_cylindrical;
+
+#[test]
+fn cylindrical_quartic_returns_the_first_narrow_crossing() {
+    let (sdf, from, to) = narrow_cylindrical::fixture();
+    let at = |t: f64| std::array::from_fn(|a| from[a] + t * (to[a] - from[a]));
+    assert_eq!(sdf.membership(at(0.055)), Some(1));
+    assert_eq!(sdf.membership(at(0.065)), None);
+    let (t, number) = sdf.first_hit(from, to).unwrap();
+    assert_eq!(number, 1);
+    assert!((t - 0.05).abs() < 1e-9, "first hit {t}, expected 0.05");
+    let mut short_hit = None;
+    for i in 0..1000 {
+        let lo = i as f64 / 1000.0;
+        let hi = (i + 1) as f64 / 1000.0;
+        if let Some((local, electrode)) = sdf.first_hit(at(lo), at(hi)) {
+            short_hit = Some((lo + local / 1000.0, electrode));
+            break;
+        }
+    }
+    let (short_t, short_number) = short_hit.unwrap();
+    assert_eq!(short_number, number);
+    assert!((short_t - t).abs() < 1e-9);
+}
+
 fn model(
     shape: Arc<dyn SignedDistance>,
     dims: [usize; 3],

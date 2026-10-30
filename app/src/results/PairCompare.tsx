@@ -239,4 +239,3 @@ export function PairCompare({ pair }: { pair: [string, string] }) {
     </>
   );
 }
-

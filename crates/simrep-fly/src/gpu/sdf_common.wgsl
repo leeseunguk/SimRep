@@ -49,6 +49,27 @@ fn sdf_insert_root(r: ptr<function, sdf_Roots>, t: f32) {
     for (var j = (*r).count; j > pos; j--) { (*r).value[j] = (*r).value[j-1u]; }
     (*r).value[pos] = t; (*r).count++;
 }
+// Match the CPU recursion's sorted/distinct return contract before building
+// monotone intervals. Both loops are bounded by the 16-slot root capacity.
+fn sdf_sorted_roots(input: sdf_Roots) -> sdf_Roots {
+    var sorted = input;
+    for (var i = 1u; i < sorted.count; i++) {
+        let value = sorted.value[i];
+        var j = i;
+        for (var shift = 0u; shift < 16u; shift++) {
+            if j == 0u || sorted.value[j-1u] <= value { break; }
+            sorted.value[j] = sorted.value[j-1u]; j--;
+        }
+        sorted.value[j] = value;
+    }
+    var result: sdf_Roots;
+    for (var i = 0u; i < sorted.count; i++) {
+        if result.count == 0u || sorted.value[i] != result.value[result.count-1u] {
+            result.value[result.count] = sorted.value[i]; result.count++;
+        }
+    }
+    return result;
+}
 // Union of roots of poly_value and all its derivatives. Degree <= 4 gives at most
 // 4+3+2+1 distinct interior roots and two endpoints: 16 slots suffice.
 // Ascending derivative degree replaces CPU recursion. Sorting/deduplicating
@@ -66,7 +87,7 @@ fn sdf_poly_roots(input: sdf_Poly) -> sdf_Roots {
     }
     var roots: sdf_Roots;
     for (var n = 1u; n <= degree; n++) {
-        let critical = roots;
+        let critical = sdf_sorted_roots(roots);
         roots.count = 0u;
         for (var j = 0u; j < critical.count; j++) { sdf_insert_root(&roots, critical.value[j]); }
         for (var j = 0u; j <= critical.count; j++) {
@@ -106,7 +127,7 @@ fn sdf_distance(v: sdf_Volume, input: vec3<f32>) -> f32 {
             boundary = max(boundary, max(bound_low, point[a]-v.origin[a]-f32(v.dims[a]-1u)*v.spacing[a]));
         }
         let x = clamp((point[a]-v.origin[a])/v.spacing[a], 0.0, f32(v.dims[a]-1u));
-        low[a] = u32(floor(x)); high[a] = min(low[a]+1u, v.dims[a]-1u); f[a] = x-f32(low[a]);
+        low[a] = u32(floor(x)); high[a] = min(low[a]+1u,v.dims[a]-1u); f[a] = x-f32(low[a]);
     }
     var result = 0.0;
     // A one-node axis has f=0: its high corners have exactly zero weight.
@@ -118,7 +139,7 @@ fn sdf_distance(v: sdf_Volume, input: vec3<f32>) -> f32 {
                 let corner = vec3<u32>(x,y,z); var pos: vec3<u32>; var weight = 1.0;
                 for (var a = 0u; a < 3u; a++) {
                     pos[a] = select(high[a], low[a], corner[a] == 0u);
-                    weight *= select(f[a], 1.0-f[a], corner[a] == 0u);
+                    weight *= select(f[a],1.0-f[a],corner[a] == 0u);
                 }
                 result += weight * sdf_sample_value(v,pos);
             }
