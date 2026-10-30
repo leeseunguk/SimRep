@@ -19,6 +19,7 @@
 
   The tauri.cad.conf.json overlay bundles -Dest as the `occt\` folder next to SimRep's exe,
   where src-tauri/src/cad.rs looks for it, and -Dest\crt into the install folder itself.
+  tauri.windows.conf.json moves the OCCT DLLs beside both executables for the CLI's startup imports.
 
 .EXAMPLE
   powershell -NoProfile -ExecutionPolicy Bypass -File tools\win\stage-occt.ps1 -Dest app\src-tauri\bundle-occt
@@ -133,21 +134,23 @@ foreach ($p in $thirdParty) {
 # Notice file.
 $occtVersion = (Split-Path $CasRoot -Leaf)
 $lines = @(
-  'SimRep - third-party runtime notices for the occt\ folder',
-  '========================================================',
+  'SimRep - third-party OCCT runtime notices',
+  '========================================',
   '',
   'SimRep imports STEP and IGES files through Open CASCADE Technology (OCCT).',
-  "The DLLs in this folder are the unmodified official $occtVersion Windows x64 (vc14) binaries",
+  "The bundled DLLs are the unmodified official $occtVersion Windows x64 (vc14) binaries",
   'from https://github.com/Open-Cascade-SAS/OCCT/releases/tag/V7_7_0 and the third-party',
-  'libraries shipped with that release.',
+  'libraries shipped with that release. CAD-only bundles put the DLLs in occt\;',
+  'the self-contained Windows bundle shares them beside simrep-app.exe and simrep.exe.',
   '',
   'Open CASCADE Technology is licensed under the GNU Lesser General Public License',
   'version 2.1 with the Open CASCADE exception (licenses\OCCT-LICENSE_LGPL_21.txt,',
   'licenses\OCCT_LGPL_EXCEPTION.txt). SimRep links to OCCT dynamically: simrep-app.exe',
-  'delay-loads these DLLs at run time and does not contain OCCT code. You may replace',
-  'them with your own build of the same OCCT version (same DLL names and exported ABI):',
-  'put the DLLs in this folder, or point the SIMREP_OCCT_DIR environment variable at an',
-  'OCCT installation (its CASROOT) or a folder holding the DLLs. OCCT source code is',
+  'delay-loads these DLLs at run time; simrep.exe has ordinary dynamic startup imports.',
+  'You may replace the DLLs in their installed directory with your own build of the',
+  'same OCCT version (same DLL names and exported ABI). The app also accepts an',
+  'alternative via SIMREP_OCCT_DIR (an OCCT CASROOT or a folder holding the DLLs).',
+  'OCCT source code is',
   'available from https://dev.opencascade.org and https://github.com/Open-Cascade-SAS/OCCT',
   '(tag V7_7_0); on request we provide the exact source of the bundled version.',
   ''

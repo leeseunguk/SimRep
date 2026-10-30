@@ -1,5 +1,37 @@
 # Third-party notices
 
+## Windows installer runtime (October 30, 2026)
+
+The Windows installer includes the unmodified Windows x64 Node.js **24.14.1**
+`node.exe` as `runtime/node.exe`. Node.js is MIT licensed, Copyright Node.js
+contributors. Its complete upstream `LICENSE`, including the notices for V8,
+OpenSSL, libuv and the other embedded dependencies, is installed alongside it
+as `runtime/LICENSE`. The staging script downloads the pinned official archive
+and checks its SHA-256 before extracting only these two files; npm and a global
+Node installation are not required at runtime. Source and release:
+https://nodejs.org/dist/v24.14.1/ and https://github.com/nodejs/node/tree/v24.14.1.
+
+The unchanged JavaScript bridge and its Windows-installed production npm tree
+are redistributed under `ai/`, preserving package licence/notice files. The
+exact versions are recorded in installed `ai/package-lock.json`. Direct
+production packages are `@anthropic-ai/claude-agent-sdk` 0.3.311 (Anthropic
+commercial terms), `@openai/codex` 0.164.0 (Apache-2.0),
+`@code-yeongyu/senpi-ai` 2026.10.25-2 (MIT), and `jose` 5.10.0 (MIT).
+Transitive licences, including `@bufbuild/protobuf` Apache-2.0 AND BSD-3-Clause,
+remain in their packages. Native provider executables are installed by Windows
+npm, not copied from Linux. No account stores or credentials are bundled.
+The adapter notices below do not relicense commercial SDK binaries.
+
+Packaging uses a separate Node executable, rather than SEA or a JavaScript
+bundler, to preserve dynamic imports, native SDK executable discovery and
+upstream notices. Node and its licence add 91,586,176 uncompressed bytes
+(91,426,304 for node.exe and 159,872 for LICENSE). The installer additionally
+includes the release CLI, production npm packages, OCCT closure and C++ runtimes.
+The Windows overlay places the OCCT DLLs beside both executables so the CLI's
+startup imports resolve without a global PATH change or a duplicate DLL tree;
+OCCT notices remain in `occt/`. Compressed package and complete installed-tree
+sizes are recorded in the installer QA report.
+
 ## Automatic refinement policy (October 27, 2026)
 
 `crates/simrep-cli/src/auto_refine.rs` adapts the dyadic spatial marking,

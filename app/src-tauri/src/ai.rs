@@ -153,6 +153,12 @@ fn public_event(message: &Value) -> Option<&Value> {
     Some(params)
 }
 
+#[cfg(windows)]
+fn node_path(path: PathBuf) -> PathBuf {
+    // Tauri returns verbatim paths; Node cannot use them as script entrypoints.
+    dunce::simplified(&path).to_path_buf()
+}
+
 fn sidecar_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../ai/server.mjs");
     if cfg!(debug_assertions) && dev.is_file() {
@@ -163,6 +169,8 @@ fn sidecar_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         .resource_dir()
         .map_err(|_| "Cannot locate app resources")?
         .join("ai/server.mjs");
+    #[cfg(windows)]
+    let bundled = node_path(bundled);
     if !bundled.is_file() {
         return Err("AI sidecar is not installed; install ai/ dependencies and rebuild.".into());
     }
@@ -178,6 +186,25 @@ impl Bridge {
             .map_err(|_| "Cannot locate app config directory")?
             .join("ai");
         let mut command = Command::new("node");
+        #[cfg(windows)]
+        if !cfg!(debug_assertions) {
+            let resources = node_path(
+                app.path()
+                    .resource_dir()
+                    .map_err(|_| "Cannot locate app resources")?,
+            );
+            command = Command::new(resources.join("runtime/node.exe"));
+            command.env("SIMREP_BIN", resources.join("simrep.exe"));
+            // MCP and provider adapters also spawn Node by name.
+            let mut paths = vec![resources.join("runtime")];
+            if let Some(path) = std::env::var_os("PATH") {
+                paths.extend(std::env::split_paths(&path));
+            }
+            command.env(
+                "PATH",
+                std::env::join_paths(paths).map_err(|_| "Invalid runtime PATH")?,
+            );
+        }
         command
             .arg(&script)
             .current_dir(script.parent().ok_or("Cannot locate AI directory")?)
@@ -321,6 +348,21 @@ pub async fn ai_request(app: tauri::AppHandle, request: Value) -> Result<Value, 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn node_entrypoint_does_not_use_a_windows_verbatim_prefix() {
+        assert_eq!(
+            node_path(PathBuf::from(
+                r"\\?\C:\Users\Test User\SimRep\ai\server.mjs"
+            )),
+            PathBuf::from(r"C:\Users\Test User\SimRep\ai\server.mjs")
+        );
+        assert_eq!(
+            node_path(PathBuf::from(r"C:\SimRep\runtime")),
+            PathBuf::from(r"C:\SimRep\runtime")
+        );
+    }
 
     #[test]
     fn browser_is_only_a_first_party_authorization_or_usage_endpoint() {

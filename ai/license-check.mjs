@@ -1,6 +1,7 @@
 // Inspect npm's installed-package inventory without executing package hooks.
 import { spawnSync } from 'node:child_process'
-const result = spawnSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['query', '*', '--json'], {
+const npm = process.env.npm_execpath
+const result = spawnSync(npm ? process.execPath : 'npm', [...(npm ? [npm] : []), 'query', '*', '--json'], {
   cwd: new URL('.', import.meta.url), encoding: 'utf8', shell: false, maxBuffer: 10_000_000,
 })
 if (result.status !== 0) throw new Error('npm query failed')

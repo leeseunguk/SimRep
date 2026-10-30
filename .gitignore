@@ -8,6 +8,8 @@ ai/.config/
 dist/
 # OCCT runtime staged for the Windows installer (tools/win/stage-occt.ps1)
 app/src-tauri/bundle-occt/
+# Pinned Node runtime and CLI staged for the Windows installer.
+app/src-tauri/bundle-runtime/
 *.log
 /oracle-out/
 __pycache__/

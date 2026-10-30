@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "resources": {
+      "bundle-runtime/node.exe": "runtime/node.exe",
+      "bundle-runtime/LICENSE": "runtime/LICENSE",
+      "bundle-runtime/simrep.exe": "simrep.exe",
+      "bundle-occt/*.dll": "./",
+      "../../licenses/THIRD_PARTY.md": "licenses/THIRD_PARTY.md",
+      "../../ai/package-lock.json": "ai/package-lock.json"
+    }
+  }
+}

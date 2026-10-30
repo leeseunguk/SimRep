@@ -8,8 +8,9 @@
 //! - `<CASROOT>\win64\vc14\bin` and every bundled third-party `<CASROOT>\..\<name>\bin`
 //!   (tbb, freetype, freeimage, openvr `bin\win64`, ffmpeg, draco);
 //! - CASROOT candidates, in order: `SIMREP_OCCT_DIR` (a CASROOT or a folder holding the DLLs),
-//!   `CASROOT`, an `occt` folder next to the executable (bundled DLLs), the SDK the app was built
-//!   against (`OCCT_LIB_DIR` at build time), `%USERPROFILE%\occt\opencascade-7.7.0`.
+//!   `CASROOT`, an `occt` folder next to the executable, the executable folder (shared with
+//!   the bundled CLI), the SDK the app was built against (`OCCT_LIB_DIR` at build time),
+//!   `%USERPROFILE%\occt\opencascade-7.7.0`.
 //!
 //! It then loads every toolkit once, so a missing DLL becomes a clear message instead of a
 //! delay-load crash. Linux links the system OCCT normally.
@@ -80,6 +81,7 @@ fn load() -> Result<(), Reason> {
         .and_then(|p| p.parent().map(Path::to_path_buf))
     {
         candidates.push(dir.join("occt"));
+        candidates.push(dir);
     }
     if let Some(lib) = option_env!("SIMREP_OCCT_LIB_DIR") {
         candidates.push(Path::new(lib).with_file_name("bin"));

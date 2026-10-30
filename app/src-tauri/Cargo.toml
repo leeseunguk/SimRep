@@ -42,6 +42,9 @@ sha2 = "0.10"
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+dunce = "1.0.5"
+
 # Decoding, solving and flying are ~10x slower unoptimized; keep the core crates and the
 # commands (src/*.rs) optimized in dev builds too. Tauri and other dependencies stay debug.
 [profile.dev.package.simrep-core]
