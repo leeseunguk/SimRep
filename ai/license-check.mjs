@@ -1,18 +1,8 @@
-// Inspect npm's installed-package inventory without executing package hooks.
-import { spawnSync } from 'node:child_process'
-const npm = process.env.npm_execpath
-const result = spawnSync(npm ? process.execPath : 'npm', [...(npm ? [npm] : []), 'query', '*', '--json'], {
-  cwd: new URL('.', import.meta.url), encoding: 'utf8', shell: false, maxBuffer: 10_000_000,
-})
-if (result.status !== 0) throw new Error('npm query failed')
-const packages = JSON.parse(result.stdout)
+// Check the installed tree, including nested dependencies and native provider notices.
+// Generation uses the same fail-closed inventory during Windows runtime staging.
+import { fileURLToPath } from 'node:url'
+import { npmNotices } from '../tools/win/installer-notices.mjs'
+const packages = npmNotices(fileURLToPath(new URL('./node_modules', import.meta.url)))
 const counts = {}
-const exceptions = []
-for (const pkg of packages) {
-  const license = typeof pkg.license === 'string' ? pkg.license : JSON.stringify(pkg.license) || 'UNSPECIFIED'
-  counts[license] = (counts[license] || 0) + 1
-  if (!/^(MIT|Apache-2\.0|BSD-2-Clause|BSD-3-Clause|ISC|0BSD|Unlicense|BlueOak-1\.0\.0|Python-2\.0|CC0-1\.0|UNLICENSED)$/.test(license)) {
-    exceptions.push({ name: pkg.name, version: pkg.version, license })
-  }
-}
-console.log(JSON.stringify({ packages: packages.length, licences: counts, review: exceptions }, null, 2))
+for (const pkg of packages) counts[pkg.license] = (counts[pkg.license] || 0) + 1
+console.log(JSON.stringify({ packages: packages.length, licences: counts, fullTextVerified: true, spdxFallbacks: packages.filter(pkg => pkg.fallback).map(pkg => `${pkg.name}@${pkg.version}`) }, null, 2))

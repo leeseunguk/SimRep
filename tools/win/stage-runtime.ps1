@@ -1,4 +1,4 @@
-<# Stages the pinned, portable Node runtime and the release CLI for NSIS. #>
+<# Stages the pinned, portable Node runtime and CLI, and verifies complete installer notices. Stage OCCT first. #>
 param(
   [Parameter(Mandatory = $true)][string]$Dest,
   [Parameter(Mandatory = $true)][string]$Cli,
@@ -25,5 +25,6 @@ try {
   }
 } finally { $zip.Dispose() }
 Copy-Item $Cli (Join-Path $Dest 'simrep.exe') -Force
+& (Join-Path $PSScriptRoot 'stage-notices.ps1')
 Get-ChildItem $Dest | Select-Object Name, Length
 Get-FileHash (Join-Path $Dest 'node.exe'), (Join-Path $Dest 'simrep.exe') -Algorithm SHA256

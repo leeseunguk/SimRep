@@ -1,0 +1,2 @@
+# Verbatim third-party licence texts: keep upstream whitespace.
+tools/win/notice-sources/** -whitespace

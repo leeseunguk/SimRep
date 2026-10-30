@@ -1,5 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "beforeBuildCommand": "node ../tools/win/installer-notices.mjs --check && npm run build"
+  },
   "bundle": {
     "resources": {
       "bundle-runtime/node.exe": "runtime/node.exe",
@@ -7,6 +10,8 @@
       "bundle-runtime/simrep.exe": "simrep.exe",
       "bundle-occt/*.dll": "./",
       "../../licenses/THIRD_PARTY.md": "licenses/THIRD_PARTY.md",
+      "../../licenses/THIRD_PARTY_NOTICES_INSTALLER.txt": "licenses/THIRD_PARTY_NOTICES_INSTALLER.txt",
+      "../../licenses/THIRD_PARTY_NOTICES_INSTALLER.json": "licenses/THIRD_PARTY_NOTICES_INSTALLER.json",
       "../../ai/package-lock.json": "ai/package-lock.json"
     }
   }

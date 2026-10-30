@@ -1,0 +1,16 @@
+{
+  "@bufbuild/protobuf@2.15.0": ["protobuf-license", "protobuf-varint"],
+  "@code-yeongyu/senpi-ai@2026.10.25-2": ["senpi-license"],
+  "@code-yeongyu/senpi-telemetry@2026.10.25-2": ["senpi-license"],
+  "undici-types@5.26.5": ["undici-license"],
+  "@openai/codex@0.164.0": ["codex-license", "codex-notice", "spdx-MIT"],
+  "@openai/codex@0.164.0-win32-x64": ["codex-license", "codex-notice", "spdx-MIT"],
+  "@openai/codex@0.164.0-win32-arm64": ["codex-license", "codex-notice", "spdx-MIT"],
+  "@openai/codex@0.164.0-linux-x64": ["codex-license", "codex-notice", "spdx-MIT"],
+  "@openai/codex@0.164.0-linux-arm64": ["codex-license", "codex-notice", "spdx-MIT"],
+  "@openai/codex@0.164.0-darwin-x64": ["codex-license", "codex-notice", "spdx-MIT"],
+  "@openai/codex@0.164.0-darwin-arm64": ["codex-license", "codex-notice", "spdx-MIT"],
+  "webview2-com@0.39.1": ["webview2-license"],
+  "webview2-com-sys@0.39.1": ["webview2-license"],
+  "webview2-com-macros@0.8.1": ["webview2-macros-license"]
+}

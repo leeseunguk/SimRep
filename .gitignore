@@ -10,6 +10,9 @@ dist/
 app/src-tauri/bundle-occt/
 # Pinned Node runtime and CLI staged for the Windows installer.
 app/src-tauri/bundle-runtime/
+# Payload-specific notices are generated and checked before NSIS packaging.
+licenses/THIRD_PARTY_NOTICES_INSTALLER.txt
+licenses/THIRD_PARTY_NOTICES_INSTALLER.json
 *.log
 /oracle-out/
 __pycache__/

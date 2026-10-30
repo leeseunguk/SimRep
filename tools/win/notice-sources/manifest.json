@@ -1,0 +1,142 @@
+{
+  "spdx-MIT": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MIT.txt",
+    "file": "spdx-MIT.txt",
+    "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+  },
+  "spdx-Apache-2.0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/Apache-2.0.txt",
+    "file": "spdx-Apache-2.0.txt",
+    "sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff"
+  },
+  "spdx-BSD-2-Clause": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/BSD-2-Clause.txt",
+    "file": "spdx-BSD-2-Clause.txt",
+    "sha256": "f32fb3b417a194167cfad068223fc975ba96c5960513a10f66a3c28720aec1df"
+  },
+  "spdx-BSD-3-Clause": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/BSD-3-Clause.txt",
+    "file": "spdx-BSD-3-Clause.txt",
+    "sha256": "5a93d5831e1297ab10fe643e1a631e83be392896da14ee2951285a79012df69d"
+  },
+  "spdx-ISC": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/ISC.txt",
+    "file": "spdx-ISC.txt",
+    "sha256": "f2ec607f67bb0dd3053b49835b02110d5cd0f8eb6da3aac4dc0b142a6b299be9"
+  },
+  "spdx-0BSD": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/0BSD.txt",
+    "file": "spdx-0BSD.txt",
+    "sha256": "e3f18c71e10d673590eb9856c1d79dd3b4b0d65404efb5e8584dbede7edd608b"
+  },
+  "spdx-Unlicense": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/Unlicense.txt",
+    "file": "spdx-Unlicense.txt",
+    "sha256": "0bdebfeda07d45dada625ae1317c6f833186e798b171d0db640bcf32e92a8240"
+  },
+  "spdx-Zlib": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/Zlib.txt",
+    "file": "spdx-Zlib.txt",
+    "sha256": "bfb1112d49db5b1daecdfef24bd7e2f3ea0bafb33aa67aa0ab51e2bf8407c03d"
+  },
+  "spdx-MPL-2.0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt",
+    "file": "spdx-MPL-2.0.txt",
+    "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172"
+  },
+  "spdx-Unicode-3.0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/Unicode-3.0.txt",
+    "file": "spdx-Unicode-3.0.txt",
+    "sha256": "f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1"
+  },
+  "spdx-CC0-1.0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/CC0-1.0.txt",
+    "file": "spdx-CC0-1.0.txt",
+    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+  },
+  "spdx-MIT-0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MIT-0.txt",
+    "file": "spdx-MIT-0.txt",
+    "sha256": "59746d6285ffa44bfc7ecada352aa5d6a20dc8eab418a60ce091cc739012c135"
+  },
+  "spdx-BlueOak-1.0.0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/BlueOak-1.0.0.txt",
+    "file": "spdx-BlueOak-1.0.0.txt",
+    "sha256": "8a1af140fdfbf5afd3df27f7e662f989c5b963a300020dfafce42033cae9e004"
+  },
+  "spdx-Python-2.0": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/Python-2.0.txt",
+    "file": "spdx-Python-2.0.txt",
+    "sha256": "893c2bafbb8133f7aa97e1f79a3ee3241ebca7025f56278e9e1f72bb98592f9d"
+  },
+  "codex-license": {
+    "url": "https://raw.githubusercontent.com/openai/codex/rust-v0.164.0/LICENSE",
+    "file": "codex-license.txt",
+    "sha256": "d17f227e4df5da1600391338865ce0f3055211760a36688f816941d58232d8dc"
+  },
+  "codex-notice": {
+    "url": "https://raw.githubusercontent.com/openai/codex/rust-v0.164.0/NOTICE",
+    "file": "codex-notice.txt",
+    "sha256": "9d71575ecfd9a843fc1677b0efb08053c6ba9fd686a0de1a6f5382fd3c220915"
+  },
+  "protobuf-license": {
+    "url": "https://raw.githubusercontent.com/bufbuild/protobuf-es/v2.15.0/LICENSE",
+    "file": "protobuf-license.txt",
+    "sha256": "c04b4216f1cd4c5a4f7fb2f2a1b0ae70d847e9e0cac7c9dee9bf8cc03177c449"
+  },
+  "protobuf-varint": {
+    "url": "https://raw.githubusercontent.com/bufbuild/protobuf-es/v2.15.0/packages/protobuf/src/wire/varint.ts",
+    "file": "protobuf-varint.txt",
+    "sha256": "a9474515aff906daa193766356ebe400efe3dd8fdd1c46e2932154cab9de9a22"
+  },
+  "senpi-license": {
+    "url": "https://raw.githubusercontent.com/code-yeongyu/senpi/main/LICENSE",
+    "file": "senpi-license.txt",
+    "sha256": "b572487f123bf259487f7dab25923af16fecd08ed7a2c50964f393282dba883c"
+  },
+  "undici-license": {
+    "url": "https://raw.githubusercontent.com/nodejs/undici/v5.26.5/LICENSE",
+    "file": "undici-license.txt",
+    "sha256": "a6db8096b2707bc0102d256917d4d33f298ba36d8c3f25de067a2b5bb379db27"
+  },
+  "msvc-license": {
+    "url": "https://visualstudio.microsoft.com/wp-content/uploads/2021/09/Visual-C-Runtime-2015-2022-License-1.docx",
+    "file": "msvc-license.txt",
+    "sha256": "ed875263593823eb4b685cd543eda0ab075a6f57a76f7718908f2237466c442f"
+  },
+  "msvc-2026-license": {
+    "url": "https://visualstudio.microsoft.com/wp-content/uploads/2025/10/Visual-C-V14-License-Redistributable_and_Runtime_ENU.docx",
+    "file": "msvc-2026-license.txt",
+    "sha256": "923d8b11a03c277d59f3262727abc7e422158f5243a5565d67d5c270c6b05e3c"
+  },
+  "ripgrep-license": {
+    "url": "https://raw.githubusercontent.com/BurntSushi/ripgrep/15.2.0/LICENSE-MIT",
+    "file": "ripgrep-license.txt",
+    "sha256": "0f96a83840e146e43c0ec96a22ec1f392e0680e6c1226e6f3ba87e0740af850f"
+  },
+  "ripgrep-unlicense": {
+    "url": "https://raw.githubusercontent.com/BurntSushi/ripgrep/15.2.0/UNLICENSE",
+    "file": "ripgrep-unlicense.txt",
+    "sha256": "7e12e5df4bae12cb21581ba157ced20e1986a0508dd10d0e8a4ab9a4cf94e85c"
+  },
+  "ripgrep-pcre2-license": {
+    "url": "https://raw.githubusercontent.com/PCRE2Project/pcre2/pcre2-10.45/LICENCE.md",
+    "file": "ripgrep-pcre2-license.txt",
+    "sha256": "9cf7ac6976099a1d856826d3ef1b093bd6b84489dc6100628ac79e740cf9885a"
+  },
+  "webview2-license": {
+    "url": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE",
+    "file": "webview2-license.txt",
+    "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73"
+  },
+  "webview2-macros-license": {
+    "url": "https://raw.githubusercontent.com/wravery/webview2-rs/dffa41a8a46d3f5565eefbff2de57d38d399f158/LICENSE",
+    "file": "webview2-macros-license.txt",
+    "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73"
+  },
+  "sdk-embedded": {
+    "url": "https://sourceforge.net/projects/freeimage/files/Source%20Distribution/3.17.0/FreeImage3170.zip",
+    "file": "sdk-embedded.json",
+    "sha256": "59f8c0492da64775f84b9516e3710201311cf21f87bec55c9dc47a3e08ea6c64"
+  }
+}
