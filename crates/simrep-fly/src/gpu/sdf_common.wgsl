@@ -109,9 +109,12 @@ fn sdf_distance(v: sdf_Volume, input: vec3<f32>) -> f32 {
         low[a] = u32(floor(x)); high[a] = min(low[a]+1u, v.dims[a]-1u); f[a] = x-f32(low[a]);
     }
     var result = 0.0;
-    for (var z = 0u; z < 2u; z++) {
-        for (var y = 0u; y < 2u; y++) {
-            for (var x = 0u; x < 2u; x++) {
+    // A one-node axis has f=0: its high corners have exactly zero weight.
+    // Keep the remaining corner order and arithmetic, but avoid those loads.
+    let corners = min(v.dims.xyz, vec3<u32>(2u));
+    for (var z = 0u; z < corners.z; z++) {
+        for (var y = 0u; y < corners.y; y++) {
+            for (var x = 0u; x < corners.x; x++) {
                 let corner = vec3<u32>(x,y,z); var pos: vec3<u32>; var weight = 1.0;
                 for (var a = 0u; a < 3u; a++) {
                     pos[a] = select(high[a], low[a], corner[a] == 0u);
