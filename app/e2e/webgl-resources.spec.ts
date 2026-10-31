@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("WebGL2 releases all ten programs on repeated teardown and shader failure", async ({ page }) => {
+test("WebGL2 releases all ten programs and VAOs on repeated teardown and shader failure", async ({ page }) => {
   await page.goto("/?replay=manual");
   const cycles = await page.evaluate(async () => {
     const url = "/src/viewport/glRenderer.ts";
@@ -10,8 +10,21 @@ test("WebGL2 releases all ten programs on repeated teardown and shader failure",
     if (!gl) throw new Error("WebGL2 is required for the lifecycle scenario");
     const created = new Set<WebGLProgram>();
     const deleted = new Set<WebGLProgram>();
+    const vaosCreated = new Set<WebGLVertexArrayObject>();
+    const vaosDeleted = new Set<WebGLVertexArrayObject>();
     const create = gl.createProgram.bind(gl);
     const remove = gl.deleteProgram.bind(gl);
+    const createVao = gl.createVertexArray.bind(gl);
+    const removeVao = gl.deleteVertexArray.bind(gl);
+    gl.createVertexArray = () => {
+      const vao = createVao();
+      if (vao) vaosCreated.add(vao);
+      return vao;
+    };
+    gl.deleteVertexArray = (vao) => {
+      if (vao) vaosDeleted.add(vao);
+      removeVao(vao);
+    };
     gl.createProgram = () => {
       const program = create();
       if (program) created.add(program);
@@ -21,11 +34,12 @@ test("WebGL2 releases all ten programs on repeated teardown and shader failure",
       if (program) deleted.add(program);
       remove(program);
     };
+    const record = () => ({ created: created.size, deleted: deleted.size, vaosCreated: vaosCreated.size, vaosDeleted: vaosDeleted.size });
     const records = [];
     for (let i = 0; i < 3; i++) {
       const renderer = WebGl2Renderer.create(canvas);
       renderer.destroy();
-      records.push({ created: created.size, deleted: deleted.size });
+      records.push(record());
     }
     const source = gl.shaderSource.bind(gl);
     let shaders = 0;
@@ -36,18 +50,20 @@ test("WebGL2 releases all ten programs on repeated teardown and shader failure",
     } catch (caught) {
       error = String(caught);
     }
-    records.push({ created: created.size, deleted: deleted.size });
+    records.push(record());
     return { records, error };
   });
   expect(cycles.records.slice(0, 3)).toEqual([
-    { created: 10, deleted: 10 },
-    { created: 20, deleted: 20 },
-    { created: 30, deleted: 30 },
+    { created: 10, deleted: 10, vaosCreated: 2, vaosDeleted: 2 },
+    { created: 20, deleted: 20, vaosCreated: 4, vaosDeleted: 4 },
+    { created: 30, deleted: 30, vaosCreated: 6, vaosDeleted: 6 },
   ]);
   expect(cycles.error).toContain("shader");
   const failed = cycles.records[3]!;
   expect(failed.created).toBeGreaterThan(30);
   expect(failed.deleted).toBe(failed.created);
+  expect(failed.vaosCreated).toBe(7);
+  expect(failed.vaosDeleted).toBe(failed.vaosCreated);
   await test.info().attach("program-lifecycle", { body: JSON.stringify(cycles, null, 2), contentType: "application/json" });
 });
 

@@ -34,3 +34,47 @@
   transform: translateX(var(--space-5));
   background: var(--color-accent-fg);
 }
+
+/* Tablet and phone (state/layout.ts): a 44 px touch target. The button grows to the target, the
+   same track is drawn centered in it, so the switch looks as on desktop. */
+:global(html[data-layout="tablet"]) .switch,
+:global(html[data-layout="phone"]) .switch {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  border-color: transparent;
+  background: transparent;
+}
+
+:global(html[data-layout="tablet"]) .switch::before,
+:global(html[data-layout="phone"]) .switch::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--space-10) + var(--space-1));
+  height: var(--space-6);
+  border: var(--border-w) solid var(--color-border-control);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-3);
+  transform: translate(-50%, -50%);
+  transition:
+    background-color var(--dur-normal) var(--ease-out),
+    border-color var(--dur-normal) var(--ease-out);
+  content: "";
+}
+
+:global(html[data-layout="tablet"]) .switch[aria-checked="true"],
+:global(html[data-layout="phone"]) .switch[aria-checked="true"] {
+  border-color: transparent;
+  background: transparent;
+}
+
+:global(html[data-layout="tablet"]) .switch[aria-checked="true"]::before,
+:global(html[data-layout="phone"]) .switch[aria-checked="true"]::before {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+:global(html[data-layout="tablet"]) .thumb,
+:global(html[data-layout="phone"]) .thumb {
+  top: calc(50% - (var(--space-5) - var(--space-px) * 2) / 2);
+}

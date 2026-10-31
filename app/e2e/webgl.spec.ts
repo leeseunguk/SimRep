@@ -16,41 +16,13 @@ test.beforeEach(({ page }) =>
 
 type Frames = Record<string, { width: number; height: number; data: Uint8ClampedArray; bg: Uint8ClampedArray }>;
 
-/** Captures after an actual renderer frame, with animations disabled or completed. */
+/** Captures after the results mount, resize delivery and a frame at the new size. */
 const capture = (page: Page, name: string) =>
   page.evaluate(async (name) => {
-    // Busy indicators loop while the manually stepped refine is paused; they
-    // do not animate the camera or layout and cannot have a completion event.
-    await Promise.all(document.getAnimations()
-      .filter((animation) => Number.isFinite(animation.effect?.getComputedTiming().endTime))
-      .map((animation) => animation.finished));
-    const baseUrl = "/src/viewport/rendererBase.ts";
-    const { RendererBase } = (await import(/* @vite-ignore */ baseUrl)) as typeof import("../src/viewport/rendererBase");
-    const original = RendererBase.prototype.capture;
-    RendererBase.prototype.capture = async function (background) {
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          remove();
-          reject(new Error("viewport did not draw the requested frame"));
-        }, 5000);
-        // Subscribe before requesting the frame, not after a click or a screenshot.
-        const remove = this.addFrameListener(() => {
-          clearTimeout(timeout);
-          remove();
-          resolve();
-        });
-        this.requestRender();
-      });
-      return original.call(this, background);
-    };
     const url = "/src/viewport/viewState.ts";
-    const { captureViewport } = (await import(/* @vite-ignore */ url)) as typeof import("../src/viewport/viewState");
-    let blob: Blob | null;
-    try {
-      blob = await captureViewport();
-    } finally {
-      RendererBase.prototype.capture = original;
-    }
+    const { captureViewport, settleViewportLayout } = (await import(/* @vite-ignore */ url)) as typeof import("../src/viewport/viewState");
+    await settleViewportLayout();
+    const blob = await captureViewport();
     if (!blob) throw new Error("the 3D view is not mounted");
     const bmp = await createImageBitmap(blob);
     const { width, height } = bmp;
@@ -113,6 +85,18 @@ test("no WebGPU: the 3D view falls back to WebGL2 and draws the einzel lens and 
     if (m.type() === "error") errors.push(m.text());
   });
 
+  // Hold the lazy chunk until after the flight status arrives: capture must wait
+  // for the panel itself, not merely the flight response or a pre-layout frame.
+  let releaseResults!: () => void;
+  const resultsGate = new Promise<void>((resolve) => { releaseResults = resolve; });
+  let requestedResults!: () => void;
+  const resultsRequested = new Promise<void>((resolve) => { requestedResults = resolve; });
+  await page.route("**/src/results/ResultsPanel.tsx", async (route) => {
+    requestedResults();
+    await resultsGate;
+    await route.continue();
+  });
+
   const job = await startEinzel(page);
   const status = page.getByTestId("status-renderer");
   await expect(status).toHaveText("Renderer: WebGL2");
@@ -128,9 +112,15 @@ test("no WebGPU: the 3D view falls back to WebGL2 and draws the einzel lens and 
   while ((await step(page, job)) !== null);
   await answered(page, "fly", 1);
   await expect(page.getByText("40 ions flown")).toBeVisible();
+  await resultsRequested;
+  const capturing = capture(page, "on");
+  await expect(page.locator('section[aria-label="3D view"]')).toHaveAttribute("data-layout-settled", "false");
+  await expect(page.locator('[data-tour="results"]')).toHaveCount(0);
+  releaseResults();
+  await capturing;
+  await expect(page.locator('section[aria-label="3D view"]')).toHaveAttribute("data-layout-settled", "true");
 
   // Trajectories on vs off: the frames differ by the trajectory pixels.
-  await capture(page, "on");
   const toggle = page.getByRole("switch", { name: "Show trajectories" });
   await expect(toggle).toHaveAttribute("aria-checked", "true");
   await toggle.click();
@@ -146,6 +136,8 @@ test("no WebGPU: the 3D view falls back to WebGL2 and draws the einzel lens and 
   // The refined lens is still drawn under the trajectories (the results panel shrinks the view).
   const after = await drawnShare(page, "on");
   expect(after).toBeGreaterThan(0.02);
+  const dimensions = await page.evaluate(() => Object.fromEntries(Object.entries((window as unknown as { __frames: Frames }).__frames).map(([name, f]) => [name, { width: f.width, height: f.height }])));
+  await test.info().attach("capture-layout", { body: JSON.stringify({ dimensions, before, after, trajectoryPixels: traj.pixels.length }, null, 2), contentType: "application/json" });
   test.info().annotations.push({ type: "pixels", description: JSON.stringify({ before, after, trajectoryPixels: traj.pixels.length }) });
   await page.screenshot({ path: test.info().outputPath("webgl2-trajectories.png") });
 

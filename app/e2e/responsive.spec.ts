@@ -79,6 +79,54 @@ async function einzel(page: Page) {
   await answered(page, "fly", 1);
 }
 
+
+/** The app store (demo dev server module), read in the page. */
+const appState = (page: Page) =>
+  page.evaluate(async () => {
+    const url = "/src/state/store.ts";
+    const { useApp } = (await import(/* @vite-ignore */ url)) as typeof import("../src/state/store");
+    const s = useApp.getState();
+    return { selectedId: s.selectedId, home: s.home };
+  });
+
+/** Shows an error notification (the longest-lived tone) through the store. */
+const notify = (page: Page) =>
+  page.evaluate(async () => {
+    const url = "/src/state/store.ts";
+    const { useApp } = (await import(/* @vite-ignore */ url)) as typeof import("../src/state/store");
+    useApp.getState().toast("error", { key: "toast.dismiss" });
+  });
+
+/** Width x height of every visible element matching `sel` (CSS px), with its accessible name. */
+const boxes = (page: Page, sel: string) =>
+  page.evaluate(
+    (s) =>
+      [...document.querySelectorAll<HTMLElement>(s)]
+        .map((el) => ({ name: el.getAttribute("aria-label") ?? "", r: el.getBoundingClientRect() }))
+        .filter(({ r }) => r.width > 0 && r.height > 0)
+        .map(({ name, r }) => ({ name, w: r.width, h: r.height })),
+    sel,
+  );
+
+/** The 44 px rule: switches and notification dismiss buttons. */
+async function expectTouchTargets(page: Page, what: string) {
+  const switches = await boxes(page, '[role="switch"]');
+  expect(switches.length, `${what}: switches on screen`).toBeGreaterThan(0);
+  await notify(page);
+  const dismiss = page.getByRole("button", { name: "Dismiss" }).first();
+  await expect(dismiss).toBeVisible();
+  const all = [...switches, ...(await boxes(page, 'button[aria-label="Dismiss"]'))];
+  expect(all.filter((b) => b.w < 43.5 || b.h < 43.5), `${what}: switches and dismiss buttons under 44 px`).toEqual([]);
+  await dismiss.click();
+}
+
+/** Where keyboard focus is: the id of the focused element and of its nearest tab panel or drawer. */
+const focused = (page: Page) =>
+  page.evaluate(() => {
+    const a = document.activeElement as HTMLElement | null;
+    return { id: a?.id ?? "", testId: a?.dataset.testid ?? "", panel: a?.closest('[id^="panel-"]')?.id ?? null, inert: !!a?.closest("[inert]") };
+  });
+
 const SIZES = [
   { name: "390", width: 390, height: 844, minCanvas: 0.9 },
   { name: "768", width: 768, height: 1024, minCanvas: 0.5 },
@@ -163,6 +211,93 @@ test.describe("phone 390x844", () => {
       await expectNoOverflow(page, `${lang} more menu`);
       await page.keyboard.press("Escape");
     }
+  });
+
+  test("tabs: tablist semantics, one tab stop, arrows and Home/End, Tab enters the shown panel", async ({ page }) => {
+    await einzel(page);
+    const tabs = page.getByRole("tablist", { name: "Panels" }).getByRole("tab");
+    await expect(tabs).toHaveCount(3);
+    for (const id of ["scene", "simulation", "results"] as const) {
+      const tab = page.getByTestId(`phone-tab-${id}`);
+      await expect(tab).toHaveAttribute("id", `phone-tab-${id}`);
+      await expect(tab).toHaveAttribute("aria-controls", `panel-${id}`);
+      const panel = page.locator(`#panel-${id}`);
+      await expect(panel).toHaveAttribute("role", "tabpanel");
+      await expect(panel).toHaveAttribute("aria-labelledby", `phone-tab-${id}`);
+    }
+    const selected = async (id: string) => {
+      await expect(page.getByTestId(`phone-tab-${id}`)).toHaveAttribute("aria-selected", "true");
+      await expect(page.getByTestId(`phone-tab-${id}`)).toBeFocused();
+      await expect(page.locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
+      await expect(page.locator('[role="tab"][tabindex="0"]')).toHaveAttribute("id", `phone-tab-${id}`);
+      await expect(page.locator(`#panel-${id}`)).toBeVisible();
+    };
+    await expect(page.locator('[role="tab"][tabindex="0"]')).toHaveAttribute("id", "phone-tab-simulation");
+    await page.getByTestId("phone-tab-simulation").focus();
+    await page.keyboard.press("ArrowRight");
+    await selected("results");
+    await page.keyboard.press("ArrowRight");
+    await selected("scene");
+    await page.keyboard.press("ArrowLeft");
+    await selected("results");
+    await page.keyboard.press("Home");
+    await selected("scene");
+    await page.keyboard.press("End");
+    await selected("results");
+    await page.keyboard.press("ArrowLeft");
+    await selected("simulation");
+
+    // Tab from the selected tab goes into its panel (the panel is next in the DOM, as on screen).
+    for (const id of ["scene", "simulation", "results"] as const) {
+      await page.getByTestId(`phone-tab-${id}`).click();
+      await page.getByTestId(`phone-tab-${id}`).focus();
+      await page.keyboard.press("Tab");
+      expect((await focused(page)).panel, `Tab from the ${id} tab`).toBe(`panel-${id}`);
+    }
+  });
+
+  test("start screen over the Results tab: results, tabs and panels are inert", async ({ page }) => {
+    await einzel(page);
+    await page.getByTestId("phone-tab-results").click();
+    await expect(page.locator('[data-tour="results"]')).toBeVisible();
+    await page.locator('[data-tour="home"]').click();
+    await expect(page.locator('[data-tour="template-einzel"]')).toBeVisible();
+    expect((await appState(page)).home).toBe(true);
+    // Every results control sits under an inert boundary ...
+    const exposed = await page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('#panel-results button, #panel-results [tabindex], [data-testid="phone-tabs"] button')].filter((el) => !el.closest("[inert]")).length,
+    );
+    expect(exposed, "results and tab controls outside an inert boundary").toBe(0);
+    expect(await page.locator('[data-tour="results-tab-hist"]').count()).toBeGreaterThan(0);
+    // ... and keyboard traversal never reaches the workspace behind the start screen.
+    await page.locator('[data-tour="template-einzel"]').focus();
+    for (let i = 0; i < 60; i++) {
+      await page.keyboard.press("Tab");
+      const f = await focused(page);
+      expect(f.panel, `Tab ${i + 1} reached a covered panel`).toBeNull();
+      expect(f.inert).toBe(false);
+    }
+  });
+
+  test("Escape on the More menu closes it, keeps the selection, focus back on More", async ({ page }) => {
+    await einzel(page);
+    const before = (await appState(page)).selectedId;
+    expect(before, "an object is selected after the einzel flight").not.toBeNull();
+    await page.getByTestId("topbar-more").click();
+    await expect(page.getByTestId("topbar-more-menu")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("topbar-more-menu")).toHaveCount(0);
+    await expect(page.getByTestId("topbar-more")).toBeFocused();
+    expect((await appState(page)).selectedId).toBe(before);
+    // With no menu open, Escape is still the workspace's: it clears the selection.
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => (await appState(page)).selectedId).toBeNull();
+  });
+
+  test("44 px targets: switches in the Simulation tab and notification dismiss", async ({ page }) => {
+    await einzel(page);
+    await page.getByTestId("phone-tab-simulation").click();
+    await expectTouchTargets(page, "phone");
   });
 
   test("dialogs fit: AI accounts, report, shortcuts, export and the import wizard", async ({ page }) => {
@@ -265,5 +400,31 @@ test.describe("tablet 768x1024", () => {
     await answered(page, "fly", 2);
     await page.getByTestId("drawer-simulation").click();
     await expect(page.locator('[data-tour="fly"]')).toBeHidden();
+  });
+  test("drawer toggles: expanded state and controlled panel, Escape closes and focus returns", async ({ page }) => {
+    await einzel(page);
+    for (const id of ["scene", "simulation"] as const) {
+      const toggle = page.getByTestId(`drawer-${id}`);
+      await expect(toggle).toHaveAttribute("aria-controls", `panel-${id}`);
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator(`#panel-${id}`)).toBeVisible();
+      // Into the drawer, then Escape: closed, focus on its toggle, selection untouched.
+      const before = (await appState(page)).selectedId;
+      await page.locator(`#panel-${id}`).locator("button:visible").first().focus();
+      expect((await focused(page)).panel).toBe(`panel-${id}`);
+      await page.keyboard.press("Escape");
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await expect(page.locator(`#panel-${id}`)).toBeHidden();
+      await expect(toggle).toBeFocused();
+      expect((await appState(page)).selectedId).toBe(before);
+    }
+  });
+
+  test("44 px targets: switches in the properties drawer and notification dismiss", async ({ page }) => {
+    await einzel(page);
+    await page.getByTestId("drawer-simulation").click();
+    await expectTouchTargets(page, "tablet");
   });
 });

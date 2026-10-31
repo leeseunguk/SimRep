@@ -11,6 +11,7 @@ import { redo, undo } from "../state/history";
 import { openPaths, PROJECT_EXTENSION, projectTitle, saveProject, showStart } from "../state/project";
 import { useApp, type Lang, type ThemePref } from "../state/store";
 import { useLayout } from "../state/layout";
+import { drawerToggleId, ownEscape } from "../state/escape";
 import { useExport } from "../state/exportDialog";
 import { useReportDialog } from "../state/reportDialog";
 import { useWizard } from "../state/wizard";
@@ -110,8 +111,9 @@ export function TopBar() {
         </div>
         {tablet && (
           <>
-            <Button variant="ghost" iconOnly icon={<PanelLeft />} active={drawer === "scene"} aria-label={t("layout.scenePanel")} title={t("layout.scenePanel")} onClick={() => useLayout.getState().toggleDrawer("scene")} data-testid="drawer-scene" />
-            <Button variant="ghost" iconOnly icon={<PanelRight />} active={drawer === "simulation"} aria-label={t("layout.propsPanel")} title={t("layout.propsPanel")} onClick={() => useLayout.getState().toggleDrawer("simulation")} data-testid="drawer-simulation" />
+            {/* Disclosure buttons of the drawers (App: #panel-scene, #panel-simulation); Escape closes them. */}
+            <Button variant="ghost" iconOnly icon={<PanelLeft />} active={drawer === "scene"} aria-pressed={undefined} aria-expanded={drawer === "scene"} aria-controls="panel-scene" id={drawerToggleId("scene")} aria-label={t("layout.scenePanel")} title={t("layout.scenePanel")} onClick={() => useLayout.getState().toggleDrawer("scene")} data-testid="drawer-scene" />
+            <Button variant="ghost" iconOnly icon={<PanelRight />} active={drawer === "simulation"} aria-pressed={undefined} aria-expanded={drawer === "simulation"} aria-controls="panel-simulation" id={drawerToggleId("simulation")} aria-label={t("layout.propsPanel")} title={t("layout.propsPanel")} onClick={() => useLayout.getState().toggleDrawer("simulation")} data-testid="drawer-simulation" />
           </>
         )}
         <div className={styles.project}>
@@ -337,6 +339,7 @@ function MoreMenu({
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const history = useApp((s) => s.history);
   const home = useApp((s) => s.home);
   const aiOpen = useAi((s) => s.panelOpen);
@@ -345,12 +348,18 @@ function MoreMenu({
     const onDown = (e: PointerEvent) => {
       if (!wrap.current?.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    // Capture phase: this Escape closes the menu (focus back on its button) and nothing else, so the
+    // workspace Escape (App) does not also clear the selection.
+    const onKey = (e: KeyboardEvent) =>
+      ownEscape(e, () => {
+        setOpen(false);
+        trigger.current?.focus();
+      });
     window.addEventListener("pointerdown", onDown);
-    window.addEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [open]);
   const dataOk = !!exportTarget && isTauri() && allows("exportData");
@@ -374,7 +383,7 @@ function MoreMenu({
   );
   return (
     <div ref={wrap} className={styles.menuWrap}>
-      <Button variant="ghost" iconOnly icon={<Ellipsis />} aria-label={t("topbar.more")} title={t("topbar.more")} aria-expanded={open} onClick={() => setOpen(!open)} data-testid="topbar-more" />
+      <Button ref={trigger} variant="ghost" iconOnly icon={<Ellipsis />} aria-label={t("topbar.more")} title={t("topbar.more")} aria-expanded={open} onClick={() => setOpen(!open)} data-testid="topbar-more" />
       {open && (
         <div className={`${styles.menu} ${styles.moreMenu}`} aria-label={t("topbar.more")} data-testid="topbar-more-menu">
           {phone && (

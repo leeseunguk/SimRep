@@ -30,6 +30,22 @@ export function shownTab(tab: PhoneTab, hasResults: boolean): PhoneTab {
   return tab === "results" && !hasResults ? "simulation" : tab;
 }
 
+/** The phone tabs in visual order. */
+export const PHONE_TABS: readonly PhoneTab[] = ["scene", "simulation", "results"];
+
+/**
+ * Phone tab keyboard navigation (one tab stop, arrows move and select): the tab that Left/Right
+ * (wrapping), Home or End selects from `current`; null for any other key. Results is skipped while
+ * it is disabled (nothing flown).
+ */
+export function tabForKey(current: PhoneTab, key: string, hasResults: boolean): PhoneTab | null {
+  const tabs = PHONE_TABS.filter((t) => t !== "results" || hasResults);
+  const i = Math.max(0, tabs.indexOf(current));
+  const at =
+    key === "ArrowRight" ? (i + 1) % tabs.length : key === "ArrowLeft" ? (i - 1 + tabs.length) % tabs.length : key === "Home" ? 0 : key === "End" ? tabs.length - 1 : -1;
+  return tabs[at] ?? null;
+}
+
 interface Store {
   mode: LayoutMode;
   /** Tablet: the open drawer, if any. */

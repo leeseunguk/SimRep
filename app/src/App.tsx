@@ -33,7 +33,8 @@ import styles from "./App.module.css";
 import { AiAccountsDialog } from "./components/ai/AiAccountsDialog";
 import { AiPanel } from "./components/ai/AiPanel";
 import { useAi } from "./ai/store";
-import { layoutFor, shownTab, useLayout, type PhoneTab } from "./state/layout";
+import { layoutFor, PHONE_TABS, shownTab, tabForKey, useLayout, type PhoneTab } from "./state/layout";
+import { workspaceEscape } from "./state/escape";
 import { Layers, SlidersHorizontal, BarChart3 } from "lucide-react";
 
 // Plots, table and exports load with the first flight result (own chunk).
@@ -137,10 +138,7 @@ export function App() {
       } else if (e.key === "Escape") {
         // An open menu (e.g. results export) takes this Escape for itself.
         if (document.querySelector('[role="menu"]')) return;
-        if (app.helpOpen) app.setHelpOpen(false);
-        else if (app.home && app.objects.length) app.setHome(false);
-        else if (useResults.getState().ion) useResults.getState().selectIon(null);
-        else app.select(null);
+        workspaceEscape(e);
       } else if ((e.key === "Delete" || e.key === "Backspace") && !app.home && app.selectedElectrode === null) {
         const o = app.objects.find((x) => x.id === app.selectedId);
         if (o) {
@@ -167,6 +165,20 @@ export function App() {
   // Tablet: closed drawers are hidden. Phone: only the selected tab's panel is shown.
   const leftShown = desktop || (phone ? phoneTab === "scene" : drawer === "scene");
   const rightShown = desktop || (phone ? phoneTab === "simulation" : drawer === "simulation");
+  // The start screen covers the workspace, on a tablet or phone also a modal dialog: keyboard and
+  // screen readers stay out of it. (Desktop keeps its previous boundary, the start screen.)
+  const covered = home || (!desktop && (helpOpen || exporting || reporting || palette || aiSettings));
+  // Phone: the panels are the tab panels of the tabs under the 3D view.
+  const tabpanel = (id: PhoneTab) => phone && ({ role: "tabpanel", "aria-labelledby": `phone-tab-${id}`, tabIndex: 0 } as const);
+  const left = (
+    // Desktop keeps its notifications in this column, usable over the start screen.
+    <div className={styles.left} data-shown={leftShown} id="panel-scene" inert={!desktop && covered} {...tabpanel("scene")}>
+      <SceneTree />
+      {desktop && <PanelResizer edge="right" onResize={setLeftWidth} label={t("tree.title")} />}
+      {/* Notifications stack over the bottom of the scene panel, never over the 3D view. */}
+      {desktop && <Toaster />}
+    </div>
+  );
   const results = hasResults && (
     <Suspense fallback={null}>
       <ResultsPanel />
@@ -176,21 +188,22 @@ export function App() {
   return (
     <div className={styles.app} style={layout}>
       <TopBar />
-      <div className={styles.left} data-shown={leftShown}>
-        <SceneTree />
-        {desktop && <PanelResizer edge="right" onResize={setLeftWidth} label={t("tree.title")} />}
-        {/* Notifications stack over the bottom of the scene panel, never over the 3D view. */}
-        {desktop && <Toaster />}
-      </div>
-      <main className={styles.center} inert={home}>
+      {/* Phone: the scene panel follows its tab in the DOM, as on screen. */}
+      {!phone && left}
+      <main className={styles.center} inert={covered}>
         <Viewport theme={theme} />
         {!phone && results}
         {/* Tablet and phone: the side panels can be hidden, so notifications use the 3D view's bottom. */}
         {!desktop && <Toaster />}
       </main>
-      {phone && <PhoneTabs tab={phoneTab} hasResults={hasResults} />}
-      {phone && phoneTab === "results" && <div className={styles.phoneResults}>{results}</div>}
-      <div className={styles.right} data-shown={rightShown} inert={home}>
+      {phone && <PhoneTabs tab={phoneTab} hasResults={hasResults} inert={covered} />}
+      {phone && left}
+      {phone && (
+        <div className={styles.phoneResults} data-shown={phoneTab === "results"} id="panel-results" inert={covered} {...tabpanel("results")}>
+          {phoneTab === "results" && results}
+        </div>
+      )}
+      <div className={styles.right} data-shown={rightShown} id="panel-simulation" inert={covered} {...tabpanel("simulation")}>
         {wizard ? <ImportWizard /> : aiPanel ? <AiPanel /> : <PropertiesPanel />}
         {desktop && <PanelResizer edge="left" onResize={setRightWidth} label={aiPanel && !wizard ? t("ai.panel.title") : t("props.title")} />}
       </div>
@@ -209,34 +222,51 @@ export function App() {
   );
 }
 
-const PHONE_TABS: { id: PhoneTab; key: "layout.tab.scene" | "layout.tab.simulation" | "layout.tab.results"; icon: ReactNode }[] = [
-  { id: "scene", key: "layout.tab.scene", icon: <Layers aria-hidden /> },
-  { id: "simulation", key: "layout.tab.simulation", icon: <SlidersHorizontal aria-hidden /> },
-  { id: "results", key: "layout.tab.results", icon: <BarChart3 aria-hidden /> },
-];
+const TAB_LABELS: Record<PhoneTab, { key: "layout.tab.scene" | "layout.tab.simulation" | "layout.tab.results"; icon: ReactNode }> = {
+  scene: { key: "layout.tab.scene", icon: <Layers aria-hidden /> },
+  simulation: { key: "layout.tab.simulation", icon: <SlidersHorizontal aria-hidden /> },
+  results: { key: "layout.tab.results", icon: <BarChart3 aria-hidden /> },
+};
 
-/** Phone: the panels under the 3D view, one at a time. */
-function PhoneTabs({ tab, hasResults }: { tab: PhoneTab; hasResults: boolean }) {
+function selectTab(id: PhoneTab) {
+  useLayout.getState().setTab(id);
+  if (id === "results") useResults.getState().setOpen(true);
+}
+
+/** Phone: the panels under the 3D view, one at a time. One tab stop; Left/Right/Home/End select. */
+function PhoneTabs({ tab, hasResults, inert }: { tab: PhoneTab; hasResults: boolean; inert: boolean }) {
   const { t } = useI18n();
-  const home = useApp((s) => s.home);
   return (
-    <div className={styles.phoneTabs} role="tablist" aria-label={t("layout.tabs")} inert={home} data-testid="phone-tabs">
-      {PHONE_TABS.map(({ id, key, icon }) => (
+    <div
+      className={styles.phoneTabs}
+      role="tablist"
+      aria-label={t("layout.tabs")}
+      inert={inert}
+      data-testid="phone-tabs"
+      onKeyDown={(e) => {
+        const next = tabForKey(tab, e.key, hasResults);
+        if (!next) return;
+        e.preventDefault();
+        selectTab(next);
+        document.getElementById(`phone-tab-${next}`)?.focus();
+      }}
+    >
+      {PHONE_TABS.map((id) => (
         <button
           key={id}
           type="button"
           role="tab"
+          id={`phone-tab-${id}`}
           className={styles.phoneTab}
           aria-selected={tab === id}
+          aria-controls={`panel-${id}`}
+          tabIndex={tab === id ? 0 : -1}
           disabled={id === "results" && !hasResults}
           data-testid={`phone-tab-${id}`}
-          onClick={() => {
-            useLayout.getState().setTab(id);
-            if (id === "results") useResults.getState().setOpen(true);
-          }}
+          onClick={() => selectTab(id)}
         >
-          {icon}
-          {t(key)}
+          {TAB_LABELS[id].icon}
+          {t(TAB_LABELS[id].key)}
         </button>
       ))}
     </div>

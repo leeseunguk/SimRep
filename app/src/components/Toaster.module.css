@@ -102,3 +102,10 @@
   width: var(--icon-sm);
   height: var(--icon-sm);
 }
+
+/* Tablet and phone (state/layout.ts): a 44 px touch target; the icon keeps its size. */
+:global(html[data-layout="tablet"]) .close,
+:global(html[data-layout="phone"]) .close {
+  width: var(--touch-min);
+  height: var(--touch-min);
+}

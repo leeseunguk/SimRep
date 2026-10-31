@@ -18,6 +18,7 @@ import { useResults } from "../results/store";
 import { useWizard } from "../state/wizard";
 import type { Bounds } from "../scene/mesh";
 import { registerCamera, registerCapture } from "./viewState";
+import { settleLayout } from "./layoutReady";
 import { pinchStep, type Point } from "./touch";
 import { ViewportToolbar } from "./ViewportToolbar";
 import { WebGpuFallback } from "./WebGpuFallback";
@@ -231,7 +232,7 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
         unregisterCapture = registerCapture(() => {
           const css = getComputedStyle(document.documentElement);
           return r.capture({ center: css.getPropertyValue("--vp-bg-center").trim(), edge: css.getPropertyValue("--vp-bg-edge").trim() });
-        });
+        }, () => settleLayout(r, canvas));
         setState({ kind: "ready" });
         setGpu({ state: "ready", api: r.api, adapter: r.adapterLabel, fallbackReason: webgpuReason });
         // WebGL2 draws the same passes; the log keeps why WebGPU was not used.

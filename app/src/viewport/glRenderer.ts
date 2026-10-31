@@ -488,6 +488,7 @@ export class WebGl2Renderer extends RendererBase {
     };
 
     this.c = new GlContext(gl);
+    let pa: GlPaLayer | null = null;
     try {
       this.programs = {
         mesh: program("mesh", src.mesh, "Object"),
@@ -498,8 +499,9 @@ export class WebGl2Renderer extends RendererBase {
       const slice = program("pa-slice", src.slice, "Slice");
       gl.useProgram(slice.program);
       gl.uniform1i(gl.getUniformLocation(slice.program, "data"), 0);
+      pa = new GlPaLayer(this.c, program("pa-surface", src.paSurface, "Pa"), slice, this.maxTextureSize);
       this.layers = {
-        pa: new GlPaLayer(this.c, program("pa-surface", src.paSurface, "Pa"), slice, this.maxTextureSize),
+        pa,
         trajectories: new GlTrajectoryLayer(this.c, {
           line: program("trajectory-lines", src.line, "Traj"),
           splat: program("trajectory-splats", src.splat, "Traj"),
@@ -508,6 +510,7 @@ export class WebGl2Renderer extends RendererBase {
         }),
       };
     } catch (error) {
+      pa?.destroy();
       for (const p of this.ownedPrograms) gl.deleteProgram(p.program);
       canvas.removeEventListener("webglcontextlost", this.onLost);
       throw error;

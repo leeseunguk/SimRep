@@ -10,6 +10,9 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  // Software WebGL contexts contend for the CPU; repeated suites must not spawn
+  // one browser per host-core pair and starve the demo's event-driven stepping.
+  workers: 2,
   reporter: [["list"]],
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
