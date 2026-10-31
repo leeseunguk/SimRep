@@ -9,7 +9,8 @@ import { PRESET_ANGLES } from "./camera";
 import { readViewportTheme, type ViewportTheme } from "./color";
 import { pick } from "./picking";
 import type { PaDrawItem, ProbeHit } from "./paLayer";
-import { Renderer, RendererCancelledError, WebGpuUnavailableError, type DrawItem, type Insets } from "./renderer";
+import { rendererName } from "./rendererBase";
+import { createRenderer, RendererCancelledError, RendererUnavailableError, type DrawItem, type Insets, type Renderer } from "./renderer";
 import { RefineChip } from "./RefineChip";
 import { SliceLegend } from "./SliceLegend";
 import type { Highlight, TrajectoryItem } from "./trajectoryLayer";
@@ -186,8 +187,8 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
     let unregisterCapture: (() => void) | null = null;
     const { setGpu, log } = useApp.getState();
 
-    Renderer.create(canvas, () => disposed).then(
-      (r) => {
+    createRenderer(canvas, () => disposed).then(
+      ({ renderer: r, webgpuReason }) => {
         if (disposed) {
           r.destroy();
           return;
@@ -195,8 +196,8 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
         rendererRef.current = r;
         r.onDeviceLost = (reason) => {
           setState({ kind: "lost", detail: reason });
-          useApp.getState().setGpu({ state: "lost", reason });
-          useApp.getState().log("error", { key: "log.webgpuLost", params: { reason } });
+          useApp.getState().setGpu({ state: "lost", api: r.api, reason });
+          useApp.getState().log("error", { key: "log.rendererLost", params: { api: rendererName(r.api), reason } });
         };
         const resize = (w: number, h: number) => {
           canvas.width = Math.max(1, Math.min(r.maxTextureSize, Math.round(w)));
@@ -229,15 +230,17 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
           return r.capture({ center: css.getPropertyValue("--vp-bg-center").trim(), edge: css.getPropertyValue("--vp-bg-edge").trim() });
         });
         setState({ kind: "ready" });
-        setGpu({ state: "ready", adapter: r.adapterLabel });
-        log("success", { key: "log.webgpuReady", params: { adapter: r.adapterLabel } });
+        setGpu({ state: "ready", api: r.api, adapter: r.adapterLabel, fallbackReason: webgpuReason });
+        // WebGL2 draws the same passes; the log keeps why WebGPU was not used.
+        if (webgpuReason) log("warning", { key: "log.webgpuFallback", params: { reason: webgpuReason } });
+        log("success", { key: "log.rendererReady", params: { api: rendererName(r.api), adapter: r.adapterLabel } });
       },
       (err: unknown) => {
         if (disposed || err instanceof RendererCancelledError) return;
         const detail = err instanceof Error ? err.message : String(err);
         setState({ kind: "unavailable", detail });
         setGpu({ state: "unavailable", reason: detail });
-        log(err instanceof WebGpuUnavailableError ? "warning" : "error", {
+        log(err instanceof RendererUnavailableError ? "warning" : "error", {
           key: "log.webgpuUnavailable",
           params: { reason: detail },
         });

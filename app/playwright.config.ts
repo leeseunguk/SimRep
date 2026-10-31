@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 // End-to-end smoke test on demo mode (src/demo/ipc.ts): the real UI in headless Chromium against a
 // mocked Tauri IPC layer serving recorded native-core packets. No GPU and no native window needed
-// (the 3D view shows its WebGPU-unavailable card when Chromium has no adapter).
+// (without a WebGPU adapter the 3D view draws with its WebGL2 fallback, see e2e/webgl.spec.ts).
 const PORT = 1430;
 
 export default defineConfig({

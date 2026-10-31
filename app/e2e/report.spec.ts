@@ -54,8 +54,9 @@ test("top bar Export -> Report: self-contained HTML with the current flight, the
   expect(html).toContain('<tr><td>TOF mean, µs</td><td class="num">8.263052</td></tr>');
   expect(html).toContain('<tr><td>Compute time, ms (compute_ms)</td><td class="num">38.0</td></tr>');
   expect(html).toContain("Compute only");
-  // Headless Chromium has no WebGPU adapter: the report says why there is no 3D snapshot.
-  expect(html).toContain("The 3D view snapshot is not included");
+  // Headless Chromium has no WebGPU adapter: the WebGL2 fallback draws the view, so its snapshot is in.
+  expect(html).not.toContain("The 3D view snapshot is not included");
+  expect(html).toMatch(/<img src="data:image\/png;base64,[^"]+" alt="3D view snapshot">/);
   await expect(dialog.getByText("Exported")).toBeVisible();
   await dialog.getByRole("button", { name: "Close" }).first().click();
   await expect(dialog).toBeHidden();

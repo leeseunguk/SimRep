@@ -150,56 +150,9 @@ export class TrajectoryLayer {
     };
   }
 
-  /**
-   * Ion under a screen point (device px): the nearest end point of any ion, or segment of a drawn
-   * trajectory, within `tolerance` px. `viewProj` is the column-major view-projection.
-   */
+  /** Ion under a screen point (device px), see trajectoryPick(). */
   pick(viewProj: Float32Array, width: number, height: number, px: number, py: number, tolerance: number): IonHit | null {
-    const m = viewProj;
-    let best: IonHit | null = null;
-    let bestD = tolerance * tolerance;
-    const project = (x: number, y: number, z: number, out: Float64Array, o: number) => {
-      const w = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
-      if (w <= 1e-9) return false;
-      out[o] = ((m[0]! * x + m[4]! * y + m[8]! * z + m[12]!) / w * 0.5 + 0.5) * width;
-      out[o + 1] = (0.5 - (m[1]! * x + m[5]! * y + m[9]! * z + m[13]!) / w * 0.5) * height;
-      return true;
-    };
-    const a = new Float64Array(2);
-    const b = new Float64Array(2);
-    for (const item of this.items) {
-      if (!item.visible) continue;
-      const { ends, offsets, points, header } = item.flight;
-      for (let i = 0; i < header.ions; i++) {
-        if (!project(ends[i * 4]!, ends[i * 4 + 1]!, ends[i * 4 + 2]!, a, 0)) continue;
-        // End points win ties against the paths running through them.
-        const d = (a[0]! - px) ** 2 + (a[1]! - py) ** 2 - 1;
-        if (d < bestD) {
-          bestD = d;
-          best = { id: item.id, index: i };
-        }
-      }
-      for (let i = 0; i < header.ions; i++) {
-        const s = offsets[i]!;
-        const e = offsets[i + 1]!;
-        if (e - s < 2) continue;
-        let ok = project(points[s * 3]!, points[s * 3 + 1]!, points[s * 3 + 2]!, a, 0);
-        for (let k = s + 1; k < e; k++) {
-          const okB = project(points[k * 3]!, points[k * 3 + 1]!, points[k * 3 + 2]!, b, 0);
-          if (ok && okB) {
-            const d = segmentDistance2(px, py, a[0]!, a[1]!, b[0]!, b[1]!);
-            if (d < bestD) {
-              bestD = d;
-              best = { id: item.id, index: i };
-            }
-          }
-          a[0] = b[0]!;
-          a[1] = b[1]!;
-          ok = okB;
-        }
-      }
-    }
-    return best;
+    return trajectoryPick(this.items, viewProj, width, height, px, py, tolerance);
   }
 
   setTheme(theme: ViewportTheme) {
@@ -225,29 +178,14 @@ export class TrajectoryLayer {
 
   /** Box around the visible trajectories (included in "fit all"). */
   bounds(ids?: readonly string[]): Bounds | null {
-    let b: Bounds | null = null;
-    for (const item of this.items) {
-      const g = this.gpu.get(item.id);
-      if (item.visible && g?.bounds && (!ids || ids.includes(item.id))) b = unionBounds(b, g.bounds);
-    }
-    return b;
+    return trajectoryBounds(this.items, (id) => this.gpu.get(id)?.bounds ?? null, ids);
   }
 
   draw(pass: GPURenderPassEncoder, width: number, height: number) {
     const theme = this.theme;
     if (!theme || !this.items.some((i) => i.visible)) return;
-    // Only drawn ions have lines (the rest are end points), so they set the line density.
-    const ions = this.items.reduce((n, i) => n + (i.visible ? i.flight.header.drawn : 0), 0);
-    const lineAlpha =
-      Math.min(LINE_ALPHA_MAX, Math.max(LINE_ALPHA_MIN, LINE_DENSITY / Math.sqrt(Math.max(ions, 1)))) * (this.highlight ? DIM_WITH_HIGHLIGHT : 1);
-    const d = this.data;
-    d.set([...theme.trajectory, lineAlpha], 0);
-    d.set([...theme.splatHit, SPLAT_ALPHA], 4);
-    d.set([...theme.splat, SPLAT_ALPHA], 8);
-    d.set([width, height, SPLAT_RADIUS_CSS_PX * devicePixelRatio, RIM_DARKNESS], 12);
-    d.set([...theme.highlight, 1], 16);
-    d.set([theme.highlightWidth * devicePixelRatio, theme.highlightRing * devicePixelRatio, 0, 0], 20);
-    this.device.queue.writeBuffer(this.uniform, 0, d);
+    trajectoryUniforms(this.items, theme, this.highlight !== null, width, height, this.data);
+    this.device.queue.writeBuffer(this.uniform, 0, this.data);
     pass.setBindGroup(1, this.bindGroup);
     for (const item of this.items) {
       const g = this.gpu.get(item.id);
@@ -292,43 +230,15 @@ export class TrajectoryLayer {
   }
 
   private upload(flight: Flight): TrajectoryGpu {
-    const { offsets, points, ends, surface, header } = flight;
-    const ions = header.ions;
-    // Strip indices with a restart between ions (single-point trajectories draw nothing).
-    const indices = new Uint32Array(header.points + ions);
-    let k = 0;
-    for (let i = 0; i < ions; i++) {
-      const a = offsets[i]!;
-      const b = offsets[i + 1]!;
-      if (b - a < 2) continue;
-      for (let p = a; p < b; p++) indices[k++] = p;
-      indices[k++] = RESTART;
-    }
-    let bounds: Bounds | null = null;
-    if (points.length >= 3) {
-      const min: [number, number, number] = [Infinity, Infinity, Infinity];
-      const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
-      for (let i = 0; i < points.length; i += 3)
-        for (let a = 0; a < 3; a++) {
-          const v = points[i + a]!;
-          if (v < min[a]!) min[a] = v;
-          if (v > max[a]!) max[a] = v;
-        }
-      bounds = { min, max };
-    }
-    const splats = new Float32Array(ions * 4);
-    for (let i = 0; i < ions; i++) {
-      splats.set(ends.subarray(i * 4, i * 4 + 3), i * 4);
-      splats[i * 4 + 3] = header.surfaces[surface[i]!]?.surface.kind === "electrode" ? 1 : 0;
-    }
+    const geo = trajectoryGeometry(flight);
     return {
       flight,
-      points: header.points > 0 ? this.buffer(points, GPUBufferUsage.VERTEX, "trajectory-points") : null,
-      indices: k > 0 ? this.buffer(indices.subarray(0, k), GPUBufferUsage.INDEX, "trajectory-indices") : null,
-      indexCount: k,
-      splats: ions > 0 ? this.buffer(splats, GPUBufferUsage.VERTEX, "trajectory-splats") : null,
-      splatCount: ions,
-      bounds,
+      points: flight.header.points > 0 ? this.buffer(flight.points, GPUBufferUsage.VERTEX, "trajectory-points") : null,
+      indices: geo.indexCount > 0 ? this.buffer(geo.indices, GPUBufferUsage.INDEX, "trajectory-indices") : null,
+      indexCount: geo.indexCount,
+      splats: geo.splatCount > 0 ? this.buffer(geo.splats, GPUBufferUsage.VERTEX, "trajectory-splats") : null,
+      splatCount: geo.splatCount,
+      bounds: geo.bounds,
     };
   }
 
@@ -337,6 +247,130 @@ export class TrajectoryLayer {
     g.indices?.destroy();
     g.splats?.destroy();
   }
+}
+
+/** Box around the visible trajectories (included in "fit all"). */
+export function trajectoryBounds(items: readonly TrajectoryItem[], bounds: (id: string) => Bounds | null, ids?: readonly string[]): Bounds | null {
+  let b: Bounds | null = null;
+  for (const item of items) {
+    const box = bounds(item.id);
+    if (item.visible && box && (!ids || ids.includes(item.id))) b = unionBounds(b, box);
+  }
+  return b;
+}
+
+/** Trajectory uniforms (Traj struct of the WGSL and GLSL shaders). `width` / `height` in device px. */
+export function trajectoryUniforms(items: readonly TrajectoryItem[], theme: ViewportTheme, highlighted: boolean, width: number, height: number, d: Float32Array) {
+  // Only drawn ions have lines (the rest are end points), so they set the line density.
+  const ions = items.reduce((n, i) => n + (i.visible ? i.flight.header.drawn : 0), 0);
+  const lineAlpha =
+    Math.min(LINE_ALPHA_MAX, Math.max(LINE_ALPHA_MIN, LINE_DENSITY / Math.sqrt(Math.max(ions, 1)))) * (highlighted ? DIM_WITH_HIGHLIGHT : 1);
+  d.set([...theme.trajectory, lineAlpha], 0);
+  d.set([...theme.splatHit, SPLAT_ALPHA], 4);
+  d.set([...theme.splat, SPLAT_ALPHA], 8);
+  d.set([width, height, SPLAT_RADIUS_CSS_PX * devicePixelRatio, RIM_DARKNESS], 12);
+  d.set([...theme.highlight, 1], 16);
+  d.set([theme.highlightWidth * devicePixelRatio, theme.highlightRing * devicePixelRatio, 0, 0], 20);
+}
+
+/** GPU-ready arrays of a flight: strip indices with restarts, splat end points (xyz + hit flag), bounds. */
+export function trajectoryGeometry(flight: Flight): {
+  indices: Uint32Array<ArrayBuffer>;
+  indexCount: number;
+  splats: Float32Array<ArrayBuffer>;
+  splatCount: number;
+  bounds: Bounds | null;
+} {
+  const { offsets, points, ends, surface, header } = flight;
+  const ions = header.ions;
+  // Strip indices with a restart between ions (single-point trajectories draw nothing).
+  const indices = new Uint32Array(header.points + ions);
+  let k = 0;
+  for (let i = 0; i < ions; i++) {
+    const a = offsets[i]!;
+    const b = offsets[i + 1]!;
+    if (b - a < 2) continue;
+    for (let p = a; p < b; p++) indices[k++] = p;
+    indices[k++] = RESTART;
+  }
+  let bounds: Bounds | null = null;
+  if (points.length >= 3) {
+    const min: [number, number, number] = [Infinity, Infinity, Infinity];
+    const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < points.length; i += 3)
+      for (let a = 0; a < 3; a++) {
+        const v = points[i + a]!;
+        if (v < min[a]!) min[a] = v;
+        if (v > max[a]!) max[a] = v;
+      }
+    bounds = { min, max };
+  }
+  const splats = new Float32Array(ions * 4);
+  for (let i = 0; i < ions; i++) {
+    splats.set(ends.subarray(i * 4, i * 4 + 3), i * 4);
+    splats[i * 4 + 3] = header.surfaces[surface[i]!]?.surface.kind === "electrode" ? 1 : 0;
+  }
+  return { indices: indices.slice(0, k), indexCount: k, splats, splatCount: ions, bounds };
+}
+
+/**
+ * Ion under a screen point (device px): the nearest end point of any ion, or segment of a drawn
+ * trajectory, within `tolerance` px. `viewProj` is the column-major view-projection.
+ */
+export function trajectoryPick(
+  items: readonly TrajectoryItem[],
+  viewProj: Float32Array,
+  width: number,
+  height: number,
+  px: number,
+  py: number,
+  tolerance: number,
+): IonHit | null {
+  const m = viewProj;
+  let best: IonHit | null = null;
+  let bestD = tolerance * tolerance;
+  const project = (x: number, y: number, z: number, out: Float64Array, o: number) => {
+    const w = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
+    if (w <= 1e-9) return false;
+    out[o] = ((m[0]! * x + m[4]! * y + m[8]! * z + m[12]!) / w * 0.5 + 0.5) * width;
+    out[o + 1] = (0.5 - (m[1]! * x + m[5]! * y + m[9]! * z + m[13]!) / w * 0.5) * height;
+    return true;
+  };
+  const a = new Float64Array(2);
+  const b = new Float64Array(2);
+  for (const item of items) {
+    if (!item.visible) continue;
+    const { ends, offsets, points, header } = item.flight;
+    for (let i = 0; i < header.ions; i++) {
+      if (!project(ends[i * 4]!, ends[i * 4 + 1]!, ends[i * 4 + 2]!, a, 0)) continue;
+      // End points win ties against the paths running through them.
+      const d = (a[0]! - px) ** 2 + (a[1]! - py) ** 2 - 1;
+      if (d < bestD) {
+        bestD = d;
+        best = { id: item.id, index: i };
+      }
+    }
+    for (let i = 0; i < header.ions; i++) {
+      const s = offsets[i]!;
+      const e = offsets[i + 1]!;
+      if (e - s < 2) continue;
+      let ok = project(points[s * 3]!, points[s * 3 + 1]!, points[s * 3 + 2]!, a, 0);
+      for (let k = s + 1; k < e; k++) {
+        const okB = project(points[k * 3]!, points[k * 3 + 1]!, points[k * 3 + 2]!, b, 0);
+        if (ok && okB) {
+          const d = segmentDistance2(px, py, a[0]!, a[1]!, b[0]!, b[1]!);
+          if (d < bestD) {
+            bestD = d;
+            best = { id: item.id, index: i };
+          }
+        }
+        a[0] = b[0]!;
+        a[1] = b[1]!;
+        ok = okB;
+      }
+    }
+  }
+  return best;
 }
 
 function segmentDistance2(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {

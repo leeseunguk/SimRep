@@ -10,6 +10,7 @@ import { clampCoord, displayMirrors, type FastStatus, type PaFormatId, type PaGr
 import type { PaSurface } from "../scene/paSurface";
 import type { TemplateId } from "../scene/templates";
 import type { CameraState } from "../viewport/camera";
+import type { RendererApi } from "../viewport/rendererBase";
 
 export type Lang = "ko" | "en";
 export type ThemePref = "light" | "dark" | "system";
@@ -137,9 +138,10 @@ export interface Toast {
 
 export type GpuStatus =
   | { state: "pending" }
-  | { state: "ready"; adapter: string }
+  /** `fallbackReason`: why WebGPU was not used (WebGL2 draws the view), else null. */
+  | { state: "ready"; api: RendererApi; adapter: string; fallbackReason: string | null }
   | { state: "unavailable"; reason: string }
-  | { state: "lost"; reason: string };
+  | { state: "lost"; api: RendererApi; reason: string };
 
 /** Device the native core flies ions on (created once at start-up, see src-tauri/src/live.rs). */
 export type ComputeStatus =

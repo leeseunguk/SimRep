@@ -3,6 +3,7 @@ import { host } from "../host";
 import { useI18n } from "../i18n";
 import { sceneTriangles, useApp } from "../state/store";
 import { useResults } from "../results/store";
+import { rendererName } from "../viewport/rendererBase";
 import styles from "./StatusBar.module.css";
 
 export function StatusBar() {
@@ -26,18 +27,25 @@ export function StatusBar() {
 
   const gpuText =
     gpu.state === "ready"
-      ? t("status.webgpu.ready", { adapter: gpu.adapter })
+      ? t("status.renderer.ready", { api: rendererName(gpu.api) })
       : gpu.state === "pending"
         ? t("status.webgpu.pending")
         : gpu.state === "lost"
-          ? t("status.webgpu.lost")
+          ? t("status.renderer.lost", { api: rendererName(gpu.api) })
           : t("status.webgpu.unavailable");
   const HostItems = host()?.StatusItems;
-  const gpuTitle = gpu.state === "unavailable" || gpu.state === "lost" ? gpu.reason : gpuText;
+  const gpuTitle =
+    gpu.state === "unavailable" || gpu.state === "lost"
+      ? gpu.reason
+      : gpu.state === "ready"
+        ? gpu.fallbackReason
+          ? t("status.renderer.fallbackTitle", { adapter: gpu.adapter, reason: gpu.fallbackReason })
+          : t("status.renderer.title", { api: rendererName(gpu.api), adapter: gpu.adapter })
+        : gpuText;
 
   return (
     <footer className={styles.statusbar}>
-      <span className={styles.item} title={gpuTitle}>
+      <span className={styles.item} title={gpuTitle} data-testid="status-renderer" data-renderer={gpu.state === "ready" ? gpu.api : undefined}>
         <span className={styles.dot} data-state={gpu.state} />
         {gpuText}
       </span>
