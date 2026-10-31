@@ -3325,6 +3325,7 @@ dependencies = [
  "base64 0.22.1",
  "bincode",
  "bytemuck",
+ "js-sys",
  "pollster",
  "rayon",
  "serde",
@@ -3334,6 +3335,7 @@ dependencies = [
  "simrep-geom",
  "simrep-mesh",
  "simrep-solve",
+ "web-time",
  "wgpu",
 ]
 
@@ -3401,6 +3403,7 @@ dependencies = [
  "simrep-core",
  "simrep-geom",
  "simrep-io",
+ "web-time",
  "wgpu",
 ]
 
