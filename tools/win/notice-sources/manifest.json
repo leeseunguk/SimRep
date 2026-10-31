@@ -178,5 +178,35 @@
     "url": "https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/0a81fd6928ea3b33c8cd484aa4575d50ffb98012/LICENSE",
     "file": "alloc-stdlib-license.txt",
     "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae"
+  },
+  "tauri-plugin-mit": {
+    "url": "https://raw.githubusercontent.com/tauri-apps/plugins-workspace/44293a5722efcaf27060504e63b17aeba721b40f/LICENSE_MIT",
+    "file": "tauri-plugin-mit.txt",
+    "sha256": "89ff9689dcf9dd53968785d05a26f7898bb169dbfcada8d032b3e68cf0d55607"
+  },
+  "mlua-license": {
+    "url": "https://raw.githubusercontent.com/mlua-rs/mlua/e7fa8d75bb3947648605562694d03c1ce4c82b20/LICENSE",
+    "file": "mlua-license.txt",
+    "sha256": "63b61a30d3e3abcfcb1bda4b99f4eea9fdb7d6ab05fbc513461fef6cf89baf29"
+  },
+  "profiling-license": {
+    "url": "https://raw.githubusercontent.com/aclysma/profiling/8271551172eb6fa4cba47369aedd93790c623df9/LICENSE-MIT",
+    "file": "profiling-license.txt",
+    "sha256": "c8167fdeeed46d3f244d3f85c5bf998ce889343691c32be2c61a8bc4b5c08333"
+  },
+  "spirv-license": {
+    "url": "https://raw.githubusercontent.com/gfx-rs/rspirv/8afc3d0ac8e158128cd1410bb2e4b4c26ab11bb4/LICENSE",
+    "file": "spirv-license.txt",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  "tauri-license": {
+    "url": "https://raw.githubusercontent.com/tauri-apps/tauri/59b63ab500da9859f12d8888c3298bc29bba0b92/LICENSE-MIT",
+    "file": "tauri-license.txt",
+    "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d"
+  },
+  "selectors-source": {
+    "url": "https://raw.githubusercontent.com/servo/stylo/572ecba2d1600e7c3d490586692a209faf703baa/selectors/lib.rs",
+    "file": "selectors-source.txt",
+    "sha256": "d54c6e13e9e952dac17d209171df8657e3cae93beaddace4906150cdec8d02e9"
   }
 }

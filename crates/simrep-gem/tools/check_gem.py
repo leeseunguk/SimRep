@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Extend the installed GEM oracle harness with fractional sidecar comparison."""
+import os
 import json
 import re
 import struct
@@ -149,7 +150,7 @@ def compare(ours, oracle):
 
 
 def write_report():
-    root = Path("/mnt/c/Users/lsu10/simrep-oracle/_gem")
+    root = Path(os.environ.get("SIMREP_ORACLE_DIR", REPO / "target/simrep-oracle")) / "_gem"
     results = json.loads((root / "results.json").read_text())
     report = REPO / "docs/gem-validation.md"
     lines = report.read_text().split("\n## Original mismatch regression ledger\n")[0].splitlines()

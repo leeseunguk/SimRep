@@ -1836,7 +1836,7 @@
    "title": "Einzel lens template after refine + fly, results (TOF histogram)",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-109\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-109\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -1876,7 +1876,7 @@
    "title": "Quadrupole template after refine + fly, results (TOF histogram)",
    "info": {
     "name": "quadrupole.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\quadrupole-67\\quadrupole.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\quadrupole-67\\quadrupole.pa0",
     "template": "quadrupole",
     "dims": [
      121,
@@ -1924,7 +1924,7 @@
    "title": "Reflectron TOF template after refine + fly, results (TOF histogram)",
    "info": {
     "name": "reflectron.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\reflectron-8\\reflectron.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\reflectron-8\\reflectron.pa0",
     "template": "reflectron",
     "dims": [
      241,
@@ -1968,7 +1968,7 @@
    "title": "Ion trap template after refine + fly, results (TOF histogram)",
    "info": {
     "name": "trap.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\trap-9\\trap.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\trap-9\\trap.pa0",
     "template": "trap",
     "dims": [
      161,
@@ -2007,7 +2007,7 @@
    "title": "Einzel: properties panel scrolled to the ion source section",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2047,7 +2047,7 @@
    "title": "Einzel: properties panel scrolled to the flight results section (TOF stats, hits)",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2087,7 +2087,7 @@
    "title": "Einzel: properties panel scrolled to the end (flight results section)",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2135,7 +2135,7 @@
    "title": "Einzel: dragging the #2 voltage slider (live re-fly during the drag)",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2175,7 +2175,7 @@
    "title": "Results: detector map tab",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2223,7 +2223,7 @@
    "title": "Results: end-position table",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2276,7 +2276,7 @@
    "title": "Results: export menu open",
    "info": {
     "name": "einzel.pa0",
-    "path": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-110\\einzel.pa0",
+    "path": "%USERPROFILE%\\Documents\\SimRep\\einzel-110\\einzel.pa0",
     "template": "einzel",
     "dims": [
      201,
@@ -2389,7 +2389,7 @@
    "title": "Exact surface card ON (quadrupole cut-cell .pa0 with .cuts.json) + results badge",
    "info": {
     "name": "quadrupole.pa0",
-    "path": "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa\\quad\\quadrupole.pa0",
+    "path": "%USERPROFILE%\\simrep-gui-test\\visual-qa\\quad\\quadrupole.pa0",
     "template": null,
     "dims": [
      121,
@@ -2445,7 +2445,7 @@
    "title": "Exact surface card OFF (grid-point collision, GPU live)",
    "info": {
     "name": "quadrupole.pa0",
-    "path": "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa\\quad\\quadrupole.pa0",
+    "path": "%USERPROFILE%\\simrep-gui-test\\visual-qa\\quad\\quadrupole.pa0",
     "template": null,
     "dims": [
      121,
@@ -2569,7 +2569,7 @@
     "error": {
      "key": "error.technical",
      "params": {
-      "detail": "\\\\?\\C:\\Users\\lsu10\\simrep-gui-test\\visual-qa\\bad\\broken.gem: line 2: unsupported numeric function or argument count 'e'"
+      "detail": "\\\\?\\%USERPROFILE%\\simrep-gui-test\\visual-qa\\bad\\broken.gem: line 2: unsupported numeric function or argument count 'e'"
      }
     }
    },
@@ -3492,7 +3492,7 @@
       "div._columns_s47xt_55>aside._side_s47xt_146>h2._sectionTitle_s47xt_62"
      ],
      [
-      "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa",
+      "%USERPROFILE%\\simrep-gui-test\\visual-qa",
       2.97,
       10,
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentPath_s47xt_227"
@@ -3504,7 +3504,7 @@
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentTime_s47xt_238"
      ],
      [
-      "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa",
+      "%USERPROFILE%\\simrep-gui-test\\visual-qa",
       2.97,
       10,
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentPath_s47xt_227"
@@ -3516,7 +3516,7 @@
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentTime_s47xt_238"
      ],
      [
-      "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa",
+      "%USERPROFILE%\\simrep-gui-test\\visual-qa",
       2.97,
       10,
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentPath_s47xt_227"
@@ -3824,7 +3824,7 @@
       "div._columns_s47xt_55>aside._side_s47xt_146>h2._sectionTitle_s47xt_62"
      ],
      [
-      "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa",
+      "%USERPROFILE%\\simrep-gui-test\\visual-qa",
       4.13,
       10,
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentPath_s47xt_227"
@@ -3836,7 +3836,7 @@
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentTime_s47xt_238"
      ],
      [
-      "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa",
+      "%USERPROFILE%\\simrep-gui-test\\visual-qa",
       4.13,
       10,
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentPath_s47xt_227"
@@ -3848,7 +3848,7 @@
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentTime_s47xt_238"
      ],
      [
-      "C:\\Users\\lsu10\\simrep-gui-test\\visual-qa",
+      "%USERPROFILE%\\simrep-gui-test\\visual-qa",
       4.13,
       10,
       "li._recentItem_s47xt_190>button._recentOpen_s47xt_206>span._recentPath_s47xt_227"

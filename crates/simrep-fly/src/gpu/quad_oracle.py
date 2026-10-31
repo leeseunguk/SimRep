@@ -2,6 +2,7 @@
 """Reproduce the app-template quadrupole SIMION compute/readout calibration."""
 import argparse
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -14,9 +15,9 @@ from run_oracle import DEFAULT_SIMION, run_simion, win_path
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", default="/mnt/c/Users/lsu10/Documents/SimRep/quadrupole-2")
-    parser.add_argument("--beam", default="/mnt/c/Users/lsu10/simrep-gpu-bench/quadrupole-1000.ion")
-    parser.add_argument("--work", default="/mnt/c/Users/lsu10/simrep-oracle/_quad_gpu")
+    parser.add_argument("--source", default=str(ROOT / "target/quadrupole-2"))
+    parser.add_argument("--beam", default=str(ROOT / "target/simrep-gpu-bench/quadrupole-1000.ion"))
+    parser.add_argument("--work", default=str(pathlib.Path(os.environ.get("SIMREP_ORACLE_DIR", ROOT / "target/simrep-oracle")) / "_quad_gpu"))
     args = parser.parse_args()
     work = pathlib.Path(args.work)
     work.mkdir(parents=True, exist_ok=True)

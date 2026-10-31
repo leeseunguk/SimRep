@@ -1,4 +1,4 @@
-# SIMION_Rep 기술 보고서 계획
+# SimRep 기술 보고서 계획
 
 작성일: 2026-10-25. 스킬: `~/.omo/agent/skills/technical-report-style` (new 모드, 동봉 템플릿).
 작업 폴더: `docs/report/`. 원고 `manuscript.json`, 그림 `figures/`, 그림 장부 `figure-ledger.json`,
@@ -17,7 +17,7 @@
 | R7 | 프로젝트 원칙 반영: SIMION보다 빠르게(계산 시간만 비교), 정밀도 유지(같은 정밀도 비교), 쉬운 GUI, 3D 모델 가져오기·내보내기 | 1, 8장 | 판정 규칙 절과 종합 표 | 진행 |
 
 예외: 없음. 원고 진단·윤문 면제 지시 없음 → `check_prose.py`와 im-not-ai `humanize-korean`
-(`/mnt/c/Users/lsu10/.codex/skills/humanize-korean/SKILL.md`)을 실행한다.
+(`/mnt/c/Users/<user>/.codex/skills/humanize-korean/SKILL.md`)을 실행한다.
 
 모델 규칙 메모: 스킬 기본은 "구현 Grok 4.7 xhigh"이나 사용자 지시("grok은 사용량이 없어서 swe-2.0을 써야 한다")가
 우선한다. 구현 보조는 SWE-2, 캡처·그림 제작은 프론트엔드 담당(Opus 5.5), 본문은 리드가 쓴다.
@@ -81,7 +81,7 @@
 
 ## 5. 윤문 실행 기록
 
-- 사용한 스킬: im-not-ai `humanize-korean` (`/mnt/c/Users/lsu10/.codex/external/im-not-ai`, 설치된 리비전 `14aeb52d13e737beb4e999cb7cb92275d0969689`). polishing.md가 적은 확인 리비전(`2f3d943...`)과 다르다.
+- 사용한 스킬: im-not-ai `humanize-korean` (`/mnt/c/Users/<user>/.codex/external/im-not-ai`, 설치된 리비전 `14aeb52d13e737beb4e999cb7cb92275d0969689`). polishing.md가 적은 확인 리비전(`2f3d943...`)과 다르다.
 - 원고 전체가 8,000자를 넘어 스킬 규칙상 strict 승급 대상이지만, strict 5인 파이프라인은 Claude Code 전용 에이전트 팀(TeamCreate)을 요구한다. 그래서 장 단위 4,600자 이하 조각 13개로 나눠 fast(monolith) 경로를 각각 실행했다(스킬이 제시하는 chunk 모드). 입력은 원본 `scripts/prepare_monolith_input.py --genre report`로 준비했다.
 - polishing.md가 요구하는 원본 `verify_gates.py`는 설치된 리비전에 없다. 대신 리드가 (1) 문단 ID별 보호 항목(숫자·단위·경로·인용·도표 참조·식 번호) 기계 대조, (2) 윤문 전후 `check_prose.py`, (3) monolith 자체 변경률·자체검증 기록을 남기고, 의미 변화가 있는 수정은 채택하지 않는다. 게이트 스크립트를 실행했다고 쓰지 않는다.
 - 구현 역할 모델: 스킬 기본은 Grok 4.7 xhigh이나 사용자 지시(Grok 금지)에 따라 문장 작업 전용 writing 작업자가 수행했다.

@@ -3,7 +3,7 @@
 --extract <ours.pa#> <simion.pa#>: decode both PA# files (electrode nodes are stored as
 value + 2*max_voltage) into electrode-number maps and save data/F19-hexapole-masks.npz.
   ours:   cd target/report-figs/hex && simrep gem2pa hexapole.gem hexapole.pa#
-  SIMION: C:\\Users\\lsu10\\simrep-oracle\\_gem\\examples\\geometry\\hexapole.oracle.pa#
+  SIMION: %USERPROFILE%\\simrep-oracle\\_gem\\examples\\geometry\\hexapole.oracle.pa#
           (SIMION 2024 gem2pa of the same installed example, see docs/gem-validation.md)
 """
 import struct

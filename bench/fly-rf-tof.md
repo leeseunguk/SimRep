@@ -159,13 +159,13 @@ adding `--features simrep-fly/precision-study`. Then run from `/mnt/c`:
 ```sh
 p="$PWD/tools/simion-oracle/gpu_precision_study.py"
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/lsu10/simrep-target/release/examples/rf_tof.exe \
+  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
   --mode native --mode constant < /dev/null)
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/lsu10/simrep-target/release/examples/rf_tof.exe \
+  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
   --mode native --max-step 0.2 --tolerance 1e-11 --tag=-step02 < /dev/null)
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/lsu10/simrep-target/release/examples/rf_tof.exe \
+  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
   --mode native --case rf_mirror --case rf_square_wave \
   --max-step 0.2 --tolerance 1e-8 --tag=-rf-speed < /dev/null)
 ```
@@ -189,7 +189,7 @@ Large-beam reproduction adds `--copies` to the study command:
 
 ```sh
 (cd /mnt/c && timeout 45 python3 "$p" \
-  --native /mnt/c/Users/lsu10/simrep-target/release/examples/rf_tof.exe \
+  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
   --mode native --case tof --copies 250000 \
   --max-step 0.2 --tolerance 1e-11 --tag=-batched-1000000 < /dev/null)
 ```
@@ -247,7 +247,7 @@ below uses separate terminal-state flights to the recorded sample times.
 ## Oracle setup and physical inputs
 
 Installed examples remain read-only. `rf_tof_reference.py` makes working
-copies under `C:\Users\lsu10\simrep-oracle\_rf_tof`. It refines `.pa#` inputs
+copies under `%USERPROFILE%\simrep-oracle\_rf_tof`. It refines `.pa#` inputs
 with SIMION's strict minimum `--convergence 1e-7`. Existing normal
 `mirror.pa` and `detect.pa` are loaded unchanged.
 
@@ -449,16 +449,16 @@ python3 tools/simion-oracle/rf_tof_measure.py \
 # Build using the Windows recipe in docs/dev/windows-gpu.md, then:
 p="$PWD/tools/simion-oracle/rf_tof_measure.py"
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/lsu10/simrep-target/release/examples/rf_tof.exe \
+  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
   --device gpu --output gpu-cold-specialized.json < /dev/null)
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/lsu10/simrep-target/release/examples/rf_tof.exe \
+  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
   --device gpu --grid-study < /dev/null)
 
 python3 tools/simion-oracle/rf_tof_report.py
 ```
 
-`C:\Users\lsu10\simrep-oracle\_rf_tof\` retains:
+`%USERPROFILE%\simrep-oracle\_rf_tof\` retains:
 
 * `reference.json`: exact SIMION arguments, exit codes, process walls,
   metadata, high-precision readout and uninstrumented T.Qual 3/209 logs.

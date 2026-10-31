@@ -10,7 +10,7 @@
  "exported": [
   {
    "files": "einzel-field.vti",
-   "dir": "C:\\Users\\lsu10\\Documents\\SimRep\\einzel-132"
+   "dir": "%USERPROFILE%\\Documents\\SimRep\\einzel-132"
   }
  ]
 }

@@ -80,7 +80,7 @@ GoogleDriveFS.exe                     1
 
 orphan conhost: 0
 busy conhost (>50% of a core): 2
-  pid 26152 cpu 100% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- /home/lsu10/orca/workspaces/SIMION/SIMION_Rep
+  pid 26152 cpu 100% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- $REPO
   pid 52060 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
 stopped orphan conhost: 0
 ```

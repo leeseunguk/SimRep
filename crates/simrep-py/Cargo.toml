@@ -1,6 +1,6 @@
 [package]
 name = "simrep-py"
-description = "NumPy and Python parameter scans for SIMION_Rep"
+description = "NumPy and Python parameter scans for SimRep"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

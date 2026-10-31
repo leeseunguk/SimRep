@@ -59,7 +59,7 @@
     "location": "5.1 자기장 / B = −n_g ∇p,    B(x) = (μ₀/4π) ∫ I dℓ × r / |r|³   (6) / 식 (6)의 앞식에서",
     "verdict": "verified",
     "checked_against": {
-      "file": "docs/physics-magnetic-collision.md; crates/simrep-fly/src/physics/magnetic.rs; /mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html",
+      "file": "docs/physics-magnetic-collision.md; crates/simrep-fly/src/physics/magnetic.rs; /mnt/c/Users/<user>/simion_docs_raw/magnetic_potential.html",
       "section_or_symbol": "Units and magnetic fields; Coil::field_gauss; defining magnetic scalar potential",
       "line_range": "physics-magnetic-collision.md:110-151; magnetic.rs:247-310; magnetic_potential.html:283-335"
     },
@@ -81,7 +81,7 @@
     "location": "5.3 유전체 / −∇·(ε_r ∇V) = ρ_f/ε₀,    εᵢⱼ = 2/(1/ε_i + 1/ε_j)   (8) / 식 (8)의 epsilon_r은",
     "verdict": "fix",
     "checked_against": {
-      "file": "docs/dielectric.md; crates/simrep-solve/src/dielectric.rs; /mnt/c/Users/lsu10/simion_docs_raw/dielectric.html",
+      "file": "docs/dielectric.md; crates/simrep-solve/src/dielectric.rs; /mnt/c/Users/<user>/simion_docs_raw/dielectric.html",
       "section_or_symbol": "Discretization and interfaces; harmonic, from_nodes, from_cells; dielectric theory",
       "line_range": "docs/dielectric.md:3-15,116-150; dielectric.rs:130-174; dielectric.html:58-88,155-163"
     },
@@ -103,7 +103,7 @@
     "location": "5.5 재료가 있는 자기장 / −∇·(μ_r ∇p) = (4π/n_g)(−∇·M),    B = −n_g μ_r ∇p + 4πM   (10) / 식 (10)의 mu_r은",
     "verdict": "verified",
     "checked_against": {
-      "file": "docs/magnetostatics.md; crates/simrep-solve/src/magnetostatics.rs; /mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html",
+      "file": "docs/magnetostatics.md; crates/simrep-solve/src/magnetostatics.rs; /mnt/c/Users/<user>/simion_docs_raw/magnetic_potential.html",
       "section_or_symbol": "Equations and flight contract; MagneticProblem::scalar; magnetic potential theory",
       "line_range": "magnetostatics.md:3-23; magnetostatics.rs:179-266; magnetic_potential.html:169-190"
     },
@@ -114,7 +114,7 @@
     "location": "5.5 재료가 있는 자기장 / −∇·(μ_r⁻¹ ∇A_z) = (4π/n_g) J_z,    B = n_g ∇ × A   (11) / 식 (11)의 J_z는",
     "verdict": "fix",
     "checked_against": {
-      "file": "docs/magnetostatics.md; crates/simrep-solve/src/magnetostatics.rs; /mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html",
+      "file": "docs/magnetostatics.md; crates/simrep-solve/src/magnetostatics.rs; /mnt/c/Users/<user>/simion_docs_raw/magnetic_potential.html",
       "section_or_symbol": "Equations and flight contract; MagneticProblem::currents; planar/Cartesian vector potential",
       "line_range": "magnetostatics.md:25-55; magnetostatics.rs:269-326; magnetic_potential.html:119-168"
     },
@@ -972,7 +972,7 @@
     "location": "7. 데스크톱 앱 / 정확한 표면 파일이 있으면 카드와 배지로 보여 주고 스위치로 끌 수 있다. 그림 21은 같은 4중극에서 스위치를 켠 경우(정밀 / 켜면 이온 20개가",
     "verdict": "unverifiable",
     "checked_against": {
-      "file": "docs/report/figures/F22.png; docs/dev/frontend.md; docs/report/figures/data/F08-{simrep-cuts,simrep-nocuts}.csv; /mnt/c/Users/lsu10/simrep-gui-test/report-figs/quad2/quadrupole.gem",
+      "file": "docs/report/figures/F22.png; docs/dev/frontend.md; docs/report/figures/data/F08-{simrep-cuts,simrep-nocuts}.csv; /mnt/c/Users/<user>/simrep-gui-test/report-figs/quad2/quadrupole.gem",
       "section_or_symbol": "exact surface on/off aggregate counts, not per-ion transition table",
       "line_range": "frontend.md:334-340; PNG binary"
     },
@@ -1049,7 +1049,7 @@
     "location": "5.1, 5.2, 5.3, 5.5 / SIMION 도움말·예제 출처",
     "verdict": "fix",
     "checked_against": {
-      "file": "docs/report/manuscript.json; /mnt/c/Users/lsu10/simion_docs_raw/{magnetic_potential,dielectric}.html; /mnt/c/Program Files/SIMION-2024/examples/collision_hs1/collision_hs1.lua",
+      "file": "docs/report/manuscript.json; /mnt/c/Users/<user>/simion_docs_raw/{magnetic_potential,dielectric}.html; /mnt/c/Program Files/SIMION-2024/examples/collision_hs1/collision_hs1.lua",
       "section_or_symbol": "reference list vs cited SIMION physical definitions",
       "line_range": "manuscript.references; magnetic_potential.html:81-225; dielectric.html:58-88; collision_hs1.lua:305-351"
     },
@@ -1060,7 +1060,7 @@
     "location": "3장·4장·5장·6장·8장 요점 정리 / GPU 풀이는·einzel 렌즈에서·자기장 예제·GEM 261개·정밀도를 맞춘",
     "verdict": "fix",
     "checked_against": {
-      "file": "docs/report/manuscript.json; /home/lsu10/.omo/agent/skills/technical-report-style/SKILL.md",
+      "file": "docs/report/manuscript.json; /home/<user>/.omo/agent/skills/technical-report-style/SKILL.md",
       "section_or_symbol": "사용 지점의 출처; numeric chapter conclusions",
       "line_range": "manuscript.blocks:54,94,146,162,183; SKILL.md:사용 지점의 출처"
     },

@@ -190,7 +190,7 @@ contract rather than an atomic flag added to the current API.
 
 Reproduce using the Windows hygiene below, replacing the test filter with
 `kernel_experiments`, setting `SIMREP_GPU_KERNEL_BENCH` to
-`C:\Users\lsu10\simrep-gui-test` and forwarding it through `WSLENV`.
+`%USERPROFILE%\simrep-gui-test` and forwarding it through `WSLENV`.
 Leave `SIMREP_GPU_PREVIEW` unset for native, or set it to `1` for Preview.
 Set and forward `SIMREP_GPU_PHASES=1` for phase replay. No diagnostic feature
 flag is required; the benchmark is an opt-in test and adds no production
@@ -336,12 +336,12 @@ Reproduce from the repository root, following `docs/dev/windows-gpu.md`:
 
 ```bash
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-target'
-export SIMREP_GPU_LIVE_BENCH='C:\Users\lsu10\simrep-gui-test'
+export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
+export SIMREP_GPU_LIVE_BENCH='%USERPROFILE%\simrep-gui-test'
 export WSLENV=CARGO_TARGET_DIR:SIMREP_GPU_LIVE_BENCH:SIMREP_GPU_PREVIEW
 set -o pipefail
 cd /mnt/c
-timeout 900 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe test \
+timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe test \
   --manifest-path "$manifest" -p simrep-fly --release --lib live_refly_benchmark \
   -- --nocapture --test-threads=1 < /dev/null 2>&1 | tr -d '\r'
 # Repeat with SIMREP_GPU_PREVIEW=1 for the explicit app precision.
@@ -936,7 +936,7 @@ The 3D small-beam crossover also differs from a blanket GPU rule: measured
 These bracket no crossover; CPU is preferable at both counts. The historical
 4,096-ion einzel threshold must not be treated as a calibrated 3D threshold.
 
-Raw evidence lives under `C:\Users\lsu10\simrep-oracle\_quad_gpu`:
+Raw evidence lives under `%USERPROFILE%\simrep-oracle\_quad_gpu`:
 `quality-{3,209}-{compute,readout}.json`, coarse CPU/GPU CSVs and
 `reference-{2,4}-*.csv`. Its `scripts/README.txt` contains exact bounded
 foreground commands; scripts also remain in `crates/simrep-fly/src/gpu/`.
@@ -1010,12 +1010,12 @@ The revised rule explicitly allows extrapolation for impractical large runs.
 
 ```sh
 python3 tools/simion-oracle/generate_einzel_beam.py \
-  /mnt/c/Users/lsu10/simrep-oracle/_real_einzel/auto-1024.ion --ions 1024
+  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/auto-1024.ion --ions 1024
 p="$PWD/tools/simion-oracle/einzel_compute_reference.py"
 (cd /mnt/c && timeout 45 python3 "$p" \
-  --particles /mnt/c/Users/lsu10/simrep-oracle/_real_einzel/auto-1024.ion \
+  --particles /mnt/c/Users/<user>/simrep-oracle/_real_einzel/auto-1024.ion \
   --ions 1024 \
-  --output /mnt/c/Users/lsu10/simrep-oracle/_real_einzel/einzel-strict-compute-1024.json \
+  --output /mnt/c/Users/<user>/simrep-oracle/_real_einzel/einzel-strict-compute-1024.json \
   < /dev/null)
 ```
 
@@ -1185,14 +1185,14 @@ trajectory sensitivity dominate this comparison.
 All 1,000 GPU ions terminate physically at workbench walls. CPU/GPU
 termination reasons and nearest **specific wall faces agree 1,000/1,000**.
 Per-ion endpoint/TOF errors and face labels are retained in
-`C:\Users\lsu10\simrep-oracle\_real_einzel\fly-gpu-differences-default.csv`
+`%USERPROFILE%\simrep-oracle\_real_einzel\fly-gpu-differences-default.csv`
 and `fly-gpu-differences.csv` (the 0.05 us run).
 
 Reproduce without touching the reference:
 
 ```sh
-P=/mnt/c/Users/lsu10/simrep-oracle
-R=/home/lsu10/orca/workspaces/SIMION/SIMION_Rep/target/fly-real
+P=/mnt/c/Users/<user>/simrep-oracle
+R=$REPO/target/fly-real
 python3 tools/simion-oracle/compare_gpu_fly.py \
   --cpu "$R/boundary-original.csv" \
   --gpu "$P/_real_einzel/fly-gpu-subset-default.csv" \
@@ -1263,10 +1263,10 @@ a timeout and C-drive working directory:
 
 ```sh
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-target'
+export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR"
 set -o pipefail
-(cd /mnt/c && timeout 55 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build \
+(cd /mnt/c && timeout 55 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
   --release -p simrep-cli --manifest-path "$manifest" \
   < /dev/null 2>&1 | tr -d '\r')
 ```
@@ -1275,19 +1275,19 @@ Generate only the new million-ion beam:
 
 ```sh
 python3 tools/simion-oracle/generate_einzel_beam.py \
-  /mnt/c/Users/lsu10/simrep-oracle/_real_einzel/fly-gpu-1000000.ion \
+  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/fly-gpu-1000000.ion \
   --ions 1000000
 ```
 
 For 10k/100k, use the original ION files; for 1M use the generated file:
 
 ```sh
-ions=C:/Users/lsu10/simrep-oracle/_benchfly/einzel_10000.ion
-out=C:/Users/lsu10/simrep-oracle/_real_einzel/fly-gpu-10000.csv
+ions=%USERPROFILE%/simrep-oracle/_benchfly/einzel_10000.ion
+out=%USERPROFILE%/simrep-oracle/_real_einzel/fly-gpu-10000.csv
 (cd /mnt/c && /usr/bin/time -f 'process_wall_s: %e' timeout 45 \
-  /mnt/c/Users/lsu10/simrep-target/release/simrep.exe fly \
+  /mnt/c/Users/<user>/simrep-target/release/simrep.exe fly \
   --device gpu --backend vulkan \
-  --pa C:/Users/lsu10/simrep-oracle/_benchfly/einzel.pa0 \
+  --pa %USERPROFILE%/simrep-oracle/_benchfly/einzel.pa0 \
   --particles "$ions" --voltage 1=0,2=110,3=0 \
   --bounds=-101,-19,-19,291,19,19 --output "$out" \
   < /dev/null 2>&1 | tr -d '\r')

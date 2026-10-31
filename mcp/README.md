@@ -70,10 +70,10 @@ Linux: `~/.config/Claude/claude_desktop_config.json`)
   "mcpServers": {
     "simrep": {
       "command": "node",
-      "args": ["/absolute/path/to/SIMION_Rep/mcp/server.mjs"],
+      "args": ["/absolute/path/to/SimRep/mcp/server.mjs"],
       "env": {
         "SIMREP_BIN": "/absolute/path/to/simrep",
-        "SIMREP_WORKSPACE": "/absolute/path/to/SIMION_Rep"
+        "SIMREP_WORKSPACE": "/absolute/path/to/SimRep"
       }
     }
   }

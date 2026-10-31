@@ -17,7 +17,7 @@ use simrep_io::{PaFile, read_fast_adjust, read_pa, read_particles, write_pa};
 use simrep_solve::cutcell::{CutCells, surface_fraction};
 use simrep_solve::mg::{Geometry, Grid, Options};
 
-const INPUT: &str = "/mnt/c/Users/lsu10/simrep-oracle/_quad_gpu";
+const INPUT: &str = "target/simrep-oracle/_quad_gpu";
 const OUTPUT: &str = "target/quadrupole-convergence";
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 type Bounds = [[f64; 3]; 2];

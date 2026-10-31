@@ -854,7 +854,7 @@ Exact imported fields match same-grid analytic SDF within
 
 Notation here is LaTeX transcription of stated docs/code, not a new model.
 Raw SIMION files below are all under
-`/mnt/c/Users/lsu10/simion_docs_raw/`. A relevant page does not imply that
+`/mnt/c/Users/<user>/simion_docs_raw/`. A relevant page does not imply that
 SIMION uses our numerical discretization.
 
 ### Electrostatics, multigrid and cut cells

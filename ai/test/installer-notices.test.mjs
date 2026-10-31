@@ -51,6 +51,14 @@ test('legacy dual-licence separators become SPDX OR expressions preserving shipp
   assert.deepEqual(notice.texts.map(file => file.text).sort(), [apache, upstreamLicense].sort())
 })
 
+test('complete CC0 notices are preserved and truncated waivers fail closed', t => {
+  const cc0 = readFileSync(new URL('../../tools/win/notice-sources/spdx-CC0-1.0.txt', import.meta.url), 'utf8')
+  const { root } = fixture(t, { license: 'CC0-1.0' }, { LICENSE: cc0 })
+  assert.equal(npmNotices(root)[0].texts[0].text, cc0)
+  const truncated = fixture(t, { license: 'CC0-1.0' }, { LICENSE: cc0.slice(0, cc0.indexOf('4. Limitations and Disclaimers')) })
+  assert.throws(() => npmNotices(truncated.root), /No full licence text: example@1\.0\.0/)
+})
+
 test('licence labels and short excerpts fail even with author metadata', t => {
   const { root } = fixture(t, { author: 'Example Author' }, { LICENSE: 'MIT' })
   assert.throws(() => npmNotices(root), /No full licence text: example@1\.0\.0/)

@@ -156,7 +156,7 @@ cargo test -p simrep-solve --release --test dielectric -- --nocapture
 cargo test -p simrep-solve --release --test dielectric_gpu
 cargo test -p simrep-cli --release --test dielectric_cli
 cargo run -p simrep-solve --release --example dielectric_oracle -- \
-  /mnt/c/Users/lsu10/simrep-oracle/dielectric cpu
+  /mnt/c/Users/<user>/simrep-oracle/dielectric cpu
 ```
 
 Analytic tests use residual tolerance `1e-12`, independent of SIMION:
@@ -266,7 +266,7 @@ optional last argument selects that tolerance:
 
 ```sh
 cargo run -p simrep-solve --release --example dielectric_oracle -- \
-  /mnt/c/Users/lsu10/simrep-oracle/dielectric cpu 1e-10
+  /mnt/c/Users/<user>/simrep-oracle/dielectric cpu 1e-10
 # Use Windows Vulkan per docs/dev/windows-gpu.md for the GPU rows.
 ```
 
@@ -419,7 +419,7 @@ software Vulkan; this is numerical coverage, not hardware performance.
 cargo test -p simrep-solve --release --test nonlinear_dielectric -- --nocapture
 RAYON_NUM_THREADS=4 cargo run -p simrep-solve --release \
   --example nonlinear_dielectric_oracle -- \
-  /mnt/c/Users/lsu10/simrep-oracle/dielectric cpu 1e-10
+  /mnt/c/Users/<user>/simrep-oracle/dielectric cpu 1e-10
 ```
 
 The oracle tightens its own CPU reference from relative residual `1e-13`
@@ -672,8 +672,8 @@ CPU/GPU crossover calibration.
 Example reproduction, using an unused writable output directory:
 
 ```sh
-root=/mnt/c/Users/lsu10/simrep-oracle/dielectric
-out=/mnt/c/Users/lsu10/simrep-oracle/physical-h025
+root=/mnt/c/Users/<user>/simrep-oracle/dielectric
+out=/mnt/c/Users/<user>/simrep-oracle/physical-h025
 cargo run -p simrep-solve --release --example nonlinear_dielectric_refinement -- \
   "$root" "$out" 0.25 generate
 RAYON_NUM_THREADS=4 cargo run -p simrep-solve --release \
@@ -743,13 +743,13 @@ rather than a large win. Exact reproduction commands:
 ```sh
 # CPU, Linux
 RAYON_NUM_THREADS=16 target/release/examples/dielectric_oracle \
-  /mnt/c/Users/lsu10/simrep-oracle/dielectric cpu 1e-10
+  /mnt/c/Users/<user>/simrep-oracle/dielectric cpu 1e-10
 RAYON_NUM_THREADS=16 target/release/examples/nonlinear_dielectric_refinement \
-  /mnt/c/Users/lsu10/simrep-oracle/dielectric target/nl-h1 1.0 cpu 1e-5 3
+  /mnt/c/Users/<user>/simrep-oracle/dielectric target/nl-h1 1.0 cpu 1e-5 3
 # GPU, Windows Vulkan (foreground, /mnt/c cwd, closed stdin, timeout)
-timeout 900 /mnt/c/Users/lsu10/simrep-target/release/examples/dielectric_oracle.exe \
-  'C:\Users\lsu10\simrep-oracle\dielectric' vulkan 1e-10 </dev/null
-timeout 600 /mnt/c/Users/lsu10/simrep-target/release/examples/nonlinear_dielectric_refinement.exe \
-  'C:\Users\lsu10\simrep-oracle\dielectric' 'C:\Users\lsu10\simrep-oracle\qa-nl-h1' \
+timeout 900 /mnt/c/Users/<user>/simrep-target/release/examples/dielectric_oracle.exe \
+  '%USERPROFILE%\simrep-oracle\dielectric' vulkan 1e-10 </dev/null
+timeout 600 /mnt/c/Users/<user>/simrep-target/release/examples/nonlinear_dielectric_refinement.exe \
+  '%USERPROFILE%\simrep-oracle\dielectric' '%USERPROFILE%\simrep-oracle\qa-nl-h1' \
   1.0 vulkan 1e-5 3 qa-gpu.pa </dev/null
 ```

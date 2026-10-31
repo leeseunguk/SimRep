@@ -35,13 +35,13 @@ Files are encoded by `simrep-io`, not a separate CLI format writer.
 
 ## Inputs and comparison protocol
 
-- Existing references were read from `C:\Users\lsu10\simrep-oracle\`.
+- Existing references were read from `%USERPROFILE%\simrep-oracle\`.
 - New references copied only PA# inputs into
-  `C:\Users\lsu10\simrep-refine-reference\{default,tight}\<example>\`.
+  `%USERPROFILE%\simrep-refine-reference\{default,tight}\<example>\`.
   Default uses SIMION's default convergence; tight uses `--convergence 1e-7`.
   The oracle worker checked SHA256 preservation of 19 original PA/log files.
 - CPU output is in `/tmp/simrep-refine-cpu/<example>/`.
-  Windows output is in `C:\Users\lsu10\simrep-refine-gpu\_bench3d\`.
+  Windows output is in `%USERPROFILE%\simrep-refine-gpu\_bench3d\`.
 - `tools/simion-oracle/compare_pa.py` independently decodes the binary arrays
   using Python's standard library. Max and RMS differences include **every
   grid node**, including electrodes. Every reported electrode-mask mismatch
@@ -56,17 +56,17 @@ cargo build --release -p simrep-cli
 RAYON_NUM_THREADS=16 /usr/bin/time -p target/release/simrep refine \
   '/tmp/simrep-refine-cpu/_bench3d/sc3d_x2.pa#' --tolerance 1e-12
 
-export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-target'
+export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR"
 set -o pipefail
-timeout 900 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build --release -p simrep-cli \
+timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build --release -p simrep-cli \
   --manifest-path "$(wslpath -w "$PWD/Cargo.toml")" </dev/null 2>&1 | tr -d '\r'
-/usr/bin/time -p timeout 180 /mnt/c/Users/lsu10/simrep-target/release/simrep.exe \
-  refine 'C:\Users\lsu10\simrep-refine-gpu\_bench3d\sc3d_x2.pa#' \
+/usr/bin/time -p timeout 180 /mnt/c/Users/<user>/simrep-target/release/simrep.exe \
+  refine '%USERPROFILE%\simrep-refine-gpu\_bench3d\sc3d_x2.pa#' \
   --device gpu --backend vulkan --tolerance 1e-12 </dev/null 2>&1 | tr -d '\r'
 
 timeout 260 python3 tools/simion-oracle/run_oracle.py _bench3d --refine \
-  --work-dir /mnt/c/Users/lsu10/simrep-refine-reference/tight/_bench3d \
+  --work-dir /mnt/c/Users/<user>/simrep-refine-reference/tight/_bench3d \
   --refine-args='--convergence 1e-7' --timeout 180 </dev/null
 python3 tools/simion-oracle/compare_pa.py generated.pa500 oracle.pa500
 ```

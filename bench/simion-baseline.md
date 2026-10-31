@@ -38,7 +38,7 @@ Fly is effectively single-threaded: `--num-threads 1` makes no difference.
 
 ## Large 3D refine case
 
-`examples/performance_tests` ships **no large 3D case** — all `.pa#`/`.pa` files there are 2D (planar/cylindrical, max ~2.6M points) or trivially small. The `sc3d_x2` case (259^3 = 17.37M points, 139 MB `.pa#`) was built headless via `gem2pa` from a two-shell-spheres `.gem` (`pa_define(130,130,130,planar,xyz)` scaled 2x) by a previous setup step; SIMION's CLI does support this, so the case is real and reproducible, not synthetic smoke. Gem source: `C:\Users\lsu10\simrep-oracle\_bench3d\sc3d.gem`.
+`examples/performance_tests` ships **no large 3D case** — all `.pa#`/`.pa` files there are 2D (planar/cylindrical, max ~2.6M points) or trivially small. The `sc3d_x2` case (259^3 = 17.37M points, 139 MB `.pa#`) was built headless via `gem2pa` from a two-shell-spheres `.gem` (`pa_define(130,130,130,planar,xyz)` scaled 2x) by a previous setup step; SIMION's CLI does support this, so the case is real and reproducible, not synthetic smoke. Gem source: `%USERPROFILE%\simrep-oracle\_bench3d\sc3d.gem`.
 
 ## Exact invocations
 
@@ -47,7 +47,7 @@ All from `cd /mnt/c`, `< /dev/null`, foreground with `timeout`, via the harness:
 ```sh
 R=tools/simion-oracle/run_oracle.py
 
-# performance_tests examples (copied fresh to C:\Users\lsu10\simrep-oracle\<example>)
+# performance_tests examples (copied fresh to %USERPROFILE%\simrep-oracle\<example>)
 python3 $R performance_tests/6_cylindrical_pa_tests --work-dir <w> --refine --fly big_pa_cylinder.iob
 python3 $R performance_tests/6_cylindrical_pa_tests --work-dir <w> --refine --num-threads 1
 python3 $R performance_tests/8_rf_tests             --refine --fly rf_mirror.iob
@@ -67,7 +67,7 @@ python3 $R _bench3d --work-dir C:\...\simrep-oracle\_bench3d --refine --num-thre
 python3 $R _bench3d --work-dir C:\...\simrep-oracle\_bench3d --refine --refine-args "--convergence 1e-7"
 ```
 
-The effective SIMION command line for e.g. the 100k-ion fly (cwd `C:\Users\lsu10\simrep-oracle\_benchfly`):
+The effective SIMION command line for e.g. the 100k-ion fly (cwd `%USERPROFILE%\simrep-oracle\_benchfly`):
 
 ```
 simion.exe --nogui --noprompt --default-num-particles 110000 fly \
@@ -91,7 +91,7 @@ Process hygiene verified at end: `winproc.ps1 cleanup` — no `simion.exe` runni
 ## Oracle coverage (phase 0)
 
 Date: 2026-10-23. Full oracle results (argv, exit codes, stdout/stderr, per-call seconds) under
-`C:\Users\lsu10\simrep-oracle\<example>\oracle.json`, produced by `tools/simion-oracle/run_oracle.py`
+`%USERPROFILE%\simrep-oracle\<example>\oracle.json`, produced by `tools/simion-oracle/run_oracle.py`
 (900 s per-call timeout, default threads). For examples with multiple `.iob`s, extra flies were run
 via `--work-dir` passes and merged into the same `oracle.json`. `refine exit/s` = all refine runs
 exit 0 and total refine wall time; `fly exit/s` likewise over every `.iob` flown; `ions` = splats
@@ -122,7 +122,7 @@ timeout), plus two documented manual calls for `dielectric/plates_2dp` (needs a 
 and one batch-lua run of `solenoid/solenoid_write.lua`. All flies ran with `--programs 1` and
 `--recording-enable 1` (recording output `<iob stem>.oracle_recording.txt` in the work dir).
 Full argv/stdout per call is in `oracle*.json` artifacts under
-`.omo/evidence/phase5-oracle/` (also `C:\Users\lsu10\simrep-oracle\<example>\oracle.json`, the last
+`.omo/evidence/phase5-oracle/` (also `%USERPROFILE%\simrep-oracle\<example>\oracle.json`, the last
 fly per work dir). `compute s` = SIMION's own reported seconds (`Refine completed ... in X Sec`,
 `File saved ... in X Sec`, `Fly completed. N splats, X seconds`), summed over the runs listed;
 wall time per call is in the artifacts. `ions` = splats per fly. Every call exited 0; no timeouts.
@@ -142,5 +142,5 @@ wall time per call is in the artifacts. `ions` = splats per fly. Every call exit
 
 236 SIMION calls total across phase-5 coverage (233 via `run_oracle.py`, plus manual
 gem2pa + refine for `plates_2dp.pa#` and the `solenoid_write.lua` batch run): every call exit 0. Recording outputs (`*.oracle_recording.txt`), generated `.pa`/`.pa0`/`.pa#`
-arrays, `params.txt` and `out.csv` live in `C:\Users\lsu10\simrep-oracle\<example>\` alongside the
+arrays, `params.txt` and `out.csv` live in `%USERPROFILE%\simrep-oracle\<example>\` alongside the
 per-invocation `oracle.json` snapshots archived in `.omo/evidence/phase5-oracle/`.

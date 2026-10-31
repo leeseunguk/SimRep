@@ -13,7 +13,7 @@ GUI는 Tauri 2 + React + TypeScript(Vite)다. 3D 뷰는 WebGPU로 그린다.
 |---|---|
 | WSL Node | `~/.local/bin/node` v24 (Node 22 이상이면 됨) |
 | Windows Node | `C:\Program Files\nodejs\node.exe` v24 |
-| Windows Rust | `C:\Users\lsu10\.cargo\bin\cargo.exe`, `stable-x86_64-pc-windows-msvc` |
+| Windows Rust | `%USERPROFILE%\.cargo\bin\cargo.exe`, `stable-x86_64-pc-windows-msvc` |
 | C++ 빌드 도구 | Visual Studio 2022 (MSVC) |
 | WebView2 런타임 | 155 (WebGPU 기본 활성) |
 
@@ -47,15 +47,15 @@ npm run dev
 
 ```powershell
 $env:CARGO_TARGET_DIR = "$env:USERPROFILE\simrep-app-target"
-cargo run --manifest-path \\wsl.localhost\Ubuntu\home\lsu10\orca\workspaces\SIMION\SIMION_Rep\app\src-tauri\Cargo.toml
+cargo run --manifest-path \\wsl.localhost\Ubuntu\home\<user>\SimRep\app\src-tauri\Cargo.toml
 ```
 
 같은 일을 WSL 터미널에서 Windows 툴체인으로 실행하려면:
 
 ```bash
-CARGO_TARGET_DIR='C:\Users\lsu10\simrep-app-target' WSLENV=CARGO_TARGET_DIR \
-  /mnt/c/Users/lsu10/.cargo/bin/cargo.exe run \
-  --manifest-path '\\wsl.localhost\Ubuntu\home\lsu10\orca\workspaces\SIMION\SIMION_Rep\app\src-tauri\Cargo.toml' < /dev/null
+CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target' WSLENV=CARGO_TARGET_DIR \
+  /mnt/c/Users/<user>/.cargo/bin/cargo.exe run \
+  --manifest-path '\\wsl.localhost\Ubuntu\home\<user>\SimRep\app\src-tauri\Cargo.toml' < /dev/null
 ```
 
 - 디버그 빌드(`custom-protocol` 기능 없음)는 `tauri.conf.json`의 `build.devUrl`(`http://127.0.0.1:1420`)을 연다. 그래서 Tauri CLI 없이 `cargo run`만으로 개발 모드가 되고, WSL에서 소스를 고치면 창이 HMR로 바로 바뀐다.
@@ -73,7 +73,7 @@ CARGO_TARGET_DIR='C:\Users\lsu10\simrep-app-target' WSLENV=CARGO_TARGET_DIR \
 C: 드라이브에 체크아웃(또는 복사)이 있으면 Windows Node만으로 표준 Tauri 흐름을 쓴다. 이때는 WSL의 Vite를 끄고 실행한다(같은 1420 포트).
 
 ```powershell
-cd C:\dev\SIMION_Rep\app        # 루트 Cargo.toml, crates/ 도 함께 있어야 한다 (simrep-core path 의존성)
+cd C:\dev\SimRep\app        # 루트 Cargo.toml, crates/ 도 함께 있어야 한다 (simrep-core path 의존성)
 npm install
 $env:CARGO_TARGET_DIR = "$env:USERPROFILE\simrep-app-target"
 npm run tauri dev               # beforeDevCommand가 Vite를 띄우고 cargo run으로 창을 연다
@@ -96,22 +96,22 @@ npm run tauri dev               # beforeDevCommand가 Vite를 띄우고 cargo ru
 
 OCCT 7.7.0 묶음(2026-10-24): OCCT 툴킷 30개 + tbb 2 + FreeImage + FreeType + FFmpeg 4 + openvr = DLL 39개, MSVC 런타임 3개(`MSVCP140`, `VCRUNTIME140`, `VCRUNTIME140_1`), 70.4 MB. 그 밖의 가져오기는 Windows 시스템 DLL과 UCRT api-set뿐이다. STEP/IGES만 쓰는데도 FreeImage·FreeType·FFmpeg·openvr가 들어오는 이유: OCCT 7.7의 `TKXDESTEP`/`TKXDEIGES`가 `TKVCAF → TKV3d → TKService`를 가져오기 때문이다(불러오기만 하고 쓰지 않는다). `simrep-app.exe`는 OCCT 툴킷 12개를 지연 로드하고 `MSVCP140.dll`(simrep-cad C++ 셰임)은 바로 가져오므로, C++ 런타임은 `occt\`가 아니라 실행 파일 옆에 있어야 VC++ 재배포 패키지가 없는 PC에서도 앱이 뜬다(나중에 불러오는 OCCT DLL은 이미 올라온 런타임을 같이 쓴다).
 
-빌드(WSL에서, Windows Node로 Tauri CLI 실행). Tauri CLI 2.12.4 Windows 패키지는 `npm pack @tauri-apps/cli@2.12.4 @tauri-apps/cli-win32-x64-msvc@2.12.4`를 `C:\Users\lsu10\simrep-tauri-cli\node_modules\@tauri-apps\`에 풀어 둔다(WSL의 `node_modules`에는 Linux 바이너리만 있음). CLI는 `TAURI_APP_PATH`/`TAURI_FRONTEND_PATH`로 WSL 소스를 가리키게 해서 `/mnt/c`에서 실행하고, Windows npm은 UNC 현재 폴더에서 못 돌므로 `beforeBuildCommand`를 비우는 설정(`{"build":{"beforeBuildCommand":""}}`, 저장소 밖 파일)을 겹치고 `dist/`는 WSL에서 먼저 만든다.
+빌드(WSL에서, Windows Node로 Tauri CLI 실행). Tauri CLI 2.12.4 Windows 패키지는 `npm pack @tauri-apps/cli@2.12.4 @tauri-apps/cli-win32-x64-msvc@2.12.4`를 `%USERPROFILE%\simrep-tauri-cli\node_modules\@tauri-apps\`에 풀어 둔다(WSL의 `node_modules`에는 Linux 바이너리만 있음). CLI는 `TAURI_APP_PATH`/`TAURI_FRONTEND_PATH`로 WSL 소스를 가리키게 해서 `/mnt/c`에서 실행하고, Windows npm은 UNC 현재 폴더에서 못 돌므로 `beforeBuildCommand`를 비우는 설정(`{"build":{"beforeBuildCommand":""}}`, 저장소 밖 파일)을 겹치고 `dist/`는 WSL에서 먼저 만든다.
 
 ```bash
 (cd app && npm run build)
 s="$(wslpath -w tools/win/stage-occt.ps1)"; d="$(wslpath -w app/src-tauri)"
 (cd /mnt/c && timeout 600 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$s" -Dest "$d\bundle-occt" < /dev/null)
-export TAURI_APP_PATH="$d" TAURI_FRONTEND_PATH="$(wslpath -w app)" CARGO_TARGET_DIR='C:\Users\lsu10\simrep-app-target-p6cad' \
-  OCCT_INCLUDE_DIR='C:\Users\lsu10\occt\opencascade-7.7.0\inc' OCCT_LIB_DIR='C:\Users\lsu10\occt\opencascade-7.7.0\win64\vc14\lib'
+export TAURI_APP_PATH="$d" TAURI_FRONTEND_PATH="$(wslpath -w app)" CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target-p6cad' \
+  OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc' OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib'
 export WSLENV=TAURI_APP_PATH:TAURI_FRONTEND_PATH:CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR
-cd /mnt/c && timeout 3000 '/mnt/c/Program Files/nodejs/node.exe' 'C:\Users\lsu10\simrep-tauri-cli\node_modules\@tauri-apps\cli\tauri.js' build \
-  --features cad --bundles nsis --config "$d\tauri.cad.conf.json" --config 'C:\Users\lsu10\simrep-tauri-cli\no-before-build.conf.json' < /dev/null
+cd /mnt/c && timeout 3000 '/mnt/c/Program Files/nodejs/node.exe' '%USERPROFILE%\simrep-tauri-cli\node_modules\@tauri-apps\cli\tauri.js' build \
+  --features cad --bundles nsis --config "$d\tauri.cad.conf.json" --config '%USERPROFILE%\simrep-tauri-cli\no-before-build.conf.json' < /dev/null
 ```
 
 결과: `<CARGO_TARGET_DIR>\release\bundle\nsis\SimRep_0.1.0_x64-setup.exe`, **29,873,560 B (28.49 MiB)**, 경고 0. NSIS 도구는 `%LOCALAPPDATA%\tauri\NSIS`에 받아 둔 것을 쓴다.
 
-확인(2026-10-24, 이 PC, 일반 사용자 권한, 상태 기록: `C:\Users\lsu10\simrep-gui-test\phase6-release\state-*.txt`, 스크립트 `install-test.ps1`):
+확인(2026-10-24, 이 PC, 일반 사용자 권한, 상태 기록: `%USERPROFILE%\simrep-gui-test\phase6-release\state-*.txt`, 스크립트 `install-test.ps1`):
 
 - 설치 전: `%LOCALAPPDATA%\SimRep` 없음, HKCU/HKLM 제거 키 없음, 바로 가기 없음.
 - `SimRep_0.1.0_x64-setup.exe /S`: 종료 코드 0, 5.0 s. `%LOCALAPPDATA%\SimRep`에 파일 54개 95.5 MB(`simrep-app.exe`, `uninstall.exe`, C++ 런타임 3개, `occt\` DLL 39개 + 고지 + `licenses\`). HKCU 제거 키(`InstallLocation` = 위 폴더), `HKCU\Software\SimRep\SimRep`, 사용자 시작 메뉴·바탕 화면 바로 가기. **HKLM·ProgramData에는 아무것도 없다.**
@@ -200,11 +200,11 @@ app/src-tauri/
 - Windows 빌드는 `docs/dev/windows-occt.md`의 SDK(OCCT 7.7.0)로:
 
   ```bash
-  CARGO_TARGET_DIR='C:\Users\lsu10\simrep-app-target-p4cad' \
-  OCCT_INCLUDE_DIR='C:\Users\lsu10\occt\opencascade-7.7.0\inc' \
-  OCCT_LIB_DIR='C:\Users\lsu10\occt\opencascade-7.7.0\win64\vc14\lib' \
+  CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target-p4cad' \
+  OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc' \
+  OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib' \
   WSLENV=CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR \
-    /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
+    /mnt/c/Users/<user>/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
   ```
 
 - OCCT DLL은 **지연 로드**한다(`build.rs`의 `/DELAYLOAD:TK*.dll` + `delayimp.lib`). 그래서 DLL이 없어도 앱은 뜨고, 첫 CAD 요청 때 `src/cad.rs`가 SDK를 찾아 env.bat/custom.bat과 같은 폴더(`<CASROOT>\win64\vc14\bin`과 옆의 서드파티 `<이름>\bin`, openvr은 `bin\win64`)를 이 프로세스의 PATH 앞에 넣고 툴킷 20개를 미리 불러 본다. 못 찾거나 못 불러오면 찾아본 곳을 담은 `cadUnavailable` 오류가 된다. 찾는 순서: `SIMREP_OCCT_DIR`(CASROOT 또는 DLL 폴더) → `CASROOT` → 실행 파일 옆 `occt\`(배포 시 DLL을 여기 넣는다) → 빌드할 때의 `OCCT_LIB_DIR` → `%USERPROFILE%\occt\opencascade-7.7.0`. 배포할 때는 OCCT DLL과 LGPL 고지(docs/step-import.md)를 함께 둔다. Linux는 시스템 OCCT를 그냥 링크한다.
@@ -230,7 +230,7 @@ app/src-tauri/
 
 배치된 배열(.iob, 원점을 옮긴 가져오기)은 작업대 좌표로 쓴다(메시는 전체 변환, VTK 격자는 평행 이동만). 확인(2026-10-24): einzel(원통)·평면 2D GEM·STL에서 만든 3D 배열로 모든 형식 19개 파일을 쓰고 구조를 검사했다(STL 삼각형 수/크기, glTF·GLB 헤더, OBJ 그룹 이름, VTK 범위). 내보낸 `.pa`와 `.pa0`을 다시 열어 같은 이온을 날리면 평균 TOF가 원본과 같다(15.2998855 µs).
 
-스크린샷(en/ko × dark/light): `C:\Users\lsu10\simrep-screenshots\phase4-import\`. 테스트 파일: `C:\Users\lsu10\simrep-gui-test\phase4b\`.
+스크린샷(en/ko × dark/light): `%USERPROFILE%\simrep-screenshots\phase4-import\`. 테스트 파일: `%USERPROFILE%\simrep-gui-test\phase4b\`.
 
 ## 3D 뷰 조작
 
@@ -340,7 +340,7 @@ app/src-tauri/
 - 3D 4중극은 목표(1만 30/s, 10만 10/s)에 못 미친다. 원인은 GPU 커널 시간이다: 이온 100개도 약 18 ms(가장 느린 이온의 순차 RK 단계 지연), 10만 개는 약 145–170 ms(3D 경계 인식 5차 패치, 셀당 216계수)라서 앱 쪽 겹치기로는 넘을 수 없다. 전압 합성(combine) 패스는 1 ms 미만이다.
 - 따로 한 번만 바꿀 때 계산 시간은 끌 때보다 길게 나온다(아인젤 1만: 40–65 ms vs 5 ms). GPU가 쉬다가 깨어나는 시간으로 보인다.
 - 백엔드에서 빨라질 곳: (1) 이온 버퍼를 비행마다 새로 만들고 96 B/이온을 읽어 오는 대신 상주 이온 버퍼와 작은 끝 상태(위치·TOF·이유)만 읽는 API(10만 개 GPU 전송 약 15–20 ms), (2) 표시할 이온의 N단계마다 위치를 GPU가 기록하는 옵션(CPU 재비행 제거), (3) 3D 장의 더 가벼운 GPU 표현.
-- 스크린샷: `C:\Users\lsu10\simrep-screenshots\phase2-gpu-live\`. 원자료: `C:\Users\lsu10\simrep-gui-test\gpulive\results.json`.
+- 스크린샷: `%USERPROFILE%\simrep-screenshots\phase2-gpu-live\`. 원자료: `%USERPROFILE%\simrep-gui-test\gpulive\results.json`.
 
 ### 정확한 전극 표면 (.cuts.json)
 
@@ -356,8 +356,8 @@ app/src-tauri/
   | CLI `fly --cuts` | 750 | 230 | 20 | 4.1145034797 |
   | 앱 표면 끔(계단) / CLI `--no-cuts` | 751 / 751 | 249 / 249 | 0 / 0 | 4.124046832 / 4.124046832 |
 
-  앱–CLI 이온별: 끝난 곳 불일치 0, 끝점 RMS 2.3e-7 mm(최대 1.8e-6, 앱 패킷이 f32), TOF RMS 1.2e-7 µs. 독립 물리 8x 기준(`compare_quadrupole.py`): 앱 정밀 비행 자체 0.0034354 mm RMS(최대 0.0202, 예전 4배 표본 풀이 0.00444), 끝난 곳 변화 0. 앱이 만든 파일을 기준 설정(`--tolerance 1e-11 --max-step-us 0.025`)으로 CLI 비행하면 **0.003435341 mm RMS, 최대 0.02018961 mm, 끝난 곳 변화 0**으로, CLI `refine-geometry` 파일의 결과(docs/geometry-pipeline.md)와 자릿수까지 같다. 첫 정확한 표면 비행은 보조 파일(12 MB) 읽기와 장 준비로 약 4 s 걸린다(CLI 준비 3.5 s). 이후 같은 전압은 캐시된다. `.pa0`를 따로 열어도(옆의 `.cuts.json`) 같은 결과였다. STL(아인젤 템플릿에서 내보낸 3부품)과 `pair.step`(CAD 빌드)도 v3 보조 파일을 만들고 정확한 표면으로 날았다. 기록: `C:\Users\lsu10\simrep-gui-test\phase7\quad\`(`cli-*.csv`), `phase7\quad-compare.txt`. 정확한 CSG 풀이 확인: `phase7b\quad\`(앱 파일, `cli\`에 CLI 파일, `app-precise.csv`, `cli-appfiles-*.csv`), `phase7b\quad-compare.txt`(스크립트 `phase7b\quadwiz.js`).
-- 스크린샷(en/ko × dark/light): `C:\Users\lsu10\simrep-screenshots\phase7-exact\`. `01` 마법사 cut-cell 보조 파일, `02` 정확한 표면 켜짐(실시간→CPU 안내), `03` 결과 섹션, `04` 끔(GPU 실시간).
+  앱–CLI 이온별: 끝난 곳 불일치 0, 끝점 RMS 2.3e-7 mm(최대 1.8e-6, 앱 패킷이 f32), TOF RMS 1.2e-7 µs. 독립 물리 8x 기준(`compare_quadrupole.py`): 앱 정밀 비행 자체 0.0034354 mm RMS(최대 0.0202, 예전 4배 표본 풀이 0.00444), 끝난 곳 변화 0. 앱이 만든 파일을 기준 설정(`--tolerance 1e-11 --max-step-us 0.025`)으로 CLI 비행하면 **0.003435341 mm RMS, 최대 0.02018961 mm, 끝난 곳 변화 0**으로, CLI `refine-geometry` 파일의 결과(docs/geometry-pipeline.md)와 자릿수까지 같다. 첫 정확한 표면 비행은 보조 파일(12 MB) 읽기와 장 준비로 약 4 s 걸린다(CLI 준비 3.5 s). 이후 같은 전압은 캐시된다. `.pa0`를 따로 열어도(옆의 `.cuts.json`) 같은 결과였다. STL(아인젤 템플릿에서 내보낸 3부품)과 `pair.step`(CAD 빌드)도 v3 보조 파일을 만들고 정확한 표면으로 날았다. 기록: `%USERPROFILE%\simrep-gui-test\phase7\quad\`(`cli-*.csv`), `phase7\quad-compare.txt`. 정확한 CSG 풀이 확인: `phase7b\quad\`(앱 파일, `cli\`에 CLI 파일, `app-precise.csv`, `cli-appfiles-*.csv`), `phase7b\quad-compare.txt`(스크립트 `phase7b\quadwiz.js`).
+- 스크린샷(en/ko × dark/light): `%USERPROFILE%\simrep-screenshots\phase7-exact\`. `01` 마법사 cut-cell 보조 파일, `02` 정확한 표면 켜짐(실시간→CPU 안내), `03` 결과 섹션, `04` 끔(GPU 실시간).
 
 ### GPU API 적용 전후 실시간 갱신 (2026-10-24)
 
@@ -371,7 +371,7 @@ app/src-tauri/
 | 4중극 | 100,000 | 1.2 | 640.7 / 54.2 / 1,319.8 | **5.4** | 120.5 / 41.2 / 241.9 |
 
 - `cache_basis_powers`를 켜고 잰 4중극: 1만 개 8.2/s(전송 5.8 ms, 네이티브 29.9 ms), 10만 개 5.6/s(네이티브 224.6 ms). 아인젤(2D)은 영향 없음(47.8 / 10.4/s). 이때는 갱신/s가 같아 쓰지 않았지만, 아래처럼 이 표의 4중극 갱신/s 자체가 측정 스크립트 탓이었다.
-- 원자료: `C:\Users\lsu10\simrep-gui-test\phase7\before.json`, `after.json`, `after-cache.json`(스크립트 `helper.js`, `run.js`).
+- 원자료: `%USERPROFILE%\simrep-gui-test\phase7\before.json`, `after.json`, `after-cache.json`(스크립트 `helper.js`, `run.js`).
 
 ### 4중극 실시간 재비행 병목 (2026-10-24)
 
@@ -404,7 +404,7 @@ app/src-tauri/
 - **4중극 10만 개는 목표(10/s)에 못 미친다.** 앱 안에서 비행 하나의 GPU 계산(타임스탬프)이 약 120 ms라 그것만으로 10/s(100 ms)를 넘는다. 두 비행이 4조각씩 번갈아 GPU를 써서 둘 다 늦게 끝나고, 늦게 온 옛 결과는 버려진다(`claimResult`, 3초에 비행 24개 중 16–20개 반영). 큰 비행을 사본 하나로 몰아도 5.0–6.0/s로 같았다. 앱 쪽으로는 더 줄일 곳이 없다.
 - **백엔드에 필요한 공개 API**(crates/를 고치지 않았으므로 여기 적는다): (1) 10만 개를 한 디스패치로 날리기(`MAX_IONS_PER_DISPATCH` 32,768을 키우거나 설정으로). 크레이트 사본에서 131,072로만 바꾼 벤치: 10만 개 계산 89 → 65 ms, 비행 129 → 95 ms. (2) 이온을 GPU에 상주시키거나 비행 준비(입자 검사·변환, 10만 개 약 16 ms, 한 스레드)를 병렬로 하는 API. (3) 제출과 결과 받기를 나눈 비동기 비행(사본을 늘리지 않고 겹치기). (4) `PreparedField`가 쓰는 GPU 메모리를 알려 주는 함수(지금은 `GridField::gpu_data`가 `pub(crate)`라 `live::plan`이 배열 크기로 어림한다).
 - **남은 일**(둘 다 아래 "단면 패킷과 전압 슬라이더 범위"에서 했다): (1) 단면 패킷(830 KB)은 전압마다 바뀌지 않는 전극 플래그(166 KB)도 매번 싣고, 1만 개 갱신당 IPC의 약 60%가 단면이다. 전압별 해를 한 번 받아 UI에서 중첩하면 갱신당 IPC가 579 KB만 남는다. (2) 전압 슬라이더의 최소 범위 ±1000 V는 4중극(±2.5 V)처럼 낮은 전압 전극에서 거의 쓸 수 없다(숫자 칸 끌기도 1 V 단위).
-- 원자료: `C:\Users\lsu10\simrep-gui-test\phase7b\after.json`(스크립트 `helper.js`(전압 단위 `__quantum`), `trace.js`(IPC 시각), `setup.js`), 벤치 소스는 저장소 밖(`/home/lsu10/orca/scratch-p7b/flybench`).
+- 원자료: `%USERPROFILE%\simrep-gui-test\phase7b\after.json`(스크립트 `helper.js`(전압 단위 `__quantum`), `trace.js`(IPC 시각), `setup.js`), 벤치 소스는 저장소 밖(`/home/<user>/orca/scratch-p7b/flybench`).
 
 ### 단면 패킷과 전압 슬라이더 범위 (2026-10-24)
 
@@ -432,14 +432,14 @@ app/src-tauri/
 
   앞 표(53.9 / 12.6 / 37.8 / 5.6)보다 높은 것은 이 변경 때문이 아니라 측정 환경 때문이다. 이전 빌드도 같은 값이 나왔다. 처음 잴 때는 Windows CPU가 100%였다: WSL에서 띄운 Windows 프로그램의 headless `conhost.exe`가 클라이언트가 끝난 뒤에도 남아 하나에 약 2 코어씩 돌고 있었고(부모 `wsl.exe`가 살아 있어 `winproc.ps1 cleanup`의 고아 기준에 걸리지 않는다), 이때는 이전/이후 모두 4중극 1만 개 19–21/s였다. 다른 작업이 GPU를 쓰는 동안에도 값이 무너진다(4중극 1만 개 1/s). 측정 전에 `nvidia-smi.exe`로 GPU 사용률 0%를 확인하고 이전/이후를 번갈아 잔다.
 - 왜 그대로인가: 단면 요청은 한 번에 하나라 단면 패킷은 비행 응답과 대역폭을 다투지 않았다. 비행 왕복(4중극 1만 개 61 ms = 네이티브 31 ms + 579 KB 응답)은 단면 패킷 크기와 무관하고, 동시 3개로 약 49/s가 위쪽 한계다(실제 5초에 비행 요청 221–228개). `fast_adjust` 자체도 1만 개에서는 바이트가 아니라 네이티브 작업(16.6만 점 중첩, 헤더 통계)과 비행이 CPU를 같이 쓰는 데 든다(29 ms로 같음). 10만 개에서는 단면이 빨라졌다(28 → 18–19 ms). 남는 것은 갱신당 IPC 60% 감소와 큰 배열의 단면 지연 감소다. 갱신/s를 올리려면 비행 쪽(네이티브 시간, 이온당 36 B 끝 상태 + 궤적 패킷)을 줄여야 한다.
-- 원자료: `C:\Users\lsu10\simrep-gui-test\phase7c\ab2.json`(4개 설정, 이전/이후), `ab3.json`(아인젤, 이후 → 이전 → 이후), `ab-full.json`(이후 4개 설정, 이전 열은 다른 GPU 작업과 겹쳐 무효), `ab1.json`(conhost 부하 때), 스크립트 `helper.js`/`setup.js`/`trace.js`(phase7b와 같음), `qcheck.js`.
+- 원자료: `%USERPROFILE%\simrep-gui-test\phase7c\ab2.json`(4개 설정, 이전/이후), `ab3.json`(아인젤, 이후 → 이전 → 이후), `ab-full.json`(이후 4개 설정, 이전 열은 다른 GPU 작업과 겹쳐 무효), `ab1.json`(conhost 부하 때), 스크립트 `helper.js`/`setup.js`/`trace.js`(phase7b와 같음), `qcheck.js`.
 
 **전압 슬라이더 범위**(`VoltageControl`, components/SimulationSections.tsx):
 
 - 범위 = 그 배열의 조절 전극들의 파일 전압과 현재 전압 중 가장 큰 |V|의 4배를 1·2·5×10ⁿ로 올린 값, 최소 ±1 V. 한 배열의 슬라이더는 모두 같은 범위다. 단계 = 범위/1000(슬라이더 2,000칸), 숫자 칸은 단계의 자릿수로 보여 주고 끌기·화살표도 그 단계다. 예: 4중극 템플릿(±2.5 V) ±10 V, 0.01 V 단계 / 아인젤 템플릿(80 V) ±500 V, 0.5 V / 리플렉트론(150 V) ±1000 V / 이온 트랩(9 V) ±50 V. 예전에는 최소 ±1000 V, 1 V 단계라 4중극에서 한 픽셀이 약 8 V였다.
 - 템플릿은 파일에 모든 전극을 0 V로 저장하고 전압을 나중에 넣는다(위 확인). 그래서 파일 전압만으로는 범위를 정할 수 없고 현재 전압도 본다. 대신 사용자가 슬라이더·숫자 칸으로 범위 안에서 바꾸는 동안에는 범위를 그 편집을 시작할 때의 전압으로 고정한다(모듈 상태 `sizedFrom`: 배열별 기준 전압과 마지막 편집이 만든 `voltages` 객체). 그래서 끌기 도중이나 끝난 뒤에 범위가 다시 잡혀 엄지가 튀지 않는다. undo·되돌리기·템플릿·프로젝트 열기·refine 결과처럼 다른 곳에서 전압이 바뀌면 `voltages` 객체가 바뀌어 새 전압으로 다시 잰다. 문서 필드가 아니라 undo·프로젝트에 들어가지 않고, 편집 자체는 예전처럼 `setElectrodeVoltage`라 undo 병합도 그대로다.
 - **넓히기**: 범위보다 큰 값을 숫자 칸에 입력(또는 끌기·화살표로 넘김)하면 고정을 풀고 새 전압으로 다시 잰다(4중극에서 12 V 입력 → ±50 V). 안내는 섹션 말머리와 슬라이더·눈금의 툴팁(`volts.widenHint`)에 있다.
-- 확인(release 앱, 4중극 템플릿, CDP 실제 입력): 슬라이더 3개 모두 min/max −10/10, step 0.01, 숫자 칸 `2.50`. #1 칸에 `12` 입력 + Enter → 세 슬라이더 모두 −50/50, step 0.05. 스크린샷(en/ko × light/dark, 창 전체와 섹션만 2배): `C:\Users\lsu10\simrep-screenshots\phase7c\`(`01-default-*`, `02-widened-*`).
+- 확인(release 앱, 4중극 템플릿, CDP 실제 입력): 슬라이더 3개 모두 min/max −10/10, step 0.01, 숫자 칸 `2.50`. #1 칸에 `12` 입력 + Enter → 세 슬라이더 모두 −50/50, step 0.05. 스크린샷(en/ko × light/dark, 창 전체와 섹션만 2배): `%USERPROFILE%\simrep-screenshots\phase7c\`(`01-default-*`, `02-widened-*`).
 
 ### 제출/수거 파이프라인과 작은 비행 패킷 (2026-10-24)
 
@@ -463,7 +463,7 @@ app/src-tauri/
 - **4중극 10만 개는 GPU에 묶인다**: 비행 하나의 계산이 104 ms(GPU 타임스탬프)라 위쪽 한계가 약 9.6/s이고, 이후 8.6–8.9/s는 GPU가 약 90% 바쁜 상태다. 네이티브 시간(262 ms)은 대부분 앞 비행 뒤에서 GPU 큐를 기다린 시간이다. 10/s를 넘기려면 비행 하나의 GPU 시간을 줄여야 한다(크레이트 쪽).
 - **호스트 전송**은 이제 `Timings`의 setup + upload + readback이다(이전 열의 85 ms(10만)는 GPU 왕복에서 계산을 뺀 값이라 잠금·큐 대기를 포함했다).
 - **동시 요청 4개**(`LIVE_DEPTH` = 4, 같은 이후 앱, 3개와 바로 이어 잰 짝): 아인젤 10만 22.2 vs 18.9/s로 빨라지지만 GPU에 묶인 4중극 10만은 8.7 vs 8.5/s로 그대로이고 왕복만 312 → 413 ms로 늘어 3개로 두었다(4중극 1만 짝은 rAF가 32 Hz로 떨어진 실행이라 비교 불가).
-- 원자료: `C:\Users\lsu10\simrep-gui-test\livepipe\results\`(`before-2.json`, `before-3.json`, `after-1..3.json`, `d3-1.json`, `d4-1.json`. 이전 1회차는 정리 단계 오류로 JSON이 없고 중앙값만 남았다), 스크립트 `helper.js`(`check`: 고정 전압 비교), `setup.js`, `drag.js`, 구동기 `measure.py`.
+- 원자료: `%USERPROFILE%\simrep-gui-test\livepipe\results\`(`before-2.json`, `before-3.json`, `after-1..3.json`, `d3-1.json`, `d4-1.json`. 이전 1회차는 정리 단계 오류로 JSON이 없고 중앙값만 남았다), 스크립트 `helper.js`(`check`: 고정 전압 비교), `setup.js`, `drag.js`, 구동기 `measure.py`.
 
 ## 결과 탐색 (결과 패널)
 
@@ -489,7 +489,7 @@ app/src-tauri/
 | 같은 배열, `einzel_10000.ion` | 10,000 | 2.2 / 3.7 | 2.6 / 3.2 | 2.1 / 3.0 | 2.1 / 3.0 | 5.5 / 7.8 |
 
   분석(필터·구간 나누기·통계) 자체는 10만 개에 1–2 ms, 표를 TOF로 정렬하면 13 ms. 이온 탭의 10만 개 시간은 대부분 같은 순간에 도착한 4 MB 비행 패킷 처리와 겹친 `ion_trace` 왕복이다(따로 부르면 1.6 ms, Rust 쪽 0.45 ms). 끝 상태 CSV(10만 행, 8.0 MB)는 만드는 데 134 ms, 쓰는 데 157 ms.
-- 스크린샷: `C:\Users\lsu10\simrep-screenshots\phase5-results\`(en/ko × dark/light, 탭별, 실제 einzel 10만 개, 내보내기 메뉴). 내보낸 파일 예: `C:\Users\lsu10\simrep-gui-test\phase5\export-*`.
+- 스크린샷: `%USERPROFILE%\simrep-screenshots\phase5-results\`(en/ko × dark/light, 탭별, 실제 einzel 10만 개, 내보내기 메뉴). 내보낸 파일 예: `%USERPROFILE%\simrep-gui-test\phase5\export-*`.
 
 ## 5분 따라하기 (Tour)
 
@@ -505,7 +505,7 @@ app/src-tauri/
 
 - 첫 실행(데스크톱, `simrep.tour` 없음)에 시작 화면 오른쪽에 제안 카드가 뜬다(다른 화면이면 오른쪽 아래). **나중에**/**시작**/닫기 모두 `seen`을 저장한다. 도움말(F1)의 **5분 따라하기** 버튼과 시작 화면의 같은 버튼으로 언제든 다시 시작한다. 건너뛰기·이전·다음은 언제든 된다.
 - 카드 위치: 대상의 오른쪽 → 왼쪽 → 아래 → 위 중 창에 맞는 첫 자리(내보내기 단계는 메뉴가 아래로 열리므로 위를 먼저). 대상이 패널 밖에 있으면 그 패널만 스크롤해 가운데로 가져온다(`scrollIntoView`는 `overflow: hidden`인 앱 루트까지 밀어 창 전체가 밀리므로 쓰지 않는다). 작업 중(`busy`)이거나 도움말이 열려 있으면 숨는다.
-- 확인(2026-10-24, debug 앱, CDP 실제 클릭): 제안 → 아인젤 카드 → #2에 60 입력 → 다시 비행 → 히스토그램 탭 → 내보내기 → 모든 이온의 끝 상태(CSV 41줄 = 머리 + 이온 40) → 완료. 스크린샷: `C:\Users\lsu10\simrep-screenshots\phase6-release\`(`01`–`05`, en/ko × dark/light).
+- 확인(2026-10-24, debug 앱, CDP 실제 클릭): 제안 → 아인젤 카드 → #2에 60 입력 → 다시 비행 → 히스토그램 탭 → 내보내기 → 모든 이온의 끝 상태(CSV 41줄 = 머리 + 이온 40) → 완료. 스크린샷: `%USERPROFILE%\simrep-screenshots\phase6-release\`(`01`–`05`, en/ko × dark/light).
 
 ## 시작 화면과 템플릿
 

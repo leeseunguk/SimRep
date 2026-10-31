@@ -9,7 +9,7 @@
 | CLI 결과 (`cli-result`) | F04 F05 F08 F11 F12 F14 F15 F16 F19 F20 | `target/release/simrep`(와 FLY2 생성기 `target/release/examples/particles`)를 실제로 실행 |
 | 저장 데이터 (`stored-data`) | F02 F06 F10 F13 F17 | bench/·docs/ 표 또는 보관된 측정 CSV를 그대로 그림 |
 
-`C:\Users\lsu10\simrep-screenshots\`의 예전 스크린샷은 하나도 다시 쓰지 않았다. 그 뒤 앱 소스
+`%USERPROFILE%\simrep-screenshots\`의 예전 스크린샷은 하나도 다시 쓰지 않았다. 그 뒤 앱 소스
 (`SimulationSections.tsx`, `ResultsPanel.tsx`, i18n 등)가 바뀌어 현재 앱과 같다고 볼 수 없기 때문이다.
 
 ## 폴더
@@ -37,16 +37,16 @@ matplotlib numpy scipy pillow` (확인한 버전: matplotlib 3.11.2, numpy 2.5.4
 
 ```bash
 # 1) 빌드 (STEP 가져오기 때문에 cad 기능 필요)
-CARGO_TARGET_DIR='C:\Users\lsu10\simrep-app-target-fig' \
-OCCT_INCLUDE_DIR='C:\Users\lsu10\occt\opencascade-7.7.0\inc' OCCT_LIB_DIR='C:\Users\lsu10\occt\opencascade-7.7.0\win64\vc14\lib' \
+CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target-fig' \
+OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc' OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib' \
 WSLENV=CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR \
-  /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
+  /mnt/c/Users/<user>/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
 # 2) Vite (WSL)과 앱 (원격 디버깅 포트 9333)
 (cd app && node_modules/.bin/vite) &
 cd /mnt/c && WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333 WSLENV=WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS/w \
-  /mnt/c/Users/lsu10/simrep-app-target-fig/debug/simrep-app.exe < /dev/null &
-# 3) cdp.mjs와 app/*.js를 C:\Users\lsu10\simrep-gui-test\report-figs\ 로 복사한 뒤 Windows node로 실행
-cd /mnt/c/Users/lsu10/simrep-gui-test/report-figs
+  /mnt/c/Users/<user>/simrep-app-target-fig/debug/simrep-app.exe < /dev/null &
+# 3) cdp.mjs와 app/*.js를 %USERPROFILE%\simrep-gui-test\report-figs\ 로 복사한 뒤 Windows node로 실행
+cd /mnt/c/Users/<user>/simrep-gui-test/report-figs
 METRICS=1280x800 WSLENV=METRICS '/mnt/c/Program Files/nodejs/node.exe' cdp.mjs eval einzel.js '{"count":1000,"draw":300}'
 METRICS=1280x800 WSLENV=METRICS '/mnt/c/Program Files/nodejs/node.exe' cdp.mjs shot 'C:\...\F01-raw.png'
 # 끝나면: taskkill.exe /IM simrep-app.exe /T /F

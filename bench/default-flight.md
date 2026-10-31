@@ -425,7 +425,7 @@ python3 bench/default_flight_sweep.py target/default-flight/sweep.log \
 python3 bench/default_flight_sweep.py target/default-flight/api-cli.log \
   --defaults-only --cli-field --paired-cli target/release/simrep
 SIMREP_DEFAULTS_ONLY=1 \
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 ```
 

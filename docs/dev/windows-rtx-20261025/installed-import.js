@@ -19,7 +19,7 @@ await window.__TAURI_INTERNALS__.invoke("plugin:event|emit_to", {
   target: { kind: "AnyLabel", label: "main" },
   event: "tauri://drag-drop",
   payload: {
-    paths: ["C:\\Users\\lsu10\\simrep-cad-fixtures\\pair.step"],
+    paths: [(window.SIMREP_CAD_FIXTURE ?? "C:\\simrep-cad-fixtures\\pair.step")],
     position: { x: 500, y: 400 },
   },
 });

@@ -117,7 +117,7 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .into_iter()
         .map(|s| SampledSdf::new(s.dims, s.origin_mm, s.spacing_mm, s.values))
         .collect::<Result<_, _>>()?;
-    let particles = read_particles("/mnt/c/Users/lsu10/simrep-oracle/_quad_gpu/particles.ion")?
+    let particles = read_particles("target/simrep-oracle/_quad_gpu/particles.ion")?
         .into_iter()
         .map(|p| {
             Particle::from_relativistic_energy(

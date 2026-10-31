@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Measure the five largest converted GEMs; optional synchronous SIMION runs."""
 import argparse
+import os
 import json
 import re
 import statistics
@@ -16,7 +17,7 @@ ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument("--oracle", action="store_true")
 ap.add_argument("--runs", type=int, default=3)
 args = ap.parse_args()
-root = Path("/mnt/c/Users/lsu10/simrep-oracle/_gem")
+root = Path(os.environ.get("SIMREP_ORACLE_DIR", REPO / "target/simrep-oracle")) / "_gem"
 cache = root / "results.json"
 results = json.loads(cache.read_text())
 largest = sorted((r for r in results if r["status"] == "pass"),

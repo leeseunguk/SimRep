@@ -1,4 +1,4 @@
-"""Shared plot style for the SIMION_Rep report figures.
+"""Shared plot style for the SimRep report figures.
 
 Every figure is drawn at its final printed width (15.5 cm on A4) so that
 font sizes in points are the sizes the reader sees. Korean text uses

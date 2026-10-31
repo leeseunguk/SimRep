@@ -2,7 +2,7 @@
 
 Native rows: `target/release/examples/particles <SIMION-2024/examples/...fly2> "" <seed>` (the generator
 used by tools/simion-oracle/check_fly2.py), seeds 1..8 for random sources.
-SIMION rows: the retained oracle exports C:\\Users\\lsu10\\simrep-oracle\\_fly2\\<name>.oracle.txt
+SIMION rows: the retained oracle exports %USERPROFILE%\\simrep-oracle\\_fly2\\<name>.oracle.txt
 (simion.iob2.load_fly2_file(...):create_ionfile, seeds 1..8; docs/fly2-validation.md).
   deterministic: bradbury_nielsen_grid/bngrid.fly2 (11 TOB x 21 positions = 231 particles)
   random:        plot/tof_histogram.fly2 (5000 per seed: Gaussian TOB mean 2 us FWHM 1 us,

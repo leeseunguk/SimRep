@@ -291,7 +291,7 @@ cargo test -p simrep-mesh
 cargo run --release -p simrep-mesh --example mesh_bench
 cargo run --release -p simrep-mesh --example simion_compare -- \
   '/mnt/c/Program Files/SIMION-2024/examples/geometry/two_cylinder-1.stl' \
-  '/mnt/c/Users/lsu10/simrep-mesh-oracle/mesh-point.pa#' 0 10 10
+  '/mnt/c/Users/<user>/simrep-mesh-oracle/mesh-point.pa#' 0 10 10
 ```
 
 Tests compare cube, sphere and torus membership and SDF to analytic formulas,
@@ -346,7 +346,7 @@ gem="$(wslpath -w tools/simion-oracle/mesh.gem)"
 s="$(wslpath -w tools/win/winproc.ps1)"
 (cd /mnt/c && timeout 30 '/mnt/c/Program Files/SIMION-2024/simion.exe' \
   --nogui --noprompt gem2pa "$gem" \
-  'C:/Users/lsu10/simrep-mesh-oracle/mesh-point.pa#' < /dev/null)
+  '%USERPROFILE%/simrep-mesh-oracle/mesh-point.pa#' < /dev/null)
 (cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive \
   -ExecutionPolicy Bypass -File "$s" cleanup < /dev/null)
 ```

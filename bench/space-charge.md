@@ -32,7 +32,7 @@ at (-10,0,0) with scale 0.1; both workbench bounds are
 [-10,-4,-4] to [10,4,4] mm. All 103 particles physically terminate.
 
 Artifacts are outside the repository in
-`C:\Users\lsu10\simrep-oracle\space-charge\{factor,coulombic}`:
+`%USERPROFILE%\simrep-oracle\space-charge\{factor,coulombic}`:
 `oracle.txt`, `replay.ion`, `native-{1e-04,5e-05}.csv`, and
 `comparison-{1e-04,5e-05}.json`.
 
@@ -376,7 +376,7 @@ Both original cases are replayed from their actual recorded launches:
 103 trajectories in `repulsion1`, 201 in `repulsion_mixed_beam`, I=1e-5 A,
 grouped nonrelativistic SIMION Beam repulsion, T.Qual=-9. The originals are
 unchanged. Endpoint instrumentation and working copies are under
-`C:\Users\lsu10\simrep-oracle\beam-endpoints\{repulsion1,repulsion_mixed_beam}`.
+`%USERPROFILE%\simrep-oracle\beam-endpoints\{repulsion1,repulsion_mixed_beam}`.
 The shipped potential-only Lua diagnostic is not an endpoint reference.
 Recorded velocities determine native launch KE using native constants;
 SIMION refinement reuses its original recorded KE. TOB is subtracted only
@@ -586,10 +586,10 @@ each native/SIMION error is measured against those same references.
 Reproduce using the captured launches and archived independent references:
 
 ```sh
-ROOT=/mnt/c/Users/lsu10/simrep-oracle/beam-convergence
+ROOT=/mnt/c/Users/<user>/simrep-oracle/beam-convergence
 CASE=repulsion1
 OPENBLAS_NUM_THREADS=1 python3 tools/simion-oracle/beam_reference.py \
-  --case /mnt/c/Users/lsu10/simrep-oracle/beam-endpoints/$CASE \
+  --case /mnt/c/Users/<user>/simrep-oracle/beam-endpoints/$CASE \
   --reference-cache "$ROOT/robust/$CASE" \
   --output "$ROOT/replay/$CASE" --native target/release/simrep \
   --native-steps 0 --baseline-fraction 0 --trials 3 --repeat
@@ -598,7 +598,7 @@ OPENBLAS_NUM_THREADS=1 python3 tools/simion-oracle/beam_reference.py \
 # Tighter contexts: --native-steps 1.25e-5 --baseline-fraction 1 (repulsion1)
 # or --native-steps 1e-6 --baseline-fraction .05 (mixed).
 python3 tools/simion-oracle/beam_simion_refine.py \
-  --case /mnt/c/Users/lsu10/simrep-oracle/beam-endpoints/$CASE \
+  --case /mnt/c/Users/<user>/simrep-oracle/beam-endpoints/$CASE \
   --output "$ROOT/replay-simion/$CASE/trial-1" --steps 0
 # Repeat into trial-2/trial-3; --steps 1e-4 reproduces the inactive-hook control.
 ```

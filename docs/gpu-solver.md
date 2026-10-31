@@ -239,13 +239,13 @@ foreground with closed stdin and a C-drive working directory:
 
 ```sh
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-target'
+export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
 export WSLENV="$WSLENV:CARGO_TARGET_DIR"
 set -o pipefail
-(cd /mnt/c && timeout 900 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build \
+(cd /mnt/c && timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
   --release -p simrep-cli --manifest-path "$manifest" </dev/null 2>&1 | tr -d '\r')
 for n in 128 256 539; do
-  (cd /mnt/c && timeout 300 /mnt/c/Users/lsu10/simrep-target/release/simrep.exe \
+  (cd /mnt/c && timeout 300 /mnt/c/Users/<user>/simrep-target/release/simrep.exe \
     refine-bench --device gpu --backend vulkan --n "$n" </dev/null 2>&1 | tr -d '\r')
 done
 ```

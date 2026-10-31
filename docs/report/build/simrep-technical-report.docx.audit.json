@@ -1,9 +1,9 @@
 {
   "mode": "append",
   "body_policy": "appended",
-  "source": "/home/lsu10/orca/workspaces/SIMION/SIMION_Rep/docs/report/build/cover.docx",
-  "manuscript": "/home/lsu10/orca/workspaces/SIMION/SIMION_Rep/docs/report/manuscript.json",
-  "output": "/home/lsu10/orca/workspaces/SIMION/SIMION_Rep/docs/report/build/simrep-technical-report.docx",
+  "source": "$REPO/docs/report/build/cover.docx",
+  "manuscript": "$REPO/docs/report/manuscript.json",
+  "output": "$REPO/docs/report/build/simrep-technical-report.docx",
   "source_sha256": "9e545eda4db10ce7d70807e9d87b832546dcd72ef5ef4952fc1a58bad123f078",
   "source_unchanged": true,
   "output_sha256": "f33dfd7e9238c4e3b74b90bd798af7400de78c4a4f45f0a4d1cf1cd341fc2617",

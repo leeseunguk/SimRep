@@ -838,8 +838,8 @@ Evidence and tooling (new, under `docs/report/visual-qa/`): `before/` and `after
 
 ## 9. How it was captured
 
-- Debug app `C:\Users\lsu10\simrep-app-target-fig\debug\simrep-app.exe` (cad build) with `--remote-debugging-port=9333`; it loads the frontend from Vite (`app/`, 127.0.0.1:1420), so frontend edits need no Rust rebuild (no `src-tauri` change was made). Driven over CDP from Windows node (`scripts/vqa.mjs`), viewport emulated at 1280x800@2x and 1920x1080@1x, theme set through the store, Korean UI.
-- **before** = the pre-change frontend: `git archive HEAD app` (untouched source) served by Vite with the same binary, captured with the same plan (`scripts/plan.mjs`, scripted voltages). The very first before set (captured before any edit) is kept outside the repo at `C:\Users\lsu10\simrep-gui-test\visual-qa\before-initial`; it was replaced because its drag step left a different voltage than the after run.
+- Debug app `%USERPROFILE%\simrep-app-target-fig\debug\simrep-app.exe` (cad build) with `--remote-debugging-port=9333`; it loads the frontend from Vite (`app/`, 127.0.0.1:1420), so frontend edits need no Rust rebuild (no `src-tauri` change was made). Driven over CDP from Windows node (`scripts/vqa.mjs`), viewport emulated at 1280x800@2x and 1920x1080@1x, theme set through the store, Korean UI.
+- **before** = the pre-change frontend: `git archive HEAD app` (untouched source) served by Vite with the same binary, captured with the same plan (`scripts/plan.mjs`, scripted voltages). The very first before set (captured before any edit) is kept outside the repo at `%USERPROFILE%\simrep-gui-test\visual-qa\before-initial`; it was replaced because its drag step left a different voltage than the after run.
 - **after** = one complete fresh capture of the round-3 build (all 168 PNGs, audits, motion and functional checks), then in round 4 the surfaces the round-4 changes touch were re-captured with their audits on the final source: `log-drawer`, `results-compare`, `results-export-menu`, `props-end`, `electrode-selected`, `refine-progress`, `start-recent` (both themes, both sizes). The round-4 changes do not touch any other surface: the results-panel cap only binds when the log drawer is open (only `log-drawer` opens it), and the removed entry animations do not change a settled capture.
 - Geometry probe (`scripts/logcheck.js`, `after/logcheck.json`): results panel, 3D view and log drawer rectangles with the log closed and open at 1280x800 and 1920x1080.
 - Functional checks (`after/funccheck.json`, reduced motion emulated): side-panel resizer focusable, ArrowLeft +16px, Shift+ArrowRight -64px; results resizer ArrowUp +16px, Home = default; with the export dialog open F1 does not open Help and one Escape closes only the dialog with the selection kept; a camera preset settles within 60 ms. Reduced motion (`motion.json`): before, the spinner ran with a 1 ms duration (frozen/flicker); after, 900 ms and advancing (progress 0.08 → 0.40 in 300 ms; sampled on the round-3 build, whose CSS is identical to the final one); `rise-in` becomes a pure fade. Export dialog dismissed mid-export: `after/h6check.json`.
@@ -882,7 +882,7 @@ Round 4 (final). No `simrep-app.exe` or Vite (port 1420) left: the app and Vite 
 process counts: cmd.exe 4, conhost.exe 25, node.exe 4, powershell.exe 1
 orphan conhost: 0
 busy conhost (>50% of a core): 4   (pre-existing, other sessions' wsl.exe shells, same pids as before the work)
-  pid 26152 cpu 98% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- /home/lsu10/orca/workspaces/SIMION/SIMION_Rep
+  pid 26152 cpu 98% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- $REPO
   pid 52060 / 29192 / 56704 cpu 98% parent wsl.exe (33024) ... /mnt/d/Private/Opera_test ...
 stopped orphan conhost: 0
 ```

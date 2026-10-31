@@ -11,7 +11,7 @@ const sim = await import('/src/scene/simulation.ts');
 const wiz = await import('/src/scene/importWizard.ts');
 const files = await import('/src/scene/importFiles.ts');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const W = 'C:\\Users\\lsu10\\simrep-gui-test\\visual-qa';
+const W = globalThis.SIMREP_VISUAL_QA_DIR ?? 'C:\\simrep-gui-test\\visual-qa';
 const own = (e) => [...e.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim();
 const byText = (text, sel = '*') => [...document.querySelectorAll(sel)].find((e) => own(e) === text) ?? [...document.querySelectorAll(sel)].find((e) => own(e).startsWith(text));
 const scroller = (el) => { let p = el?.parentElement; while (p && !(p.scrollHeight > p.clientHeight && /auto|scroll/.test(getComputedStyle(p).overflowY))) p = p.parentElement; return p; };

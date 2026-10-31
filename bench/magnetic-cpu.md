@@ -163,12 +163,12 @@ script="$PWD/bench/magnetic_cpu_compute.py"
 (cd /mnt/c && timeout 420 python3 "$script" < /dev/null)
 
 # Five-run CPU controls, field profile and three-run mag90 precision sweep.
-SIMREP_CPU_MAGNETIC_ORACLE=/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023 \
+SIMREP_CPU_MAGNETIC_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance magnetic_cpu_ \
   -- --nocapture --test-threads=1
 
 # Additional actual solenoid populations, three measured flights apiece.
-SIMREP_CPU_MAGNETIC_ORACLE=/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023 \
+SIMREP_CPU_MAGNETIC_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
 SIMREP_MAGNETIC_CASE=solenoid SIMREP_CPU_MAGNETIC_COUNTS=1000,10000 \
   cargo test --release -p simrep-fly --test magnetic_performance \
   magnetic_cpu_map_and_profile -- --nocapture --test-threads=1

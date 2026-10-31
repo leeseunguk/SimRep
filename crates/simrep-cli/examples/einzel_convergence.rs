@@ -17,8 +17,8 @@ use simrep_solve::mg::{Geometry, Grid, Options, solve};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-const PA: &str = "/mnt/c/Users/lsu10/simrep-oracle/_benchfly/einzel.pa0";
-const IONS: &str = "/mnt/c/Users/lsu10/simrep-oracle/_real_einzel/subset.ion";
+const PA: &str = "target/simrep-oracle/_benchfly/einzel.pa0";
+const IONS: &str = "target/simrep-oracle/_real_einzel/subset.ion";
 const OUTPUT: &str = "target/fly-real";
 
 fn transpose<T: Copy>(values: &[T], nx: usize, ny: usize) -> Vec<T> {

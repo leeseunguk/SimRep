@@ -1,18 +1,18 @@
 Quadrupole GPU/SIMION reproduction, 2026-10-23
 
 The original solved template is read-only:
-  C:\Users\lsu10\Documents\SimRep\quadrupole-2\quadrupole.pa0 + .pa1/.pa2/.pa3
+  %USERPROFILE%\Documents\SimRep\quadrupole-2\quadrupole.pa0 + .pa1/.pa2/.pa3
 The working copy and all measured evidence are:
-  C:\Users\lsu10\simrep-oracle\_quad_gpu\
+  %USERPROFILE%\simrep-oracle\_quad_gpu\
 
 All commands below run in WSL, with Windows processes foreground, bounded,
 closed stdin, and a C-drive cwd. Set ROOT to the checkout containing these
 Rust GPU modules and helper scripts. The measured checkout was:
-  /home/lsu10/.omo/wt/t2ddf4d1928/m
+  $WORKTREE
 
-ROOT=/home/lsu10/.omo/wt/t2ddf4d1928/m
+ROOT=$WORKTREE
 S="$ROOT/crates/simrep-fly/src/gpu"
-Q=/mnt/c/Users/lsu10/simrep-oracle/_quad_gpu
+Q=/mnt/c/Users/<user>/simrep-oracle/_quad_gpu
 mkdir -p "$Q"
 
 1. Generate 1000 ions: +1 e, 100 amu, 100 eV, x=1 mm, +X direction,
@@ -29,12 +29,12 @@ mkdir -p "$Q"
    Setup records the checked PA node transform: (1,0,0) -> (0.5,0,0) mm.
 
 3. Run CPU/GPU coarse and independent 2x/4x re-solves (release test):
-   export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-gpu-target'
-   export SIMREP_GPU_QUAD_REFERENCE='C:\Users\lsu10\simrep-oracle\_quad_gpu'
+   export CARGO_TARGET_DIR='%USERPROFILE%\simrep-gpu-target'
+   export SIMREP_GPU_QUAD_REFERENCE='%USERPROFILE%\simrep-oracle\_quad_gpu'
    export WSLENV=CARGO_TARGET_DIR:SIMREP_GPU_QUAD_REFERENCE
    manifest="$(wslpath -w "$ROOT/Cargo.toml")"
    (cd /mnt/c && set -o pipefail && timeout 900 \
-      /mnt/c/Users/lsu10/.cargo/bin/cargo.exe test --release \
+      /mnt/c/Users/<user>/.cargo/bin/cargo.exe test --release \
       --manifest-path "$manifest" -p simrep-fly --lib \
       quadrupole_grid_time_reference -- --nocapture < /dev/null 2>&1 | tr -d '\r')
    quad_reference.rs contains the complete reference construction:
@@ -49,10 +49,10 @@ mkdir -p "$Q"
    python3 "$S/quad_compare.py" "$Q"
 
 5. GPU/CPU collision-rule agreement (does not overwrite the references):
-   export SIMREP_GPU_QUAD_RULES='C:\Users\lsu10\simrep-oracle\_quad_gpu'
+   export SIMREP_GPU_QUAD_RULES='%USERPROFILE%\simrep-oracle\_quad_gpu'
    export WSLENV=CARGO_TARGET_DIR:SIMREP_GPU_QUAD_RULES
    (cd /mnt/c && set -o pipefail && timeout 120 \
-      /mnt/c/Users/lsu10/.cargo/bin/cargo.exe test --release --all-features \
+      /mnt/c/Users/<user>/.cargo/bin/cargo.exe test --release --all-features \
       --manifest-path "$manifest" -p simrep-fly --lib \
       quadrupole_collision_rule_agreement -- --nocapture < /dev/null 2>&1 | tr -d '\r')
    rule-{nearest-node,node-cell}-{cpu,gpu}.csv and agreement text files retain

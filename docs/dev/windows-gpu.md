@@ -10,33 +10,33 @@ preference. The initial hardware is an NVIDIA GeForce RTX 3070 (8 GB).
 ## Build and run
 
 Run these commands in Bash, at the repository root. Windows Rust is installed
-at `C:\Users\lsu10\.cargo\bin\cargo.exe`. Build artifacts stay on C: rather
+at `%USERPROFILE%\.cargo\bin\cargo.exe`. Build artifacts stay on C: rather
 than the slow `\\wsl.localhost\...` filesystem.
 
 ```bash
 cargo build && cargo test
 
-export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-target'
+export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
 # WSLENV explicitly forwards this variable to Windows. Do not use /p:
 # CARGO_TARGET_DIR is already a Windows path.
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR"
 set -o pipefail
 
-timeout 900 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build \
+timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
   --manifest-path "$(wslpath -w "$PWD/Cargo.toml")" \
   </dev/null 2>&1 | tr -d '\r'
 
-timeout 120 /mnt/c/Users/lsu10/simrep-target/debug/simrep.exe gpu-info \
+timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-info \
   --backend dx12 </dev/null 2>&1 | tr -d '\r'
-timeout 120 /mnt/c/Users/lsu10/simrep-target/debug/simrep.exe gpu-info \
+timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-info \
   --backend vulkan </dev/null 2>&1 | tr -d '\r'
 
-timeout 120 /mnt/c/Users/lsu10/simrep-target/debug/simrep.exe gpu-smoke \
+timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-smoke \
   --backend dx12 </dev/null 2>&1 | tr -d '\r'
-timeout 120 /mnt/c/Users/lsu10/simrep-target/debug/simrep.exe gpu-smoke \
+timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-smoke \
   --backend vulkan </dev/null 2>&1 | tr -d '\r'
 
-timeout 900 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe test -p simrep-solve \
+timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe test -p simrep-solve \
   --manifest-path "$(wslpath -w "$PWD/Cargo.toml")" \
   </dev/null 2>&1 | tr -d '\r'
 ```
@@ -164,7 +164,7 @@ run the repository's console cleanup and retain its process counts:
 ```bash
 timeout 60 /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \
   -NoProfile -ExecutionPolicy Bypass \
-  -File "$(wslpath -w /home/lsu10/orca/workspaces/SIMION/SIMION_Rep/tools/win/winproc.ps1)" \
+  -File "$(wslpath -w $REPO/tools/win/winproc.ps1)" \
   cleanup </dev/null 2>&1 | tr -d '\r'
 ```
 

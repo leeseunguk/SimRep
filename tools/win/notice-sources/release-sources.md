@@ -1,8 +1,8 @@
 # Release-pinned omission sources
 
 The package map supplements missing package notice files with upstream text,
-not author metadata or substituted SPDX templates. The manifest hashes the
-exact downloaded bytes. Refresh only these entries with:
+not author metadata. The manifest hashes the exact downloaded bytes. Refresh
+only these entries with:
 
 ```sh
 node tools/win/refresh-notice-sources.mjs aws-sdk-license aws-sdk-notice lambda-invoke-store-license lambda-invoke-store-notice data-uri-to-buffer-license proxy-agent-negotiate-license standardwebhooks-license alloc-stdlib-license
@@ -49,8 +49,32 @@ node tools/win/refresh-notice-sources.mjs aws-sdk-license aws-sdk-notice lambda-
   points to `0a81fd6928ea3b33c8cd484aa4575d50ffb98012` in
   `dropbox/rust-alloc-no-stdlib`; root LICENSE identifies 2016 Dropbox, Inc.
   The mapping also removes this Cargo package's author-derived fallback.
+- `@tauri-apps/plugin-dialog@2.8.3`: npm `gitHead`
+  `44293a5722efcaf27060504e63b17aeba721b40f` in
+  `tauri-apps/plugins-workspace`. The npm package ships `LICENSE.spdx`,
+  not the full licence text. The snapshot preserves the release's root
+  `LICENSE_MIT` verbatim for the MIT option of its dual-licence declaration.
+- `mlua-sys@0.10.0`, `profiling@1.0.18`,
+  `spirv@0.4.0+sdk-1.4.341.0`, and `tauri-plugin@2.7.2` omit licence
+  files from their published crates. Their `.cargo_vcs_info.json` files pin
+  commits `e7fa8d75bb3947648605562694d03c1ce4c82b20`,
+  `8271551172eb6fa4cba47369aedd93790c623df9`,
+  `8afc3d0ac8e158128cd1410bb2e4b4c26ab11bb4`, and
+  `59b63ab500da9859f12d8888c3298bc29bba0b92`, respectively.
+  Root upstream LICENSE or LICENSE-MIT files are preserved verbatim, using
+  the MIT option for dual-licensed crates. No copyright is inferred.
+- `selectors@0.38.0`: `.cargo_vcs_info.json` pins
+  `572ecba2d1600e7c3d490586692a209faf703baa` in `servo/stylo`.
+  Neither the crate nor this repository root carries the full MPL text.
+  The complete `selectors/lib.rs` is retained as the source of its explicit
+  MPL-2.0 declaration, together with the existing full SPDX MPL-2.0 text.
+  This package-specific mapping is not an author-derived fallback.
+- `dunce@1.0.5` already ships the complete CC0 legal code. The full-text
+  recognizer now requires its four sections and closing disclaimer rather
+  than rejecting this valid shipped notice. No supplemental text is needed.
 
 Exact raw URLs and SHA-256 content hashes are in manifest.json; every new
-source URL includes the full commit SHA. Builds read these local snapshots
-offline and fail when a package has neither complete shipped text nor a mapped
-source. A new package version does not inherit an older version's mapping.
+upstream source URL includes the full commit SHA. Builds read these local
+snapshots offline and fail when a package has neither complete shipped text
+nor a mapped source. A new package version does not inherit an older
+version's mapping.

@@ -47,7 +47,7 @@ They do not reconstruct the unavailable pre-import kernel.
 
 ## Workload and machine state
 
-- PA: `C:\Users\lsu10\simrep-oracle\_benchfly\einzel.pa0`; 91 x 20 x 1,
+- PA: `%USERPROFILE%\simrep-oracle\_benchfly\einzel.pa0`; 91 x 20 x 1,
   degrees `[6,6,1]`, four resident factors.
 - Input: the original `einzel_100000.ion`, voltages `1=0,2=110,3=0`, bounds
   `-101,-19,-19,291,19,19`.
@@ -183,17 +183,17 @@ performance win. Callers with measured short workloads can explicitly opt
 back into a larger cap. Hardware Preview's default partition is unchanged.
 
 Raw logs/CSVs are retained outside Git under
-`C:\Users\lsu10\simrep-verify-20261025\einzel-*`.
+`%USERPROFILE%\simrep-verify-20261025\einzel-*`.
 Reproduce the bounded resident control:
 
 ```sh
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='C:\Users\lsu10\simrep-target'
-export SIMREP_GPU_REAL_EINZEL='C:\Users\lsu10\simrep-oracle'
+export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
+export SIMREP_GPU_REAL_EINZEL='%USERPROFILE%\simrep-oracle'
 export WSLENV=CARGO_TARGET_DIR:SIMREP_GPU_REAL_EINZEL:SIMREP_GPU_REAL_CAP:SIMREP_GPU_REAL_GENERAL:SIMREP_GPU_REAL_NEAREST:SIMREP_GPU_REAL_DIRECT
 set -o pipefail
 cd /mnt/c
-timeout 180 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe test \
+timeout 180 /mnt/c/Users/<user>/.cargo/bin/cargo.exe test \
   --manifest-path "$manifest" -p simrep-fly --release --lib \
   real_einzel_dispatch_benchmark -- --ignored --nocapture --test-threads=1 \
   </dev/null 2>&1 | tr -d '\r'
@@ -250,7 +250,7 @@ matlab-mcp-server-windows-x64.exe     1
 
 orphan conhost: 0
 busy conhost (>50% of a core): 6
-  pid 26152 cpu 100% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- /home/lsu10/orca/workspaces/SIMION/SIMION_Rep
+  pid 26152 cpu 100% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- $REPO
   pid 52060 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
   pid 29192 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
   pid 56704 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA

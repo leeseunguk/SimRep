@@ -27,7 +27,7 @@ record of the original 100k einzel run unchanged.
 ## Input and placement
 
 The benchmark loads the existing SIMION-refined
-`C:\Users\lsu10\simrep-oracle\_benchfly\einzel.pa0` and `.pa1` through `.pa3`.
+`%USERPROFILE%\simrep-oracle\_benchfly\einzel.pa0` and `.pa1` through `.pa3`.
 The arrays have 91 axial x nodes, 20 radial y nodes, cylindrical symmetry,
 1 mm spacing and reference voltage 10000 V. Explicit electrode voltages are
 `1=0,2=110,3=0`. Fast adjustment adds `(requested-current)/reference` times each
@@ -68,7 +68,7 @@ Commands were run serially, without other benchmarks running:
 
 ```sh
 cargo build --release -p simrep-cli
-P=/mnt/c/Users/lsu10/simrep-oracle/_benchfly
+P=/mnt/c/Users/<user>/simrep-oracle/_benchfly
 target/release/simrep fly --device cpu --pa "$P/einzel.pa0" \
   --particles "$P/einzel_10000.ion" --voltage 1=0,2=110,3=0 \
   --bounds=-101,-19,-19,291,19,19 --output target/fly-real/native-10000.csv
@@ -373,7 +373,7 @@ half-grid nearest-node voxels. A reference that shrank those voxels during
 refinement mixed different material boundaries.
 
 The input is the app template at
-`C:\Users\lsu10\Documents\SimRep\quadrupole-2\quadrupole.pa0` and bases 1..3:
+`%USERPROFILE%\Documents\SimRep\quadrupole-2\quadrupole.pa0` and bases 1..3:
 121x37x37 nodes, 0.5 mm spacing, Y/Z mirrors, voltages `1=2.5,2=-2.5,3=0`.
 The existing `_quad_gpu/particles.ion` has 1,000 ions, 100 amu, +1 e, 100 eV,
 x=1 mm, +x velocity, and the recorded golden-angle disk of radius 3 mm.
@@ -653,7 +653,7 @@ RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence node-local-8
 RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence node-local-4 16
 RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence physical 1 --timing
 python3 tools/simion-oracle/collision_rf_tof.py
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
   RAYON_NUM_THREADS=16 cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 ```
 
@@ -664,7 +664,7 @@ references and bounds ordinary full-domain factors to 1/2/4/8. The local
 SIMION readout JSON, including exit-class changes and clearance groups.
 The cut-cell CLI artifacts, all three reference ladders, comparison script
 and exact commands are copied to
-`C:\Users\lsu10\simrep-oracle\_quad_cut\README.txt`.
+`%USERPROFILE%\simrep-oracle\_quad_cut\README.txt`.
 The old `_quad_gpu/reference-4-*.csv` remains historical, not a converged
 spatial reference.
 
@@ -696,8 +696,8 @@ limit are specified in `docs/geometry-pipeline.md`.
 
 Artifacts for this run are `target/cuts-v3/quadrupole.{pa0,cuts.json,csv}`.
 Source particles and the independent reference remain unchanged:
-`C:\Users\lsu10\simrep-oracle\_quad_gpu\particles.ion` and
-`C:\Users\lsu10\simrep-oracle\_quad_cut\physical-8-global.csv`.
+`%USERPROFILE%\simrep-oracle\_quad_gpu\particles.ion` and
+`%USERPROFILE%\simrep-oracle\_quad_cut\physical-8-global.csv`.
 Reproduction uses the commands in `docs/geometry-pipeline.md`; options are
 `--voltage 1=2.5,2=-2.5,3=0`, `--bounds=0,-18,-18,60,18,18`,
 `--tolerance 1e-11`, `--max-step-us 0.025`, CPU f64, 16 Rayon threads,
@@ -744,17 +744,17 @@ warning remains; Rust LSP timed out, with compiler/Clippy diagnostics clean.
 ## Reproduction and local evidence
 
 Diagnostic artifacts are under `target/fly-real/`; full-precision SIMION logs
-are under `C:\Users\lsu10\simrep-oracle\_real_einzel`, `_real_original`,
+are under `%USERPROFILE%\simrep-oracle\_real_einzel`, `_real_original`,
 and `_real_plane`. Large raw logs are deliberately not committed.
 
 ```sh
 python3 tools/simion-oracle/compare_fly.py compare \
-  /mnt/c/Users/lsu10/simrep-oracle/_real_einzel/reference-100000.txt \
+  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/reference-100000.txt \
   target/fly-real/native-100000.csv
 cargo run --release -p simrep-cli --example einzel_clearance -- \
   "$P/einzel.pa0" "$P/einzel_100000.ion" target/fly-real/clearance.csv
 python3 tools/simion-oracle/compare_fly.py classify \
-  /mnt/c/Users/lsu10/simrep-oracle/_real_einzel/reference-100000.txt \
+  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/reference-100000.txt \
   target/fly-real/native-100000.csv target/fly-real/clearance.csv
 cargo run --release -p simrep-cli --example einzel_convergence
 ```

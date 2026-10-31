@@ -29,7 +29,7 @@ warning: baseline_genre_null:report->essay
 
 [P100] 자기장은 세 가지로 줄 수 있다. 균일한 자기장, 자극 형상을 풀어 얻은 자기 스칼라 포텐셜 배열(자기 PA), 그리고 전류가 흐르는 코일이다. 자기 PA와 코일의 자기장은 식 (6)으로 계산한다.
 
-[P102] 식 (6)의 앞식에서 p는 자기 PA에 저장된 스칼라 포텐셜, n_g는 PA 머리말의 배율로, 둘을 곱해 기울기를 취하면 자기장 B(G)가 된다. 뒷식은 비오-사바르 법칙으로, 전류 I(A)가 흐르는 도선 조각 dℓ이 거리 r만큼 떨어진 점에 만드는 자기장을 더한다. 이 문서의 단위계(G, mm, A)에서는 μ₀/4π가 1 G·mm/A가 된다. 원형 코일은 타원 적분으로 정확히 계산한다. 두 식과 단위 규약은 docs/physics-magnetic-collision.md의 Units and magnetic fields 절에 있고, 구현은 crates/simrep-fly/src/physics/magnetic.rs의 Coil::field_gauss 함수다. SIMION의 자기 포텐셜 정의는 SIMION 도움말 magnetic_potential.html(/mnt/c/Users/lsu10/simion_docs_raw/magnetic_potential.html)을 따랐다.
+[P102] 식 (6)의 앞식에서 p는 자기 PA에 저장된 스칼라 포텐셜, n_g는 PA 머리말의 배율로, 둘을 곱해 기울기를 취하면 자기장 B(G)가 된다. 뒷식은 비오-사바르 법칙으로, 전류 I(A)가 흐르는 도선 조각 dℓ이 거리 r만큼 떨어진 점에 만드는 자기장을 더한다. 이 문서의 단위계(G, mm, A)에서는 μ₀/4π가 1 G·mm/A가 된다. 원형 코일은 타원 적분으로 정확히 계산한다. 두 식과 단위 규약은 docs/physics-magnetic-collision.md의 Units and magnetic fields 절에 있고, 구현은 crates/simrep-fly/src/physics/magnetic.rs의 Coil::field_gauss 함수다. SIMION의 자기 포텐셜 정의는 SIMION 도움말 magnetic_potential.html(/mnt/c/Users/<user>/simion_docs_raw/magnetic_potential.html)을 따랐다.
 
 [P103] 코일이 100개인 솔레노이드에서는 이온이 한 스텝 갈 때마다 코일 100개의 타원 적분을 더해야 해서 느렸다. 그래서 비행 전에 한 번, 솔레노이드의 축대칭을 이용해 (축 방향, 반지름) 격자 위에 자기장을 미리 계산해 두는 코일 지도를 만들었다. 지도는 간격 0.0625 mm이고, 반지름 성분은 축 근처에서도 정확하도록 Bᵣ/r 형태로 저장한다. 지도를 쓰기 전에 영역마다 격자점 사이 512곳에서 정확한 계산과 비교하고, 최대 차이가 2e-9 G 이하일 때만 지도를 쓴다. 코일 자기장은 이온이 바꾸지 않는 외부 장이므로 지도로 바꿔도 물리는 같고, 차이는 보간 오차뿐이다. 이 내용은 bench/magnetic-cpu.md의 Implementation and profile 절에 있다. 그림 9는 그 검사 결과다. 왼쪽은 이온 100개를 지도와 정확한 계산으로 각각 날렸을 때의 도착 위치 차이(로그축)로, 모두 4e-7 mm 이하이고 계산 시간은 0.852 s에서 0.199 s로 줄었다. 오른쪽은 지도의 세 영역에서 표본 512개로 잰 최대 오차이며, 모두 허용선(2e-9 G, 상대 5e-10) 아래에 있다.
 

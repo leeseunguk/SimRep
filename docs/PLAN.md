@@ -1,4 +1,4 @@
-# SIMION_Rep 개발 계획 (네이티브 우선)
+# SimRep 개발 계획 (네이티브 우선)
 
 작성일: 2026-10-23
 
@@ -29,7 +29,7 @@
 | 항목 | 상태 |
 |---|---|
 | WSL2 Rust | cargo/rustc 1.95.0 설치됨 |
-| Windows Rust | `C:\Users\lsu10\.cargo\bin\cargo.exe` 설치됨 |
+| Windows Rust | `%USERPROFILE%\.cargo\bin\cargo.exe` 설치됨 |
 | GPU | RTX 3070 8GB, 드라이버 591.86. FP64는 FP32의 1/64 |
 | WSL2 GPU API | `libcuda.so`만 있음. Vulkan(vulkaninfo) 없음, nvcc 없음 |
 | SIMION | `C:\Program Files\SIMION-2024`. 문서는 `docs/simion.chm`, 예제 폴더 약 80개 |

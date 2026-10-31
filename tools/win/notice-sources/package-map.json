@@ -20,5 +20,11 @@
   "data-uri-to-buffer@4.0.1": ["data-uri-to-buffer-license"],
   "proxy-agent-negotiate@1.1.0": ["proxy-agent-negotiate-license"],
   "standardwebhooks@1.1.1": ["standardwebhooks-license"],
-  "alloc-stdlib@0.3.0": ["alloc-stdlib-license"]
+  "alloc-stdlib@0.3.0": ["alloc-stdlib-license"],
+  "@tauri-apps/plugin-dialog@2.8.3": ["tauri-plugin-mit"],
+  "mlua-sys@0.10.0": ["mlua-license"],
+  "profiling@1.0.18": ["profiling-license"],
+  "spirv@0.4.0+sdk-1.4.341.0": ["spirv-license"],
+  "tauri-plugin@2.7.2": ["tauri-license"],
+  "selectors@0.38.0": ["selectors-source", "spdx-MPL-2.0"]
 }

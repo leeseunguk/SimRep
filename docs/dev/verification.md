@@ -82,8 +82,8 @@ python3 tools/result_identity.py "$work/single" "$work/default" --require-byte-i
 
 ## GitHub Actions
 
-`.github/workflows/ci.yml` runs on pushes to `main` and the validation branch
-`ci/setup`, and on pull requests targeting `main`. Five Ubuntu jobs check Rust
+`.github/workflows/ci.yml` runs only through manual `workflow_dispatch`, by
+repository owner decision. Five Ubuntu jobs check Rust
 formatting, both Clippy configurations and release tests; the built Python
 extension and CLI parity; frontend types, build, unit tests and Chromium demo
 E2E; published claims against committed docs/PDF; and native Tauri tests with
@@ -143,7 +143,7 @@ checks remain the explicit local paths below.
 ### CPU/ISA verification evidence
 
 The uncapped control at `5a21e5a` is
-[run 40222435247](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40222435247).
+[run 40222435247](https://github.com/leeseunguk/SimRep/actions/runs/40222435247).
 Attempt 1 used Intel Xeon Platinum 8573C, with AVX-512 flags reported by
 `lscpu`, and both magnetic tests failed. The imported-map result reported
 `NonFinite` with zero accepted steps. Attempt 2 reran Rust on AMD EPYC 9V74
@@ -157,40 +157,40 @@ not re-execute the other jobs.
 
 | Rust run / attempt | Head | CPU | Imported maps | Uniform PA/coils/Boris |
 | --- | --- | --- | --- | --- |
-| [40245295332 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40245295332) | `73a63b1` | AMD EPYC 7763 | pass | pass |
-| [40246518664 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 7763 | pass | pass |
-| [40246518664 / 2](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 9V74 | pass | pass |
-| [40246550259 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | pass | pass |
-| [40247877017 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40247877017) | `e297a09` | AMD EPYC 7763 | pass | pass |
-| [40250762926 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40250762926) | `2a23bb9` | AMD EPYC 7763 | pass | pass |
+| [40245295332 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40245295332) | `73a63b1` | AMD EPYC 7763 | pass | pass |
+| [40246518664 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 7763 | pass | pass |
+| [40246518664 / 2](https://github.com/leeseunguk/SimRep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 9V74 | pass | pass |
+| [40246550259 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | pass | pass |
+| [40247877017 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40247877017) | `e297a09` | AMD EPYC 7763 | pass | pass |
+| [40250762926 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40250762926) | `2a23bb9` | AMD EPYC 7763 | pass | pass |
 
 | Python run / attempt | Head | CPU | Result |
 | --- | --- | --- | --- |
-| [40245295332 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40245295332) | `73a63b1` | AMD EPYC 7763 | 80 pass, 1 output-parity failure, 6 hardware-only skips |
-| [40246518664 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 2](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 3](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 4](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 5](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 6](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 7](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 8](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 9](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 10](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 11](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 12](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 13](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 14](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 15](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 16](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 17](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 18](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 19](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40246550259 / 20](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
-| [40247877017 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40247877017) | `e297a09` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
-| [40250762926 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40250762926) | `2a23bb9` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
-| [40253903430 / 1](https://github.com/leeseunguk/SIMION_Rep/actions/runs/40253903430) | `9906384` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40245295332 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40245295332) | `73a63b1` | AMD EPYC 7763 | 80 pass, 1 output-parity failure, 6 hardware-only skips |
+| [40246518664 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40246518664) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 2](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 3](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 4](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 5](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 6](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 7](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 8](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 9](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 10](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 11](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 12](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 13](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 14](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 15](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 16](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 17](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 18](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 19](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40246550259 / 20](https://github.com/leeseunguk/SimRep/actions/runs/40246550259) | `250ad0e` | AMD EPYC 7763 | 81 pass, 6 hardware-only skips |
+| [40247877017 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40247877017) | `e297a09` | AMD EPYC 9V45 | 81 pass, 6 hardware-only skips |
+| [40250762926 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40250762926) | `2a23bb9` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
+| [40253903430 / 1](https://github.com/leeseunguk/SimRep/actions/runs/40253903430) | `9906384` | AMD EPYC 9V74 | 81 pass, 6 hardware-only skips |
 
 The first configured run's Python failure came from setting
 `GALLIUM_DUMP_CPU` for the entire job: process-start diagnostics changed
@@ -201,8 +201,9 @@ across all five jobs.
 No configured Intel job has been allocated yet. These AMD results do not
 establish that the Intel failure is fixed. Sampling has included new push
 and dispatch runs, job-only reruns, and a temporary explicit `ubuntu-26.04`
-request. The final workflow restores `ubuntu-latest`, per-ref concurrency,
-push/PR filters for `main`, and manual dispatch. The repository currently
+request. That historical workflow restored `ubuntu-latest`, per-ref concurrency,
+and push/PR filters for `main`. Automatic triggers are now disabled; only
+manual dispatch remains. The repository currently
 has no self-hosted runner to target a particular CPU vendor.
 
 ## Default workspace

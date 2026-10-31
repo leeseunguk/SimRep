@@ -173,7 +173,7 @@ python3 crates/simrep-gem/tools/check_gem.py --skip-oracle
 ```
 
 The harness copies GEM files and their text/Lua/STL dependencies to
-`C:\Users\lsu10\simrep-oracle\_gem\examples`, leaving the install read-only.
+`%USERPROFILE%\simrep-oracle\_gem\examples`, leaving the install read-only.
 Every SIMION invocation is foreground, has a per-call timeout, uses a
 Windows-drive working directory, and receives closed stdin. A timed-out
 Windows process is tree-killed. Raw results are in `_gem/results.json`.

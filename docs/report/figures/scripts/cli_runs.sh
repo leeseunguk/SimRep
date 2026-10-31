@@ -3,19 +3,20 @@
 # with the current release binary, then rebuild their data/ files and PNGs.
 # Usage (from the repository root):  bash docs/report/figures/scripts/cli_runs.sh
 # Needs: target/release/simrep and target/release/examples/particles (cargo build --release -p simrep-cli
-# --examples), the SIMION oracle tree under /mnt/c/Users/lsu10/simrep-oracle, SIMION examples under
+# --examples), the SIMION oracle tree (SIMREP_ORACLE_DIR, default: target/simrep-oracle), SIMION examples under
 # "/mnt/c/Program Files/SIMION-2024/examples", and a Python with numpy/scipy/matplotlib/pillow
-# (PY=... to override; default: the report venv).
+# (PY=... to override; default: python3).
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 SIMREP="$ROOT/target/release/simrep"
-D=/mnt/c/Users/lsu10/simrep-oracle
+D="${SIMREP_ORACLE_DIR:-$ROOT/target/simrep-oracle}"
+export SIMREP_ORACLE_DIR="$D"
 W="$ROOT/target/report-figs"
 FIG="$ROOT/docs/report/figures"
 DATA="$FIG/data"
 SC="$FIG/scripts"
-PY="${PY:-/home/lsu10/.cache/simrep-figvenv/bin/python}"
+PY="${PY:-python3}"
 export RAYON_NUM_THREADS=16
 mkdir -p "$W"/{quad,stair,f05,hex,diel,cmag,sector,sol,beam}
 "$SIMREP" --version
@@ -98,7 +99,7 @@ done
 "$PY" - <<'EOF'
 import os, re, subprocess
 EX = "/mnt/c/Program Files/SIMION-2024/examples"
-O = "/mnt/c/Users/lsu10/simrep-oracle/_fly2"
+O = os.path.join(os.environ["SIMREP_ORACLE_DIR"], "_fly2")
 DATA = "docs/report/figures/data"
 hdr = "tob_us,mass_amu,charge_e,x_mm,y_mm,z_mm,az_deg,el_deg,ke_ev,cwf,color\n"
 def rows(text):

@@ -327,7 +327,7 @@ registers a new row).
 - `crates/simrep-lua`: bounded Lua 5.1 execution shared by SIMION input
   formats
 - `crates/simrep-cli`: batch command-line runner
-- `crates/simrep-py`: NumPy and Python parameter scans for SIMION_Rep
+- `crates/simrep-py`: NumPy and Python parameter scans for SimRep
 - `app/`: Tauri 2 + React desktop app (separate npm workspace)
 - `docs/`: design and validation docs; start at `docs/PLAN.md`
 - `examples/`: runnable end-to-end Python/CLI examples

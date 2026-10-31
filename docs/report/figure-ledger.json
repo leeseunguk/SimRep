@@ -5,7 +5,7 @@
     "sha256": "ce3aa7214bdcf8e28a83053d7837b8fcdd3f521e44b3d928b47f64d55932ce9f",
     "kind": "app-capture",
     "what_it_shows": "시작 화면의 아인젤 렌즈 템플릿을 연 직후의 실제 앱 창 전체다. 장면 트리, 전위 단면(viridis)과 등전위선, GPU로 날린 이온 1,000개의 궤적, 전극 전압 슬라이더가 한 화면에 있어 무엇을 만들었는지 한눈에 보인다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:1000, draw:300} → project.newFromTemplate('einzel'), 그 뒤 shot(전체 창 2560×1600 px).",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:1000, draw:300} → project.newFromTemplate('einzel'), 그 뒤 shot(전체 창 2560×1600 px).",
     "numbers_checked": [
       "배열 201×41(2D 원통), 전압 #1 0 V / #2 80 V / #3 0 V",
       "이온 1,000개 모두 +x 벽 도달, 평균 TOF 8.2632 µs, 표준편차 0.1344 µs",
@@ -38,7 +38,7 @@
     "sha256": "6ac5e22c4452b7069e2662b53d3fa686dd59dfcfedef2f2fbfe150c7ab85b47b",
     "kind": "app-capture",
     "what_it_shows": "물리 4중극 GEM을 가져오기 마법사로 cut-cell 배열로 만들고, refine하고, 정확한 표면으로 날리고, 결과를 읽는 실제 앱 흐름 네 단계다. 마지막 단계의 끝난 곳별 이온 수(750/230/20)와 평균 TOF 4.1145 µs는 CLI 사용자 경로와 같다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 띠 1–3은 1280×440 CSS 창, 띠 4는 1280×800 창. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(= simrep-oracle\\_quad_cut\\quadrupole.gem, sha256 fb250579…), particles.ion(_quad_gpu, sha256 8d0e731d…). scripts/app/wiz1.js → wizrun.js → quadfly.js {precision:'precise', exact:true} → res.js; scripts/crop.py --stack로 원본 픽셀 그대로 잘라 붙임.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 띠 1–3은 1280×440 CSS 창, 띠 4는 1280×800 창. 입력 %USERPROFILE%\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(= simrep-oracle\\_quad_cut\\quadrupole.gem, sha256 fb250579…), particles.ion(_quad_gpu, sha256 8d0e731d…). scripts/app/wiz1.js → wizrun.js → quadfly.js {precision:'precise', exact:true} → res.js; scripts/crop.py --stack로 원본 픽셀 그대로 잘라 붙임.",
     "numbers_checked": [
       "격자 121×37×37, 0.5 mm, 점 165,649",
       "만들기 135 ms, cut 노드 11,160, 전극점 15,914/15,914/7,878(docs/dev/frontend.md와 일치)",
@@ -92,7 +92,7 @@
     "sha256": "11fa97d0e066121ede93619831a52648c64d9305133dc3ccf7bf7b1b22bca97e",
     "kind": "app-capture",
     "what_it_shows": "아인젤 템플릿에서 이온 1만 개를 GPU로 날린 궤적과 결과 패널의 TOF 히스토그램이다. 2번 전극이 빔을 출구 쪽에 모으고, TOF 분포는 8.13 µs 근처에 날카로운 봉우리(m/Δm 271)를 가진다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:10000, draw:300, tab:'hist'} → fit.js → zoom.js(휠 6단계 확대, 1단계 축소), 가운데 열(CSS 264,48,704×724) 캡처.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:10000, draw:300, tab:'hist'} → fit.js → zoom.js(휠 6단계 확대, 1단계 축소), 가운데 열(CSS 264,48,704×724) 캡처.",
     "numbers_checked": [
       "이온 10,000개, 평균 TOF 8.26321 µs, 표준편차 0.13436 µs, 최소 8.13042, 최대 8.61420, 정점 8.13605 µs",
       "FWHM 0.01503 µs, m/Δm 271",
@@ -119,7 +119,7 @@
     "sha256": "06d345dab8efecd0d3734c4ebbee2a76780cdf8ee759af927607ed1a4ae70628",
     "kind": "app-capture",
     "what_it_shows": "4중극 템플릿에서 #1 전압 슬라이더를 실제 마우스로 끄는 도중의 화면이다. 전압이 4.45 V가 되는 동안 단면과 이온 1만 개의 궤적(전극 3·2에 부딪힌 점 포함)이 GPU 재비행으로 바로 따라온다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/quad.js {count:10000, view:'iso'} 후 cdp.mjs dragshot(Input.dispatchMouseEvent로 슬라이더 엄지를 2.5 V 위치에서 60단계 끌고, 누른 채로 캡처). crop.py로 뷰포트+속성 패널만 자름.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/quad.js {count:10000, view:'iso'} 후 cdp.mjs dragshot(Input.dispatchMouseEvent로 슬라이더 엄지를 2.5 V 위치에서 60단계 끌고, 누른 채로 캡처). crop.py로 뷰포트+속성 패널만 자름.",
     "numbers_checked": [
       "끌기 후 전압 #1 4.45 V, #2 −2.50 V, #3 0 V",
       "이온 10,000개: +x 7,234 / 전극 3 2,346 / 전극 2 420, 평균 TOF 4.1048 µs",
@@ -174,7 +174,7 @@
     "sha256": "917c0a5e5e5deaa288d079cc299c4edbb3311c44670060fb5018b7e1d30ebd8e",
     "kind": "stored-data",
     "what_it_shows": "HS1 충돌 모형에서 50 µs 뒤 이온 4,096개의 x 위치와 에너지 분포를 SimRep CPU, SimRep GPU, SIMION으로 겹쳐 그렸다. 세 분포가 겹치고 KS 검정이 어느 쌍도 같은 분포를 기각하지 않는다.",
-    "source": "C:\\Users\\lsu10\\simrep-oracle\\physics-validation-20261023\\gpu-physics\\hs1-cpu.csv, hs1-gpu.csv(RTX 3070 Vulkan native f64, seed 813; docs/physics-magnetic-collision.md 'GPU distribution replay') 및 collision_hs1\\flight.log FINAL 행(SIMION, seed 237). data/F13-*.csv, scripts/F13_hs1.py(scipy 정확 KS로 재계산).",
+    "source": "%USERPROFILE%\\simrep-oracle\\physics-validation-20261023\\gpu-physics\\hs1-cpu.csv, hs1-gpu.csv(RTX 3070 Vulkan native f64, seed 813; docs/physics-magnetic-collision.md 'GPU distribution replay') 및 collision_hs1\\flight.log FINAL 행(SIMION, seed 237). data/F13-*.csv, scripts/F13_hs1.py(scipy 정확 KS로 재계산).",
     "numbers_checked": [
       "KS p CPU–GPU: x 0.0988, KE 0.1287(문서 0.0987632, 0.128702)",
       "KS p CPU–SIMION: x 0.5159, KE 0.3846(default-flight.md 'New versus SIMION' 0.515856/0.384564)",
@@ -242,7 +242,7 @@
     "sha256": "c3acc49c678fbef02208d209a92a90628277074e6bde867960801f971b27f62c",
     "kind": "app-capture",
     "what_it_shows": "STEP 파일(구 두 개, pair.step)을 가져오기 마법사로 연 실제 화면이다. OpenCascade가 솔리드 2개를 정상 B-rep으로 읽어 부품 이름(pair/left, pair/right), 전극 번호, 전압을 정하는 표와 3D 미리보기를 보여 준다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\step\\pair.step(= simrep-cad-fixtures\\pair.step, sha256 44ad527f…). scripts/app/stepwiz.js, crop.py로 뷰포트+마법사 패널을 자름(프로젝트 이름 표시줄 제외).",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 입력 %USERPROFILE%\\simrep-gui-test\\report-figs\\step\\pair.step(= simrep-cad-fixtures\\pair.step, sha256 44ad527f…). scripts/app/stepwiz.js, crop.py로 뷰포트+마법사 패널을 자름(프로젝트 이름 표시줄 제외).",
     "numbers_checked": [
       "부품 2개 모두 '정상 B-rep', 열기~준비 1.24 s",
       "격자 추천 0.1 mm, 영역 원점 (−1.2, −0.6, −0.6), 크기 2.3×1.1×1.1 mm",
@@ -282,7 +282,7 @@
     "sha256": "91c4f693c23f08b59908cce540b3a2f8d18bd373072f763724cdd43e2c0003a4",
     "kind": "app-capture",
     "what_it_shows": "5분 따라하기의 2단계(집속 전압 바꾸기) 실제 화면이다. 아인젤 템플릿을 고르자 1단계가 자동으로 끝나고, 안내 카드가 #2 집속 전압 컨트롤을 주황 고리로 가리킨다.",
-    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/tour.js: useTour.start() → project.newFromTemplate('einzel')(사용자가 템플릿 카드를 누르는 것과 같은 동작) → 단계 자동 진행. crop.py로 뷰포트 아래쪽과 속성 패널을 자름.",
+    "source": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/tour.js: useTour.start() → project.newFromTemplate('einzel')(사용자가 템플릿 카드를 누르는 것과 같은 동작) → 단계 자동 진행. crop.py로 뷰포트 아래쪽과 속성 패널을 자름.",
     "numbers_checked": [
       "시작 단계 'template' → 템플릿 비행 뒤 'voltage'로 자동 이동",
       "카드 표기 '따라하기 · 5단계 중 2', 강조 대상 #2 집속(80.0 V)"
@@ -294,7 +294,7 @@
     "sha256": "62a1851905856cce46bf18be0938f1491a4893e9a667b94e3138fdcc0aec49ed",
     "kind": "app-capture",
     "what_it_shows": "정확한 표면 스위치를 켠 경우(왼쪽, 정밀 CPU f64)와 끈 경우(오른쪽, 실시간 GPU f32)의 이온 섹션 카드와 비행 결과다. 켜면 이온이 실제 원기둥에서 멈춰 전극 2에 20개가 부딪히고(750/230/20), 끄면 격자점 계단에서 멈춰 결과가 751/249/0으로 달라진다. 두 쪽 모두 TOF 요약은 도착한 이온 1,000개 전체(+x 경계와 전극 표면 도착 포함)의 통계다.",
-    "source": "Windows 데스크톱 앱 simrep-app 0.1.0 debug + feature cad, 2026-10-26 다시 빌드(HEAD ae4f9d9f + 작업 트리, SurfaceElectrode 도착 통계 수정 포함): `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-26 00:11, exe sha256 d02a625f…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(sha256 fb250579…), particles.ion(sha256 8d0e731d…); scripts/app/wiz1.js → wizrun.js(F03과 같은 마법사 결과 배열, cut 노드 11,160, refine 잔차 5.58e-11) → quadfly.js {precision:'precise', exact:true, closeWizard:true} → quadfly.js {precision:'live', exact:false} 두 번(첫 비행은 장 업로드 중 CPU 대체, 두 번째 비행에서 GPU). 카드·결과 섹션은 scripts/app/rects.js(scrollto.js와 같은 스크롤 + 자를 영역 측정)로 각각 찍고 crop.py --stack/--row로 원본 픽셀 그대로 잘라 붙임. 자른 영역(장치 픽셀): 켜짐 카드 1872,150,2544,534, 결과 1872,166,2544,1074; 꺼짐 카드 1872,150,2544,498, 결과 1872,166,2544,1092. 현재 앱의 오른쪽 패널이 344 CSS px(이전 캡처 때 310)라 그림이 1272×1260에서 1368×1372로 바뀌었고, 스크롤바 띠는 잘라 냈다.",
+    "source": "Windows 데스크톱 앱 simrep-app 0.1.0 debug + feature cad, 2026-10-26 다시 빌드(HEAD ae4f9d9f + 작업 트리, SurfaceElectrode 도착 통계 수정 포함): `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-26 00:11, exe sha256 d02a625f…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan. 입력 %USERPROFILE%\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(sha256 fb250579…), particles.ion(sha256 8d0e731d…); scripts/app/wiz1.js → wizrun.js(F03과 같은 마법사 결과 배열, cut 노드 11,160, refine 잔차 5.58e-11) → quadfly.js {precision:'precise', exact:true, closeWizard:true} → quadfly.js {precision:'live', exact:false} 두 번(첫 비행은 장 업로드 중 CPU 대체, 두 번째 비행에서 GPU). 카드·결과 섹션은 scripts/app/rects.js(scrollto.js와 같은 스크롤 + 자를 영역 측정)로 각각 찍고 crop.py --stack/--row로 원본 픽셀 그대로 잘라 붙임. 자른 영역(장치 픽셀): 켜짐 카드 1872,150,2544,534, 결과 1872,166,2544,1074; 꺼짐 카드 1872,150,2544,498, 결과 1872,166,2544,1092. 현재 앱의 오른쪽 패널이 344 CSS px(이전 캡처 때 310)라 그림이 1272×1260에서 1368×1372로 바뀌었고, 스크롤바 띠는 잘라 냈다.",
     "numbers_checked": [
       "켜짐: +x 750(평균 4.251 µs) / 전극 3 230(3.741) / 전극 2 20(3.284), TOF 요약 '도착한 이온 1,000개' 최소 3.196 · 평균 4.115 · 최대 4.263 · 표준편차 0.245 µs (헤더 tof n=1000, mean 4.11450347966, std 0.244972435), 배지 '정밀 · CPU f64'·'정확한 표면', CPU 32스레드, 계산 13 ms",
       "꺼짐: +x 751(4.251) / 전극 3 249(3.740), TOF 요약 '도착한 이온 1,000개' 최소 3.733 · 평균 4.124 · 최대 4.263 · 표준편차 0.221 µs (헤더 tof n=1000, mean 4.12404688835, std 0.220988476), 배지 '실시간 · GPU f32'·'격자점', RTX 3070, 계산 12 ms",

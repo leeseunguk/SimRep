@@ -281,7 +281,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F01.png",
-   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:1000, draw:300} → project.newFromTemplate('einzel'), 그 뒤 shot(전체 창 2560×1600 px)."
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:1000, draw:300} → project.newFromTemplate('einzel'), 그 뒤 shot(전체 창 2560×1600 px)."
   },
   "status": "verified"
  },
@@ -325,7 +325,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F07.png",
-   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:10000, draw:300, tab:'hist'} → fit.js → zoom.js(휠 6단계 확대, 1단계 축소), 가운데 열(CSS 264,48,704×724) 캡처."
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/einzel.js {count:10000, draw:300, tab:'hist'} → fit.js → zoom.js(휠 6단계 확대, 1단계 축소), 가운데 열(CSS 264,48,704×724) 캡처."
   },
   "status": "verified"
  },
@@ -358,7 +358,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F09.png",
-   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/quad.js {count:10000, view:'iso'} 후 cdp.mjs dragshot(Input.dispatchMouseEvent로 슬라이더 엄지를 2.5 V 위치에서 60단계 끌고, 누른 채로 캡처). crop.py로 뷰포트+속성 패널만 자름."
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/quad.js {count:10000, view:'iso'} 후 cdp.mjs dragshot(Input.dispatchMouseEvent로 슬라이더 엄지를 2.5 V 위치에서 60단계 끌고, 누른 채로 캡처). crop.py로 뷰포트+속성 패널만 자름."
   },
   "status": "verified"
  },
@@ -391,7 +391,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F13.png",
-   "symbol": "C:\\Users\\lsu10\\simrep-oracle\\physics-validation-20261023\\gpu-physics\\hs1-cpu.csv, hs1-gpu.csv(RTX 3070 Vulkan native f64, seed 813; docs/physics-magnetic-collision.md 'GPU distribution replay') 및 collision_hs1\\flight.log FINAL 행(SIMION, seed 237). data/F13-*.csv, scripts/F13_hs1.py(scipy 정확 KS로 재계산)."
+   "symbol": "%USERPROFILE%\\simrep-oracle\\physics-validation-20261023\\gpu-physics\\hs1-cpu.csv, hs1-gpu.csv(RTX 3070 Vulkan native f64, seed 813; docs/physics-magnetic-collision.md 'GPU distribution replay') 및 collision_hs1\\flight.log FINAL 행(SIMION, seed 237). data/F13-*.csv, scripts/F13_hs1.py(scipy 정확 KS로 재계산)."
   },
   "status": "verified"
  },
@@ -468,7 +468,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F18.png",
-   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\step\\pair.step(= simrep-cad-fixtures\\pair.step, sha256 44ad527f…). scripts/app/stepwiz.js, crop.py로 뷰포트+마법사 패널을 자름(프로젝트 이름 표시줄 제외)."
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 입력 %USERPROFILE%\\simrep-gui-test\\report-figs\\step\\pair.step(= simrep-cad-fixtures\\pair.step, sha256 44ad527f…). scripts/app/stepwiz.js, crop.py로 뷰포트+마법사 패널을 자름(프로젝트 이름 표시줄 제외)."
   },
   "status": "verified"
  },
@@ -479,7 +479,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F03.png",
-   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 띠 1–3은 1280×440 CSS 창, 띠 4는 1280×800 창. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(= simrep-oracle\\_quad_cut\\quadrupole.gem, sha256 fb250579…), particles.ion(_quad_gpu, sha256 8d0e731d…). scripts/app/wiz1.js → wizrun.js → quadfly.js {precision:'precise', exact:true} → res.js; scripts/crop.py --stack로 원본 픽셀 그대로 잘라 붙임."
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; 띠 1–3은 1280×440 CSS 창, 띠 4는 1280×800 창. 입력 %USERPROFILE%\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(= simrep-oracle\\_quad_cut\\quadrupole.gem, sha256 fb250579…), particles.ion(_quad_gpu, sha256 8d0e731d…). scripts/app/wiz1.js → wizrun.js → quadfly.js {precision:'precise', exact:true} → res.js; scripts/crop.py --stack로 원본 픽셀 그대로 잘라 붙임."
   },
   "status": "verified"
  },
@@ -490,7 +490,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F21.png",
-   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/tour.js: useTour.start() → project.newFromTemplate('einzel')(사용자가 템플릿 카드를 누르는 것과 같은 동작) → 단계 자동 진행. crop.py로 뷰포트 아래쪽과 속성 패널을 자름."
+   "symbol": "Windows 데스크톱 앱(현재 main 소스) simrep-app 0.1.0 debug + feature cad, `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-25 00:35, exe sha256 8c03a219…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan; scripts/app/tour.js: useTour.start() → project.newFromTemplate('einzel')(사용자가 템플릿 카드를 누르는 것과 같은 동작) → 단계 자동 진행. crop.py로 뷰포트 아래쪽과 속성 패널을 자름."
   },
   "status": "verified"
  },
@@ -501,7 +501,7 @@
   "kind": "measured",
   "checked_against": {
    "file": "figures/F22.png",
-   "symbol": "Windows 데스크톱 앱 simrep-app 0.1.0 debug + feature cad, 2026-10-26 다시 빌드(HEAD ae4f9d9f + 작업 트리, SurfaceElectrode 도착 통계 수정 포함): `CARGO_TARGET_DIR=C:\\Users\\lsu10\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-26 00:11, exe sha256 d02a625f…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan. 입력 C:\\Users\\lsu10\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(sha256 fb250579…), particles.ion(sha256 8d0e731d…); scripts/app/wiz1.js → wizrun.js(F03과 같은 마법사 결과 배열, cut 노드 11,160, refine 잔차 5.58e-11) → quadfly.js {precision:'precise', exact:true, closeWizard:true} → quadfly.js {precision:'live', exact:false} 두 번(첫 비행은 장 업로드 중 CPU 대체, 두 번째 비행에서 GPU). 카드·결과 섹션은 scripts/app/rects.js(scrollto.js와 같은 스크롤 + 자를 영역 측정)로 각각 찍고 crop.py --stack/--row로 원본 픽셀 그대로 잘라 붙임. 자른 영역(장치 픽셀): 켜짐 카드 1872,150,2544,534, 결과 1872,166,2544,1074; 꺼짐 카드 1872,150,2544,498, 결과 1872,166,2544,1092. 현재 앱의 오른쪽 패널이 344 CSS px(이전 캡처 때 310)라 그림이 1272×1260에서 1368×1372로 바뀌었고, 스크롤바 띠는 잘라 냈다."
+   "symbol": "Windows 데스크톱 앱 simrep-app 0.1.0 debug + feature cad, 2026-10-26 다시 빌드(HEAD ae4f9d9f + 작업 트리, SurfaceElectrode 도착 통계 수정 포함): `CARGO_TARGET_DIR=%USERPROFILE%\\simrep-app-target-fig cargo.exe build --manifest-path app/src-tauri/Cargo.toml --features cad` (2026-10-26 00:11, exe sha256 d02a625f…), Vite 8.3.5 dev server(app/src), WebView2 + CDP(scripts/cdp.mjs, Emulation 1280×800 CSS, deviceScaleFactor 2), 한국어·라이트 테마, RTX 3070 Vulkan. 입력 %USERPROFILE%\\simrep-gui-test\\report-figs\\quad2\\quadrupole.gem(sha256 fb250579…), particles.ion(sha256 8d0e731d…); scripts/app/wiz1.js → wizrun.js(F03과 같은 마법사 결과 배열, cut 노드 11,160, refine 잔차 5.58e-11) → quadfly.js {precision:'precise', exact:true, closeWizard:true} → quadfly.js {precision:'live', exact:false} 두 번(첫 비행은 장 업로드 중 CPU 대체, 두 번째 비행에서 GPU). 카드·결과 섹션은 scripts/app/rects.js(scrollto.js와 같은 스크롤 + 자를 영역 측정)로 각각 찍고 crop.py --stack/--row로 원본 픽셀 그대로 잘라 붙임. 자른 영역(장치 픽셀): 켜짐 카드 1872,150,2544,534, 결과 1872,166,2544,1074; 꺼짐 카드 1872,150,2544,498, 결과 1872,166,2544,1092. 현재 앱의 오른쪽 패널이 344 CSS px(이전 캡처 때 310)라 그림이 1272×1260에서 1368×1372로 바뀌었고, 스크롤바 띠는 잘라 냈다."
   },
   "status": "verified"
  },

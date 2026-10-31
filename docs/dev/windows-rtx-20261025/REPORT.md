@@ -33,7 +33,7 @@ the builds and accuracy suites had finished and the installed app was closed.
 ## 1. Native GPU tests
 
 Command: Windows `cargo.exe test --release -p simrep-fly -p simrep-solve --
---nocapture`, using the root manifest and `C:\Users\lsu10\simrep-target`.
+--nocapture`, using the root manifest and `%USERPROFILE%\simrep-target`.
 Exit code 0. Rust harness totals: **152 passed, 0 failed, 14 ignored**.
 Those totals include CPU tests and exclude the custom harness checks below.
 
@@ -52,7 +52,7 @@ Those totals include CPU tests and exclude the custom harness checks below.
 The custom harness total is **70 checks passed, 0 failed**, plus the expected
 DX12 `SHADER_F64 unavailable` smoke skip. The magnetic replay is one Rust test
 containing seven case gates, not seven independently registered Rust tests.
-Its command used `SIMREP_GPU_PHYSICS=C:\Users\lsu10\simrep-oracle\physics-validation-20261023`
+Its command used `SIMREP_GPU_PHYSICS=%USERPROFILE%\simrep-oracle\physics-validation-20261023`
 and `--lib gpu_physics_reference_agreement -- --ignored --nocapture`; exit 0,
 65.80 s. Maximum errors:
 
@@ -75,9 +75,9 @@ Built the actual Windows abi3 wheel with the existing Windows venv's
 `pip install --force-reinstall --no-deps`, and built the matching current CLI.
 Wheel, pip install, and CLI build each exited 0.
 
-- Venv: `C:\Users\lsu10\simrep-pyvenv`.
-- Wheel: `C:\Users\lsu10\simrep-wheels\simrep-0.1.0-cp310-abi3-win_amd64.whl`.
-- CLI: `C:\Users\lsu10\simrep-target-py\release\simrep.exe`, forwarded as `SIMREP_BIN`.
+- Venv: `%USERPROFILE%\simrep-pyvenv`.
+- Wheel: `%USERPROFILE%\simrep-wheels\simrep-0.1.0-cp310-abi3-win_amd64.whl`.
+- CLI: `%USERPROFILE%\simrep-target-py\release\simrep.exe`, forwarded as `SIMREP_BIN`.
 - Full `python -m pytest crates/simrep-py/tests -v -ra`: **86 passed, 0 failed,
   1 skipped**, exit 0, 104.82 s.
 - The only skip was the software-adapter refusal test, which requires software
@@ -119,7 +119,7 @@ Using the stored SIMION 14.23 s interval, the matching published speed ratio
 is 19.17x versus README's rounded 19.3x, within 1%.
 
 The kernel controls used the unchanged `kernel_experiments` test, solved files
-under `C:\Users\lsu10\simrep-gui-test`, five warmups per candidate/population,
+under `%USERPROFILE%\simrep-gui-test`, five warmups per candidate/population,
 three measured flights, and 300 sampled trajectories. Both precision runs
 passed all bitwise state/TOF/hit/step/sample comparisons against the general
 kernel. Their medians are the `unroll_x` results, not the slower general control.
@@ -153,7 +153,7 @@ and Display event 4101 at 16:22:36 UTC:
 There is **no valid three-run median** for this CLI workload.
 No invalid zero timestamp was treated as a performance improvement.
 No application fix, timeout-policy change, or system driver setting was made.
-Output CSVs remain in `C:\Users\lsu10\simrep-verify-20261025\einzel-{0,1}.csv`.
+Output CSVs remain in `%USERPROFILE%\simrep-verify-20261025\einzel-{0,1}.csv`.
 
 ## 4. App live re-fly
 
@@ -194,7 +194,7 @@ printed its existing `.app` identifier/macOS naming recommendation.
 
 | Check | Observed result |
 | --- | --- |
-| Current installer | `C:\Users\lsu10\simrep-app-target-p6cad\release\bundle\nsis\SimRep_0.1.0_x64-setup.exe` |
+| Current installer | `%USERPROFILE%\simrep-app-target-p6cad\release\bundle\nsis\SimRep_0.1.0_x64-setup.exe` |
 | Size | **30,219,343 bytes (28.82 MiB)** for refreshed `d293d03`; initial verification build 30,225,716 bytes; historical package 29,873,560 bytes |
 | Before installation | No install directory, HKCU/HKLM uninstall keys, SimRep keys, or shortcuts |
 | Silent `/S` install | Refreshed package exit 0, 4.2 s; 54 files, 96.8 MiB; 39 OCCT DLLs, 3 CRT DLLs, notices/licenses |
@@ -283,7 +283,7 @@ GoogleDriveFS.exe                     1
 
 orphan conhost: 0
 busy conhost (>50% of a core): 6
-  pid 26152 cpu 98% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- /home/lsu10/orca/workspaces/SIMION/SIMION_Rep
+  pid 26152 cpu 98% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- $REPO
   pid 52060 cpu 98% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
   pid 29192 cpu 98% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
   pid 56704 cpu 98% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA

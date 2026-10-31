@@ -225,27 +225,27 @@ maturin build --release --manifest-path crates/simrep-py/Cargo.toml
 
 Use a Windows Python and the installed Windows Rust/MSVC toolchain, rather
 than combining a Linux interpreter with a Windows extension. The exact WSL
-invocation verified on Windows 11 (venv at `C:\Users\lsu10\simrep-pyvenv`,
-Python 3.12.10, maturin 1.15.0; cargo.exe in `C:\Users\lsu10\.cargo\bin`):
+invocation verified on Windows 11 (venv at `%USERPROFILE%\simrep-pyvenv`,
+Python 3.12.10, maturin 1.15.0; cargo.exe in `%USERPROFILE%\.cargo\bin`):
 
 ```sh
 # Every Windows exe launched from WSL needs stdin closed (< /dev/null),
 # a timeout, and a /mnt/c cwd. Env vars crossing into Windows need WSLENV;
 # suffix /p translates a WSL path value to a Windows path.
 export WSLENV="CARGO/p:CARGO_TARGET_DIR/p"
-export CARGO=/mnt/c/Users/lsu10/.cargo/bin/cargo.exe
-export CARGO_TARGET_DIR=/mnt/c/Users/lsu10/simrep-target-py
+export CARGO=/mnt/c/Users/<user>/.cargo/bin/cargo.exe
+export CARGO_TARGET_DIR=/mnt/c/Users/<user>/simrep-target-py
 (cd /mnt/c && timeout 1500 \
-  /mnt/c/Users/lsu10/simrep-pyvenv/Scripts/maturin.exe build --release \
-  --manifest-path '\\wsl.localhost\Ubuntu\home\lsu10\orca\workspaces\SIMION\SIMION_Rep\crates\simrep-py\Cargo.toml' \
-  -o 'C:\Users\lsu10\simrep-wheels' < /dev/null)
+  /mnt/c/Users/<user>/simrep-pyvenv/Scripts/maturin.exe build --release \
+  --manifest-path '\\wsl.localhost\Ubuntu\home\<user>\SimRep\crates\simrep-py\Cargo.toml' \
+  -o '%USERPROFILE%\simrep-wheels' < /dev/null)
 # cargo.exe and maturin.exe accept the \\wsl.localhost UNC path directly;
 # no Windows-side checkout is needed. Observed build time: 4 min 19 s on
 # a 16-core Ryzen 5950X with dependencies already compiled.
-(cd /mnt/c && timeout 120 /mnt/c/Users/lsu10/simrep-pyvenv/Scripts/python.exe \
+(cd /mnt/c && timeout 120 /mnt/c/Users/<user>/simrep-pyvenv/Scripts/python.exe \
   -m pip install --force-reinstall --no-deps \
-  'C:\Users\lsu10\simrep-wheels\simrep-0.1.0-cp310-abi3-win_amd64.whl' < /dev/null)
-(cd /mnt/c && timeout 30 /mnt/c/Users/lsu10/simrep-pyvenv/Scripts/python.exe \
+  '%USERPROFILE%\simrep-wheels\simrep-0.1.0-cp310-abi3-win_amd64.whl' < /dev/null)
+(cd /mnt/c && timeout 30 /mnt/c/Users/<user>/simrep-pyvenv/Scripts/python.exe \
   -c "import simrep; print(simrep.__file__)" < /dev/null)
 ```
 
@@ -255,13 +255,13 @@ Windows path):
 
 ```sh
 export WSLENV="CARGO/p:CARGO_TARGET_DIR/p:SIMREP_BIN"
-export SIMREP_BIN='C:\Users\lsu10\simrep-target-py\release\simrep.exe'
-(cd /mnt/c && timeout 900 /mnt/c/Users/lsu10/.cargo/bin/cargo.exe build \
+export SIMREP_BIN='%USERPROFILE%\simrep-target-py\release\simrep.exe'
+(cd /mnt/c && timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
   --release -p simrep-cli \
-  --manifest-path '\\wsl.localhost\Ubuntu\home\lsu10\orca\workspaces\SIMION\SIMION_Rep\Cargo.toml' < /dev/null)
+  --manifest-path '\\wsl.localhost\Ubuntu\home\<user>\SimRep\Cargo.toml' < /dev/null)
 # simrep-cli build with warm deps: ~1 min.
-(cd /mnt/c && timeout 900 /mnt/c/Users/lsu10/simrep-pyvenv/Scripts/python.exe \
-  -m pytest '\\wsl.localhost\Ubuntu\home\lsu10\orca\workspaces\SIMION\SIMION_Rep\crates\simrep-py\tests' \
+(cd /mnt/c && timeout 900 /mnt/c/Users/<user>/simrep-pyvenv/Scripts/python.exe \
+  -m pytest '\\wsl.localhost\Ubuntu\home\<user>\SimRep\crates\simrep-py\tests' \
   -q < /dev/null)
 # Without WSLENV the SIMREP_BIN variable silently does
 # not reach the Windows process and the parity test falls back to the

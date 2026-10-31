@@ -268,7 +268,7 @@ simrep fly --particles ions.ion --collision hs1 --seed 813 \
   --duration-us 50 --allow-time-limit --output hs1.csv
 
 simrep fly --particles ions.ion --collision sds --seed 813 \
-  --mbmr /mnt/c/Users/lsu10/simrep-oracle/collision_sds/mbmr.dat \
+  --mbmr /mnt/c/Users/<user>/simrep-oracle/collision_sds/mbmr.dat \
   --gas-diameter-nm 0.366 --temperature-k 273.15 \
   --duration-us 50 --allow-time-limit --output sds.csv
 ```
@@ -303,7 +303,7 @@ working directory. Unknown JSON fields and invalid model parameters fail.
 ## Validation protocol and artifacts
 
 `tools/simion-oracle/physics_validate.py` creates dedicated working copies
-under `C:\Users\lsu10\simrep-oracle\physics-validation-20261023`.
+under `%USERPROFILE%\simrep-oracle\physics-validation-20261023`.
 It uses the shipped Lua only inside SIMION as an oracle. Magnetic fields
 are probed through the documented `instance:field_wc` interface; adjusted
 PAs and workbench transforms are exported before native evaluation.
@@ -543,16 +543,16 @@ Reproduce the profiling and matched-reference gate after preparing the
 foreground SIMION artifacts:
 
 ```sh
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 # Optional: limit the profiling test to sector_3dp.
 SIMREP_MAGNETIC_CASE=sector_3dp \
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 
 RAYON_NUM_THREADS=16 target/release/simrep fly --device cpu \
-  --particles /mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023/sector_3dp/ions.ion \
-  --run-file /mnt/c/Users/lsu10/simrep-oracle/physics-validation-20261023/sector_3dp/run.json \
+  --particles /mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023/sector_3dp/ions.ion \
+  --run-file /mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023/sector_3dp/run.json \
   --bounds=-11,-156,-156,11,156,156 --duration-us 10000 \
   --nonrelativistic --max-step-us 1 --tolerance 1e-10 --output /tmp/sector-3dp.csv
 ```
@@ -572,7 +572,7 @@ python3 tools/simion-oracle/physics_validate.py --only magnetic --stage native
 python3 tools/simion-oracle/physics_validate.py --only collision --ions 4096
 python3 tools/simion-oracle/physics_validate.py --check-replay
 target/release/examples/physics_probe mobility
-SIMREP_MBMR=/mnt/c/Users/lsu10/simrep-oracle/collision_sds/mbmr.dat \
+SIMREP_MBMR=/mnt/c/Users/<user>/simrep-oracle/collision_sds/mbmr.dat \
   cargo test --workspace
 ```
 

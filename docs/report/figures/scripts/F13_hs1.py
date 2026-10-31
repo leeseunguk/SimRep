@@ -1,6 +1,6 @@
 """F13: HS1 hard-sphere collisions, SimRep CPU vs GPU vs SIMION end-state distributions (stored data).
 
-Inputs (copied into data/ from C:\\Users\\lsu10\\simrep-oracle\\physics-validation-20261023):
+Inputs (copied into data/ from %USERPROFILE%\\simrep-oracle\\physics-validation-20261023):
   F13-hs1-cpu.csv, F13-hs1-gpu.csv  gpu-physics/hs1-{cpu,gpu}.csv: 4096 ions each, seed 813, CPU f64 and
       RTX 3070 Vulkan native f64 (docs/physics-magnetic-collision.md 'GPU distribution replay, 2026-10-24')
   F13-hs1-simion.csv                collision_hs1/flight.log FINAL rows: SIMION 2024, 4096 ions, seed 237

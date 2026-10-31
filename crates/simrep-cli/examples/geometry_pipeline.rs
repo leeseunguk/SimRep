@@ -72,11 +72,9 @@ fn einzel(out: &Path) -> Result<()> {
         .unwrap_or_else(|| PathBuf::from("target/release/simrep"));
     let references = std::env::var_os("SIMREP_REFERENCE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            PathBuf::from("/home/lsu10/orca/workspaces/SIMION/SIMION_Rep/target/fly-real")
-        });
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/fly-real"));
     let input = "/mnt/c/Program Files/SIMION-2024/examples/einzel/einzel.gem";
-    let ions = "/mnt/c/Users/lsu10/simrep-oracle/_real_einzel/subset.ion";
+    let ions = "target/simrep-oracle/_real_einzel/subset.ion";
     let reference4 = read_pa(references.join("grid-4.pa"))?.array;
     let reference8 = read_pa(references.join("grid-8.pa"))?.array;
     let endpoints = csv_positions(&references.join("grid-8.csv"))?;
@@ -377,10 +375,7 @@ fn gpu(out: &Path) -> Result<()> {
     let cpu = read_pa(out.join("nonaligned-cut.pa0"))?.array;
     let mut results = Vec::new();
     for name in ["gpu-cut", "dx12-cut"] {
-        let native = read_pa(format!(
-            "/mnt/c/Users/lsu10/simrep-geometry-pipeline/{name}.pa0"
-        ))?
-        .array;
+        let native = read_pa(format!("target/geometry-pipeline/{name}.pa0"))?.array;
         assert_eq!(cpu.electrodes, native.electrodes);
         let error = cpu
             .potentials
@@ -548,7 +543,7 @@ fn surface_einzel(out: &Path) -> Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("target/release/simrep"));
     let input = "/mnt/c/Program Files/SIMION-2024/examples/einzel/einzel.gem";
-    let original_ions = "/mnt/c/Users/lsu10/simrep-oracle/_real_einzel/subset.ion";
+    let original_ions = "target/simrep-oracle/_real_einzel/subset.ion";
     let original_count = simrep_io::read_particles(original_ions)?.len();
     let mut beam = fs::read_to_string(original_ions)?;
     beam.push('\n');

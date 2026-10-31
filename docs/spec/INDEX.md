@@ -3,7 +3,7 @@
 Map from the topics this project needs to the locally extracted SIMION 2024 help pages.
 The docs are copyrighted and live **outside the repo**; nothing from them is copied here.
 
-- Extracted CHM root: `C:\Users\lsu10\simion_docs_raw` (WSL: `/mnt/c/Users/lsu10/simion_docs_raw`)
+- Extracted CHM root: `%USERPROFILE%\simion_docs_raw` (WSL: `/mnt/c/Users/<user>/simion_docs_raw`)
 - Lua module docs: `simion_docs_raw/luamodules/luamodules-docs/` (LuaSocket, LPeg, LuaFileSystem, lpack; general-purpose Lua libraries, not SIMION-specific)
 - Source: `C:\Program Files\SIMION-2024\docs\simion.chm` and `luamodules-docs.zip`
 - `[install]` below means `/mnt/c/Program Files/SIMION-2024`.
