@@ -10,9 +10,9 @@ mod spatial;
 mod surface;
 mod sweep;
 mod usda;
-mod vtk;
+pub mod vtk;
 
-pub use formats::{ImportOptions, read_mesh, write_mesh};
+pub use formats::{ImportOptions, read_mesh, read_mesh_with, write_mesh};
 pub use grid::{
     GridSpec, SignedDistanceGrid, Voxelization, sample_sdf, voxelize, voxelize_with_defects,
 };

@@ -3,7 +3,7 @@
 use crate::{Mesh, Part, invalid};
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read};
+use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
 #[derive(Clone, Copy)]
@@ -47,7 +47,10 @@ struct Element {
 }
 
 pub(super) fn read(path: &Path) -> io::Result<Mesh> {
-    let mut reader = BufReader::new(File::open(path)?);
+    read_from(BufReader::new(File::open(path)?))
+}
+
+pub(super) fn read_from(mut reader: impl BufRead) -> io::Result<Mesh> {
     let mut line = String::new();
     reader.read_line(&mut line)?;
     if line.trim() != "ply" {

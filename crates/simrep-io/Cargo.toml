@@ -5,6 +5,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+default = ["lua"]
+lua = ["dep:simrep-lua"]
+
 [dependencies]
 simrep-core.workspace = true
-simrep-lua.workspace = true
+simrep-lua = { workspace = true, optional = true }

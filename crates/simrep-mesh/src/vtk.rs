@@ -59,9 +59,23 @@ pub fn write_vti(
     origin_mm: Point,
     field: bool,
 ) -> io::Result<()> {
+    write_vti_with(pa, origin_mm, field, || {
+        Ok(BufWriter::new(File::create(path)?))
+    })
+    .map(|_| ())
+}
+
+/// Write the same VTI to a caller-owned stream, returned after flushing.
+/// The stream factory runs after geometry validation, matching native IO.
+pub fn write_vti_with<W: Write>(
+    pa: &PotentialArray,
+    origin_mm: Point,
+    field: bool,
+    open: impl FnOnce() -> io::Result<W>,
+) -> io::Result<W> {
     let (pa, grid) = expanded_pa(pa, origin_mm)?;
     let count = pa.potentials.len();
-    let mut writer = BufWriter::new(File::create(path)?);
+    let mut writer = open()?;
     image_header(&mut writer, grid, "potential")?;
     array(&mut writer, "potential", "Float64", 1, 0)?;
     array(&mut writer, "electrode", "UInt8", 1, 8 + count * 8)?;
@@ -85,7 +99,8 @@ pub fn write_vti(
             }
         }
     }
-    finish(&mut writer)
+    finish(&mut writer)?;
+    Ok(writer)
 }
 
 fn node_field(pa: &PotentialArray, grid: GridSpec, i: usize) -> Point {
@@ -123,6 +138,26 @@ pub fn write_revolved_vts(
     angular_segments: usize,
     sweep_degrees: f64,
 ) -> io::Result<()> {
+    write_revolved_vts_with(
+        pa,
+        origin_mm,
+        field,
+        angular_segments,
+        sweep_degrees,
+        || Ok(BufWriter::new(File::create(path)?)),
+    )
+    .map(|_| ())
+}
+
+/// Stream variant of [`write_revolved_vts`], with identical validation and bytes.
+pub fn write_revolved_vts_with<W: Write>(
+    pa: &PotentialArray,
+    origin_mm: Point,
+    field: bool,
+    angular_segments: usize,
+    sweep_degrees: f64,
+    open: impl FnOnce() -> io::Result<W>,
+) -> io::Result<W> {
     SurfaceOptions {
         angular_segments,
         sweep_degrees,
@@ -140,7 +175,7 @@ pub fn write_revolved_vts(
         .filter(|n| n.checked_mul(57).is_some())
         .ok_or_else(|| invalid("revolved grid size overflow"))?;
     let (nx, ny) = (pa.nx - 1, pa.ny - 1);
-    let mut writer = BufWriter::new(File::create(path)?);
+    let mut writer = open()?;
     let vectors = if field { " Vectors=\"field\"" } else { "" };
     writeln!(
         writer,
@@ -204,7 +239,8 @@ pub fn write_revolved_vts(
             }
         }
     }
-    finish(&mut writer)
+    finish(&mut writer)?;
+    Ok(writer)
 }
 
 pub fn write_scalar_vti(
@@ -279,8 +315,16 @@ pub(crate) fn validate_trajectories(trajectories: &[Trajectory]) -> io::Result<u
 
 /// One VTK PolyLine cell per trajectory, including id, time and velocity.
 pub fn write_vtp(path: impl AsRef<Path>, trajectories: &[Trajectory]) -> io::Result<()> {
+    write_vtp_with(trajectories, || Ok(BufWriter::new(File::create(path)?))).map(|_| ())
+}
+
+/// Stream variant of [`write_vtp`].
+pub fn write_vtp_with<W: Write>(
+    trajectories: &[Trajectory],
+    open: impl FnOnce() -> io::Result<W>,
+) -> io::Result<W> {
     let count = validate_trajectories(trajectories)?;
-    let mut writer = BufWriter::new(File::create(path)?);
+    let mut writer = open()?;
     writeln!(
         writer,
         "<?xml version=\"1.0\"?>\n<VTKFile type=\"PolyData\" version=\"1.0\" byte_order=\"LittleEndian\" header_type=\"UInt64\">\n<PolyData><Piece NumberOfPoints=\"{count}\" NumberOfVerts=\"0\" NumberOfLines=\"{}\" NumberOfStrips=\"0\" NumberOfPolys=\"0\">",
@@ -352,15 +396,25 @@ pub fn write_vtp(path: impl AsRef<Path>, trajectories: &[Trajectory]) -> io::Res
         offset += trajectory.points.len() as i64;
         writer.write_all(&offset.to_le_bytes())?;
     }
-    finish(&mut writer)
+    finish(&mut writer)?;
+    Ok(writer)
 }
 
 pub fn write_trajectories_csv(
     path: impl AsRef<Path>,
     trajectories: &[Trajectory],
 ) -> io::Result<()> {
+    write_trajectories_csv_with(trajectories, || Ok(BufWriter::new(File::create(path)?)))
+        .map(|_| ())
+}
+
+/// Stream variant of [`write_trajectories_csv`].
+pub fn write_trajectories_csv_with<W: Write>(
+    trajectories: &[Trajectory],
+    open: impl FnOnce() -> io::Result<W>,
+) -> io::Result<W> {
     validate_trajectories(trajectories)?;
-    let mut writer = BufWriter::new(File::create(path)?);
+    let mut writer = open()?;
     writeln!(
         writer,
         "trajectory_id,time_us,x_mm,y_mm,z_mm,vx_mm_per_us,vy_mm_per_us,vz_mm_per_us"
@@ -376,5 +430,6 @@ pub fn write_trajectories_csv(
             )?;
         }
     }
-    writer.flush()
+    writer.flush()?;
+    Ok(writer)
 }

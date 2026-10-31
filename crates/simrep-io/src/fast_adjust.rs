@@ -27,13 +27,26 @@ pub fn read_fast_adjust(
     path: impl AsRef<Path>,
     overrides: &[(usize, f64)],
 ) -> io::Result<PotentialArray> {
+    read_fast_adjust_with(path, overrides, |path| read_pa(path))
+}
+
+/// Apply fast adjustment using a caller-owned PA loader instead of native IO.
+///
+/// A browser may resolve each requested sibling name from an in-memory byte
+/// registry and decode it with `PaFile::read`. Validation, normalization and
+/// arithmetic are identical to [`read_fast_adjust`].
+pub fn read_fast_adjust_with(
+    path: impl AsRef<Path>,
+    overrides: &[(usize, f64)],
+    mut load: impl FnMut(&Path) -> io::Result<PaFile>,
+) -> io::Result<PotentialArray> {
     let path = path.as_ref();
     let extension = path
         .extension()
         .and_then(|s| s.to_str())
         .filter(|s| s.eq_ignore_ascii_case("pa0"))
         .ok_or_else(|| invalid("fast adjustment requires a .pa0 file"))?;
-    let base = read_pa(path)?;
+    let base = load(path)?;
     let metadata = base
         .pa0
         .as_ref()
@@ -78,7 +91,7 @@ pub fn read_fast_adjust(
             number.to_string()
         };
         let sibling = path.with_extension(format!("{}{suffix}", &extension[..2]));
-        let solution = read_pa(&sibling).map_err(|error| {
+        let solution = load(&sibling).map_err(|error| {
             io::Error::new(error.kind(), format!("{}: {error}", sibling.display()))
         })?;
         if !same_geometry(&base, &solution) {

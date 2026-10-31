@@ -9,7 +9,7 @@ license = "PolyForm-Noncommercial-1.0.0"
 
 [workspace.dependencies]
 simrep-core = { path = "crates/simrep-core" }
-simrep-io = { path = "crates/simrep-io" }
+simrep-io = { path = "crates/simrep-io", default-features = false }
 simrep-gem = { path = "crates/simrep-gem" }
 simrep-mesh = { path = "crates/simrep-mesh" }
 simrep-solve = { path = "crates/simrep-solve" }

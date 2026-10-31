@@ -5,10 +5,14 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+default = ["lua"]
+lua = ["dep:mlua", "dep:simrep-lua", "simrep-io/lua"]
+
 [dependencies]
 simrep-core.workspace = true
-simrep-io.workspace = true
+simrep-io = { workspace = true, default-features = false }
 simrep-geom.workspace = true
 serde = { version = "1", features = ["derive"] }
-mlua = { version = "0.11.6", features = ["lua51", "vendored", "send"] }
-simrep-lua.workspace = true
+mlua = { version = "0.11.6", features = ["lua51", "vendored", "send"], optional = true }
+simrep-lua = { workspace = true, optional = true }

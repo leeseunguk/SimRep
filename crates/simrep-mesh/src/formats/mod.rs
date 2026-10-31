@@ -5,7 +5,7 @@ mod threemf;
 use crate::{Mesh, Part, Point, Transform, Unit, add, cross, dot, invalid, mul, norm, sub};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufReader, BufWriter, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Cursor, Read, Seek, Write};
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -21,8 +21,14 @@ pub fn read_mesh(path: impl AsRef<Path>, options: ImportOptions) -> io::Result<M
     options.transform.validate()?;
     let extension = extension(path)?;
     let (mut mesh, source_unit) = match extension.as_str() {
-        "stl" => (read_stl(path)?, Unit::Millimeter),
-        "obj" => (read_obj(path)?, Unit::Millimeter),
+        "stl" => (
+            read_stl(path, BufReader::new(File::open(path)?))?,
+            Unit::Millimeter,
+        ),
+        "obj" => (
+            read_obj(BufReader::new(File::open(path)?))?,
+            Unit::Millimeter,
+        ),
         "ply" => (ply::read(path)?, Unit::Millimeter),
         "3mf" => threemf::read(path)?,
         "gltf" | "glb" => (gltf_io::read(path)?, Unit::Meter),
@@ -42,58 +48,105 @@ pub fn read_mesh(path: impl AsRef<Path>, options: ImportOptions) -> io::Result<M
     Ok(mesh)
 }
 
+/// Import from caller-owned bytes, resolving glTF buffers through the same
+/// loader. The path selects the format and retains native part naming.
+pub fn read_mesh_with(
+    path: impl AsRef<Path>,
+    options: ImportOptions,
+    mut load: impl FnMut(&Path) -> io::Result<Vec<u8>>,
+) -> io::Result<Mesh> {
+    let path = path.as_ref();
+    options.transform.validate()?;
+    let bytes = load(path)?;
+    let (mut mesh, source_unit) = match extension(path)?.as_str() {
+        "stl" => (read_stl(path, Cursor::new(&bytes))?, Unit::Millimeter),
+        "obj" => (read_obj(Cursor::new(&bytes))?, Unit::Millimeter),
+        "ply" => (ply::read_from(Cursor::new(&bytes))?, Unit::Millimeter),
+        "3mf" => threemf::read_from(Cursor::new(&bytes))?,
+        "gltf" | "glb" => (gltf_io::read_with(path, &bytes, &mut load)?, Unit::Meter),
+        other => {
+            return Err(invalid(format!(
+                "unsupported mesh extension {other:?}; expected stl, obj, ply, 3mf, gltf or glb"
+            )));
+        }
+    };
+    let transform = options.transform.compose(Transform::scale(
+        options.units.unwrap_or(source_unit).millimeters(),
+    ));
+    for part in &mut mesh.parts {
+        part.transform(transform)?;
+    }
+    mesh.validate()?;
+    Ok(mesh)
+}
+
 /// Write STL (binary), OBJ, glTF (embedded buffer), GLB or USDA. STL has no part
 /// names; reimport reconstructs its edge-connected components.
 pub fn write_mesh(path: impl AsRef<Path>, mesh: &Mesh) -> io::Result<()> {
     mesh.validate()?;
     let path = path.as_ref();
     match extension(path)?.as_str() {
-        "stl" => {
-            let mut writer = BufWriter::new(File::create(path)?);
-            let mut triangles = Vec::with_capacity(mesh.triangle_count());
-            for part in &mesh.parts {
-                for triangle in &part.triangles {
-                    let vertices = triangle.map(|i| part.vertices[i]);
-                    let normal =
-                        cross(sub(vertices[1], vertices[0]), sub(vertices[2], vertices[0]));
-                    let normal = if norm(normal) > 0.0 {
-                        mul(normal, 1.0 / norm(normal))
-                    } else {
-                        [0.0; 3]
-                    };
-                    let vertices = vertices.map(|v| stl_io::Vertex::new(v.map(|x| x as f32)));
-                    if vertices.iter().flat_map(|v| v.0).any(|v| !v.is_finite()) {
-                        return Err(invalid("mesh is outside STL Float32 range"));
-                    }
-                    triangles.push(stl_io::Triangle {
-                        normal: stl_io::Normal::new(normal.map(|v| v as f32)),
-                        vertices,
-                    });
-                }
-            }
-            stl_io::write_stl(&mut writer, triangles.iter())?;
-            writer.flush()
-        }
-        "obj" => {
-            let mut writer = BufWriter::new(File::create(path)?);
-            let mut offset = 1;
-            for part in &mesh.parts {
-                writeln!(writer, "o {}", part.name.replace(['\n', '\r'], "_"))?;
-                for [x, y, z] in &part.vertices {
-                    writeln!(writer, "v {x} {y} {z}")?;
-                }
-                for [a, b, c] in &part.triangles {
-                    writeln!(writer, "f {} {} {}", a + offset, b + offset, c + offset)?;
-                }
-                offset += part.vertices.len();
-            }
-            writer.flush()
-        }
+        "stl" | "obj" => mesh.write_to(path, BufWriter::new(File::create(path)?)),
         "gltf" | "glb" => gltf_io::write(path, mesh),
         "usda" => crate::write_usda(path, Some(mesh), &[]),
         other => Err(invalid(format!(
             "unsupported mesh export {other:?}; expected stl, obj, gltf, glb or usda"
         ))),
+    }
+}
+
+impl Mesh {
+    /// Write STL, OBJ, embedded-buffer glTF or GLB to caller-owned storage.
+    /// Only the path extension is inspected; no filesystem is accessed.
+    pub fn write_to(&self, path: impl AsRef<Path>, mut writer: impl Write) -> io::Result<()> {
+        self.validate()?;
+        let path = path.as_ref();
+        match extension(path)?.as_str() {
+            "stl" => {
+                let mut triangles = Vec::with_capacity(self.triangle_count());
+                for part in &self.parts {
+                    for triangle in &part.triangles {
+                        let vertices = triangle.map(|i| part.vertices[i]);
+                        let normal =
+                            cross(sub(vertices[1], vertices[0]), sub(vertices[2], vertices[0]));
+                        let normal = if norm(normal) > 0.0 {
+                            mul(normal, 1.0 / norm(normal))
+                        } else {
+                            [0.0; 3]
+                        };
+                        let vertices = vertices.map(|v| stl_io::Vertex::new(v.map(|x| x as f32)));
+                        if vertices.iter().flat_map(|v| v.0).any(|v| !v.is_finite()) {
+                            return Err(invalid("mesh is outside STL Float32 range"));
+                        }
+                        triangles.push(stl_io::Triangle {
+                            normal: stl_io::Normal::new(normal.map(|v| v as f32)),
+                            vertices,
+                        });
+                    }
+                }
+                stl_io::write_stl(&mut writer, triangles.iter())?;
+            }
+            "obj" => {
+                let mut offset = 1;
+                for part in &self.parts {
+                    writeln!(writer, "o {}", part.name.replace(['\n', '\r'], "_"))?;
+                    for [x, y, z] in &part.vertices {
+                        writeln!(writer, "v {x} {y} {z}")?;
+                    }
+                    for [a, b, c] in &part.triangles {
+                        writeln!(writer, "f {} {} {}", a + offset, b + offset, c + offset)?;
+                    }
+                    offset += part.vertices.len();
+                }
+            }
+            "gltf" | "glb" => return gltf_io::write_with(path, self, writer),
+            other => {
+                return Err(invalid(format!(
+                    "unsupported byte mesh export {other:?}; expected stl, obj, gltf or glb"
+                )));
+            }
+        }
+        writer.flush()
     }
 }
 
@@ -104,9 +157,9 @@ fn extension(path: &Path) -> io::Result<String> {
         .ok_or_else(|| invalid("file has no extension; import accepts stl, obj, ply, 3mf, gltf or glb; export accepts stl, obj, gltf, glb or usda"))
 }
 
-fn read_obj(path: &Path) -> io::Result<Mesh> {
+fn read_obj(mut reader: impl BufRead) -> io::Result<Mesh> {
     let (models, _) = tobj::load_obj_buf(
-        &mut BufReader::new(File::open(path)?),
+        &mut reader,
         &tobj::LoadOptions {
             triangulate: false,
             single_index: true,
@@ -195,8 +248,8 @@ fn triangulate(face: &[usize], vertices: &[Point]) -> io::Result<Vec<[usize; 3]>
         .collect())
 }
 
-fn read_stl(path: &Path) -> io::Result<Mesh> {
-    let mesh = stl_io::read_stl(&mut BufReader::new(File::open(path)?))?;
+fn read_stl(path: &Path, mut reader: impl Read + Seek) -> io::Result<Mesh> {
+    let mesh = stl_io::read_stl(&mut reader)?;
     let mut part = Part {
         name: path
             .file_stem()

@@ -11,6 +11,7 @@ use crate::{
 
 mod coil_map;
 mod imported;
+#[cfg(feature = "gpu")]
 pub(crate) use coil_map::CoilMapPlan;
 pub use coil_map::{CoilMapCalibration, PreparedMagneticField};
 pub use imported::{DivergenceReport, ImportedMagneticMap, MapPlacement, OutsideMap};
@@ -26,6 +27,7 @@ pub struct MagneticPa {
     sector: Option<(usize, f64, f64)>,
 }
 
+#[cfg(feature = "gpu")]
 pub(crate) struct MagneticPaView<'a> {
     pub instance: &'a InstanceField,
     pub factor: f64,
@@ -46,6 +48,7 @@ impl MagneticPa {
     }
 
     /// Read-only reconstruction and placement for native GPU upload.
+    #[cfg(feature = "gpu")]
     pub(crate) fn gpu_parts(&self) -> MagneticPaView<'_> {
         MagneticPaView {
             instance: &self.instance,

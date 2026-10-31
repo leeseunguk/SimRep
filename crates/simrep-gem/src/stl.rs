@@ -98,7 +98,7 @@ pub(crate) fn distance(triangles: &[Triangle], p: Point) -> f64 {
 }
 
 pub(crate) fn read(path: &Path, selector: Option<Point>) -> Result<Vec<Triangle>> {
-    let bytes = std::fs::read(path).map_err(|e| Error(format!("{}: {e}", path.display())))?;
+    let bytes = crate::parser::read_bytes(path)?;
     let mut triangles = Vec::new();
     if bytes.len() >= 84
         && 84 + u32::from_le_bytes(bytes[80..84].try_into().unwrap()) as usize * 50 == bytes.len()

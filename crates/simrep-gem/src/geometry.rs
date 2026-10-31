@@ -280,10 +280,13 @@ impl Primitive {
     pub(crate) fn contains(&self, p: Point, margin: Point, on: bool, mode: RasterMode) -> bool {
         let auto = mode.auto;
         match self {
+            #[cfg(feature = "lua")]
             Self::Lua(callback) => !matches!(
                 callback.call(p),
                 mlua::Value::Nil | mlua::Value::Boolean(false)
             ),
+            #[cfg(not(feature = "lua"))]
+            Self::Lua(callback) => callback.contains(p),
             Self::Mesh(triangles) => compare(crate::stl::distance(triangles, p), margin[0], on),
             Self::Box { min, max } => (0..3).all(|i| {
                 compare(min[i] - margin[i], p[i], on || margin[i] != 0.)

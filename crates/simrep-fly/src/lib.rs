@@ -4,17 +4,48 @@
 //! cubic B-splines on electrode-free grids. Both give a C1 electric field.
 //! See the crate README for boundary conditions and collision conventions.
 
+#[cfg(target_arch = "wasm32")]
+extern crate self as std;
+#[cfg(target_arch = "wasm32")]
+extern crate std as native_std;
+#[cfg(target_arch = "wasm32")]
+pub use native_std::*;
+#[cfg(target_arch = "wasm32")]
+pub mod time {
+    pub use web_time::*;
+}
+
+// The wasm libc pow differs from the native kernel by 1 ULP on RK45's
+// error^(-1/5) control factor, changing subsequent accepted steps. Use the
+// browser's f64 kernel instead; the native implementation is unchanged.
+#[cfg(target_arch = "wasm32")]
+#[unsafe(no_mangle)]
+pub extern "C" fn pow(base: f64, exponent: f64) -> f64 {
+    js_sys::Math::pow(base, exponent)
+}
+
 pub mod adaptive;
 mod expression;
+#[cfg(not(target_arch = "wasm32"))]
 mod field;
+#[cfg(target_arch = "wasm32")]
+pub mod field;
 mod flight;
+#[cfg(feature = "gpu")]
 pub mod gpu;
 mod instance;
 pub mod physics;
+#[cfg(feature = "gpu")]
 #[path = "gpu/sdf_hit.rs"]
 pub mod sdf_hit;
 pub mod surface;
 pub mod surface_sdf;
+#[cfg(feature = "webgpu")]
+#[path = "webgpu/packed.rs"]
+pub mod webgpu;
+#[cfg(all(test, feature = "webgpu", feature = "gpu", not(target_arch = "wasm32")))]
+#[path = "webgpu/qa.rs"]
+mod webgpu_qa;
 
 pub use adaptive::AdaptiveField;
 pub use expression::VoltageExpression;

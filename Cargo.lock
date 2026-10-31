@@ -402,6 +402,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
+name = "futures-channel"
+version = "0.3.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f9e3d69d39e4862ffed03ed071a76f9a13ba1d9109d355b0f0aa6b15e393c4"
+dependencies = [
+ "futures-core",
+]
+
+[[package]]
 name = "futures-core"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1321,6 +1330,7 @@ dependencies = [
  "base64",
  "bincode",
  "bytemuck",
+ "js-sys",
  "pollster",
  "rayon",
  "serde",
@@ -1331,6 +1341,7 @@ dependencies = [
  "simrep-io",
  "simrep-mesh",
  "simrep-solve",
+ "web-time",
  "wgpu",
 ]
 
@@ -1417,6 +1428,7 @@ name = "simrep-solve"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "futures-channel",
  "pollster",
  "rayon",
  "serde",
@@ -1424,6 +1436,7 @@ dependencies = [
  "simrep-core",
  "simrep-geom",
  "simrep-io",
+ "web-time",
  "wgpu",
 ]
 
@@ -1660,6 +1673,16 @@ name = "web-sys"
 version = "0.3.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88261b9deccee56594c11a3460c462c41f58d148598fe70ad77070126a68aba4"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",

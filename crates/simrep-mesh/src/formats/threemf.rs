@@ -3,7 +3,7 @@ use quick_xml::Reader;
 use quick_xml::events::{BytesStart, Event};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
-use std::io::{self, Read};
+use std::io::{self, Read, Seek};
 use std::path::Path;
 
 #[derive(Default)]
@@ -62,8 +62,11 @@ fn transform(attrs: &Attributes) -> io::Result<Transform> {
 }
 
 pub(super) fn read(path: &Path) -> io::Result<(Mesh, Unit)> {
-    let mut archive =
-        zip::ZipArchive::new(File::open(path)?).map_err(|e| invalid(e.to_string()))?;
+    read_from(File::open(path)?)
+}
+
+pub(super) fn read_from(reader: impl Read + Seek) -> io::Result<(Mesh, Unit)> {
+    let mut archive = zip::ZipArchive::new(reader).map_err(|e| invalid(e.to_string()))?;
     let mut relationships = String::new();
     archive
         .by_name("_rels/.rels")

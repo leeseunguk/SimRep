@@ -8,7 +8,15 @@ use std::io::{self, Write};
 use std::path::Path;
 
 pub(super) fn read(path: &Path) -> io::Result<Mesh> {
-    let gltf = gltf::Gltf::open(path).map_err(|e| invalid(e.to_string()))?;
+    read_with(path, &fs::read(path)?, &mut |path| fs::read(path))
+}
+
+pub(super) fn read_with(
+    path: &Path,
+    bytes: &[u8],
+    load: &mut impl FnMut(&Path) -> io::Result<Vec<u8>>,
+) -> io::Result<Mesh> {
+    let gltf = gltf::Gltf::from_slice(bytes).map_err(|e| invalid(e.to_string()))?;
     let buffers: Vec<Vec<u8>> = gltf
         .buffers()
         .map(|buffer| match buffer.source() {
@@ -29,8 +37,9 @@ pub(super) fn read(path: &Path) -> io::Result<Mesh> {
                     if uri.contains("://") {
                         return Err(invalid("network glTF buffers are not supported"));
                     }
-                    fs::read(
-                        path.parent()
+                    load(
+                        &path
+                            .parent()
                             .unwrap_or(Path::new("."))
                             .join(decode_uri(uri)?),
                     )
@@ -156,6 +165,10 @@ fn decode_uri(uri: &str) -> io::Result<String> {
 }
 
 pub(super) fn write(path: &Path, mesh: &Mesh) -> io::Result<()> {
+    write_with(path, mesh, io::BufWriter::new(fs::File::create(path)?))
+}
+
+pub(super) fn write_with(path: &Path, mesh: &Mesh, mut file: impl Write) -> io::Result<()> {
     let mut buffer = Vec::new();
     let mut views = Vec::new();
     let mut accessors = Vec::new();
@@ -211,7 +224,6 @@ pub(super) fn write(path: &Path, mesh: &Mesh) -> io::Result<()> {
         "nodes":nodes,"meshes":meshes,"buffers":[buffer_json],"bufferViews":views,"accessors":accessors
     });
     let mut json_bytes = serde_json::to_vec(&document)?;
-    let mut file = io::BufWriter::new(fs::File::create(path)?);
     if glb {
         while !json_bytes.len().is_multiple_of(4) {
             json_bytes.push(b' ');

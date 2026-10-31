@@ -2,6 +2,10 @@
 
 pub mod bfield;
 pub mod fast_adjust;
+#[cfg(feature = "lua")]
+pub mod fly2;
+#[cfg(not(feature = "lua"))]
+#[path = "fly2_literal.rs"]
 pub mod fly2;
 pub mod pa;
 pub mod particles;

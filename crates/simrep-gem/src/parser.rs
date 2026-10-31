@@ -1,5 +1,7 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use crate::{Error, Result};
 
@@ -8,6 +10,7 @@ pub(crate) enum Value {
     Number(f64, bool),
     Text(String),
     Default,
+    #[cfg(feature = "lua")]
     Callback(crate::lua::Callback),
 }
 
@@ -17,6 +20,7 @@ impl Value {
             Self::Number(n, _) => Ok(*n),
             Self::Text(s) => Err(Error(format!("expected a number, got '{s}'"))),
             Self::Default => Err(Error("missing numeric parameter".into())),
+            #[cfg(feature = "lua")]
             Self::Callback(_) => Err(Error("expected a number, got a Lua callback".into())),
         }
     }
@@ -218,9 +222,36 @@ fn lex(input: &str) -> Result<Vec<Token>> {
     Ok(tokens)
 }
 
+type Loader = Arc<dyn Fn(&Path) -> Result<Vec<u8>> + Send + Sync>;
+
+thread_local! {
+    // Geometry compilation follows parsing in the same statement. Keep its
+    // STL primitive reads in the caller's byte scope until Parser is dropped.
+    static BYTE_LOADER: RefCell<Option<Loader>> = const { RefCell::new(None) };
+}
+
+pub(crate) fn read_bytes(path: &Path) -> Result<Vec<u8>> {
+    let loader = BYTE_LOADER.with(|slot| slot.borrow().clone());
+    if let Some(load) = loader {
+        load(path)
+    } else {
+        std::fs::read(path).map_err(|e| Error(format!("{}: {e}", path.display())))
+    }
+}
+
 pub(crate) struct Parser {
     variables: BTreeMap<String, Value>,
     stack: Vec<PathBuf>,
+    loader: Option<Loader>,
+    previous_loader: Option<Loader>,
+}
+
+impl Drop for Parser {
+    fn drop(&mut self) {
+        if self.loader.is_some() {
+            BYTE_LOADER.with(|slot| slot.replace(self.previous_loader.take()));
+        }
+    }
 }
 
 impl Parser {
@@ -232,20 +263,52 @@ impl Parser {
         Self {
             variables: BTreeMap::new(),
             stack,
+            loader: None,
+            previous_loader: None,
+        }
+    }
+
+    pub(crate) fn with_loader(
+        loader: impl Fn(&Path) -> Result<Vec<u8>> + Send + Sync + 'static,
+    ) -> Self {
+        let loader: Loader = Arc::new(loader);
+        let previous_loader = BYTE_LOADER.with(|slot| slot.replace(Some(Arc::clone(&loader))));
+        Self {
+            variables: BTreeMap::new(),
+            stack: Vec::new(),
+            loader: Some(loader),
+            previous_loader,
         }
     }
 
     pub fn file(&mut self, path: &Path) -> Result<Vec<Node>> {
-        let path = path
-            .canonicalize()
-            .map_err(|e| Error(format!("{}: {e}", path.display())))?;
+        let path = if self.loader.is_some() {
+            let mut normalized = PathBuf::new();
+            for component in path.components() {
+                match component {
+                    std::path::Component::CurDir => {}
+                    std::path::Component::ParentDir => {
+                        normalized.pop();
+                    }
+                    other => normalized.push(other),
+                }
+            }
+            normalized
+        } else {
+            path.canonicalize()
+                .map_err(|e| Error(format!("{}: {e}", path.display())))?
+        };
         if self.stack.len() >= 15 || self.stack.contains(&path) {
             return Err(Error(format!(
                 "recursive include or include nesting exceeds 15: {}",
                 path.display()
             )));
         }
-        let text = std::fs::read(&path).map_err(|e| Error(format!("{}: {e}", path.display())))?;
+        let text = if let Some(load) = &self.loader {
+            load(&path)?
+        } else {
+            std::fs::read(&path).map_err(|e| Error(format!("{}: {e}", path.display())))?
+        };
         // Legacy files use Windows-1252 in comments; geometry tokens are ASCII.
         let text = String::from_utf8_lossy(&text);
         self.stack.push(path.clone());
@@ -257,13 +320,18 @@ impl Parser {
     }
 
     pub fn source(&mut self, text: &str, directory: &Path) -> Result<Vec<Node>> {
-        let lua = crate::lua::Runtime::new()?;
-        if crate::lua::modern(text) {
-            lua.including(self.stack.clone());
-            lua.source(text, directory)
-        } else {
-            self.expanded_source(&lua.preprocess(text)?, directory)
+        #[cfg(feature = "lua")]
+        {
+            let lua = crate::lua::Runtime::new()?;
+            if crate::lua::modern(text) {
+                lua.including(self.stack.clone());
+                lua.source(text, directory)
+            } else {
+                self.expanded_source(&lua.preprocess(text)?, directory)
+            }
         }
+        #[cfg(not(feature = "lua"))]
+        self.expanded_source(&crate::lua::preprocess(text)?, directory)
     }
 
     pub(crate) fn expanded_source(&mut self, text: &str, directory: &Path) -> Result<Vec<Node>> {

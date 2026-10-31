@@ -5,6 +5,10 @@
 //! [`Gem::rasterize`] returns a `simrep_io::PaFile`.
 
 pub mod geometry;
+#[cfg(feature = "lua")]
+mod lua;
+#[cfg(not(feature = "lua"))]
+#[path = "lua_disabled.rs"]
 mod lua;
 mod parser;
 mod raster;
@@ -14,7 +18,9 @@ pub use surface::SurfaceOffsets;
 
 use std::fmt;
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::Instant;
 
 use geometry::{Inclusion, RasterMode, Region, Shape, transform};
 use parser::{Node, Parser, Value};
@@ -287,6 +293,15 @@ pub fn read_gem(path: impl AsRef<Path>) -> Result<Gem> {
     compile(Parser::new().file(path.as_ref())?)
 }
 
+/// Read literal GEM and relative includes from caller-owned bytes.
+/// Executable Lua, when enabled, retains its native filesystem semantics.
+pub fn read_gem_with(
+    path: impl AsRef<Path>,
+    load: impl Fn(&Path) -> Result<Vec<u8>> + Send + Sync + 'static,
+) -> Result<Gem> {
+    compile(Parser::with_loader(Box::new(load)).file(path.as_ref())?)
+}
+
 pub fn parse_gem(source: &str) -> Result<Gem> {
     compile(Parser::new().source(source, Path::new("."))?)
 }
@@ -412,6 +427,7 @@ impl Gem {
                 0.5
             }
         });
+        #[cfg(not(target_arch = "wasm32"))]
         let start = Instant::now();
         for fill in &self.fills {
             let mode = RasterMode {
@@ -494,7 +510,7 @@ impl Gem {
             let points = plane * (hi[2] - lo[2]);
             let potentials = &mut array.potentials[lo[2] * plane..hi[2] * plane];
             let electrodes = &mut array.electrodes[lo[2] * plane..hi[2] * plane];
-            if points > 200_000 && hi[2] - lo[2] > 4 {
+            if !cfg!(target_arch = "wasm32") && points > 200_000 && hi[2] - lo[2] > 4 {
                 let workers = std::thread::available_parallelism()
                     .map_or(1, usize::from)
                     .min(16);
@@ -518,7 +534,10 @@ impl Gem {
         for fill in &self.fills {
             fill.shape.check_callbacks()?;
         }
+        #[cfg(not(target_arch = "wasm32"))]
         let compute_time = start.elapsed();
+        #[cfg(target_arch = "wasm32")]
+        let compute_time = Duration::ZERO;
         let mut pa = PaFile::new(array);
         pa.ng = self.ng;
         Ok(Rasterized {
@@ -779,6 +798,7 @@ fn base(nodes: &[Node], is_electrode: bool, potential: f64, fills: &mut Vec<Fill
             flush(&mut pending, fills)?;
             has_notin = false;
             if let Some(e) = electrode(&n.name) {
+                #[cfg(feature = "lua")]
                 if let Some(Value::Callback(callback)) = n.args.first() {
                     let start = fills.len();
                     base(&n.children, e, 0., fills)?;
@@ -883,6 +903,7 @@ fn region_shape(nodes: &[Node]) -> Result<Shape> {
 }
 
 fn test_shape(n: &Node) -> Result<Shape> {
+    #[cfg(feature = "lua")]
     if n.name == "shape"
         && let Some(Value::Callback(callback)) = n.args.first()
     {
