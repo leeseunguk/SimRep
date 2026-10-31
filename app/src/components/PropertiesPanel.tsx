@@ -35,6 +35,7 @@ import { NumberField } from "./ui/NumberField";
 import { Section } from "./ui/Section";
 import { SegmentedControl } from "./ui/SegmentedControl";
 import { Switch } from "./ui/Switch";
+import { cancelEscape } from "../state/escape";
 import inputs from "./ui/inputs.module.css";
 import panel from "./Panel.module.css";
 import styles from "./PropertiesPanel.module.css";
@@ -148,7 +149,7 @@ function NameField({ o }: { o: SceneObject }) {
         onBlur={() => useApp.getState().rename(o.id, text === name ? (o.customName ?? "") : text)}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
-          if (e.key === "Escape") setText(name);
+          cancelEscape(e.nativeEvent, text !== name, () => setText(name));
         }}
       />
     </Field>
@@ -516,7 +517,7 @@ function ElectrodeProperties({ o, e }: { o: PaObject; e: PaElectrode }) {
             onBlur={() => text !== name && renameElectrode(o.id, e.label, text)}
             onKeyDown={(ev) => {
               if (ev.key === "Enter") ev.currentTarget.blur();
-              if (ev.key === "Escape") setText(name);
+              cancelEscape(ev.nativeEvent, text !== name, () => setText(name));
             }}
           />
         </Field>

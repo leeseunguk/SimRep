@@ -34,7 +34,7 @@ import { AiAccountsDialog } from "./components/ai/AiAccountsDialog";
 import { AiPanel } from "./components/ai/AiPanel";
 import { useAi } from "./ai/store";
 import { layoutFor, PHONE_TABS, shownTab, tabForKey, useLayout, type PhoneTab } from "./state/layout";
-import { workspaceEscape } from "./state/escape";
+import { fieldEscape, workspaceEscape } from "./state/escape";
 import { Layers, SlidersHorizontal, BarChart3 } from "lucide-react";
 
 // Plots, table and exports load with the first flight result (own chunk).
@@ -131,7 +131,12 @@ export function App() {
       }
       // The export dialog is modal and owns Escape; no second modal (help) on top of it.
       const report = useReportDialog.getState();
-      if (typing || app.busy || useExport.getState().objectId !== null || report.open || report.paletteOpen || useAi.getState().settingsOpen) return;
+      if (app.busy || useExport.getState().objectId !== null || report.open || report.paletteOpen || useAi.getState().settingsOpen) return;
+      if (typing) {
+        // A field's Escape that cancelled nothing closes the tablet drawer around it (state/escape.ts).
+        if (e.key === "Escape" && !document.querySelector('[role="menu"]')) fieldEscape(e, (id) => document.getElementById(id)?.contains(e.target as Node) ?? false);
+        return;
+      }
       if (e.key === "?" || e.key === "F1") {
         e.preventDefault();
         app.setHelpOpen(!app.helpOpen);

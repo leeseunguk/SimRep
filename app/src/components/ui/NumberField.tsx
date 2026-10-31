@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import fieldStyles from "./Field.module.css";
 import styles from "./inputs.module.css";
+import { cancelEscape } from "../../state/escape";
 
 interface Props {
   label: string;
@@ -39,9 +40,12 @@ export function NumberField({ label, value, onChange, unit, step = 1, min, max, 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") e.currentTarget.blur();
     else if (e.key === "Escape") {
-      setText(value.toFixed(precision));
-      editing.current = false;
-      e.currentTarget.blur();
+      const input = e.currentTarget;
+      cancelEscape(e.nativeEvent, text !== value.toFixed(precision), () => {
+        setText(value.toFixed(precision));
+        editing.current = false;
+        input.blur();
+      });
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       const delta = (e.key === "ArrowUp" ? step : -step) * (e.shiftKey ? 10 : 1);

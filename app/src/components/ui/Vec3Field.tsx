@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import fieldStyles from "./Field.module.css";
 import styles from "./inputs.module.css";
+import { cancelEscape } from "../../state/escape";
 
 type Vec3 = [number, number, number];
 const AXES = ["X", "Y", "Z"] as const;
@@ -21,9 +22,12 @@ function Component({ axis, name, value, step, onCommit }: { axis: string; name: 
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") e.currentTarget.blur();
     else if (e.key === "Escape") {
-      editing.current = false;
-      setText(String(value));
-      e.currentTarget.blur();
+      const input = e.currentTarget;
+      cancelEscape(e.nativeEvent, text !== String(value), () => {
+        editing.current = false;
+        setText(String(value));
+        input.blur();
+      });
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       const next = Number((value + (e.key === "ArrowUp" ? step : -step) * (e.shiftKey ? 10 : 1)).toPrecision(12));

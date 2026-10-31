@@ -291,7 +291,7 @@ test.describe("phone 390x844", () => {
     expect((await appState(page)).selectedId).toBe(before);
     // With no menu open, Escape is still the workspace's: it clears the selection.
     await page.keyboard.press("Escape");
-    await expect.poll(async () => (await appState(page)).selectedId).toBeNull();
+    expect((await appState(page)).selectedId).toBeNull();
   });
 
   test("44 px targets: switches in the Simulation tab and notification dismiss", async ({ page }) => {
@@ -420,6 +420,47 @@ test.describe("tablet 768x1024", () => {
       await expect(toggle).toBeFocused();
       expect((await appState(page)).selectedId).toBe(before);
     }
+  });
+
+  test("Escape in a drawer field: an unchanged field closes the drawer, an edit is cancelled first", async ({ page }) => {
+    await einzel(page);
+    const toggle = page.getByTestId("drawer-simulation");
+    const name = page.locator("#panel-simulation #prop-name");
+    const before = (await appState(page)).selectedId;
+    // Unchanged: nothing to cancel, so the first Escape closes the drawer and focus returns to its toggle.
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await name.focus();
+    await page.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toBeFocused();
+    // Edited: the first Escape restores the text and keeps the drawer, the second closes it.
+    await toggle.click();
+    const original = await name.inputValue();
+    await name.fill(`${original} edited`);
+    await page.keyboard.press("Escape");
+    await expect(name).toHaveValue(original);
+    await expect(name).toBeFocused();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toBeFocused();
+    expect((await appState(page)).selectedId).toBe(before);
+  });
+
+  test("Escape on a closed select in a drawer closes the drawer", async ({ page }) => {
+    await einzel(page);
+    const toggle = page.getByTestId("drawer-simulation");
+    // The assistant (in the More menu at this width) opens in the Simulation drawer; its approval mode is a native select.
+    await page.getByTestId("topbar-more").click();
+    await page.getByTestId("topbar-more-menu").getByTestId("ai-toggle").click();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    const select = page.locator('#panel-simulation [data-testid="ai-approval-mode"]');
+    await select.focus();
+    await page.keyboard.press("Escape");
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(toggle).toBeFocused();
+    await expect(select).toHaveValue("ask");
   });
 
   test("44 px targets: switches in the properties drawer and notification dismiss", async ({ page }) => {
