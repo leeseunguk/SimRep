@@ -157,8 +157,8 @@ SIMION은 Lua 사용자 프로그램과 기록을 끄고 한 스레드로 날렸
 
 ### 설치 (Windows)
 
-Windows용 설치 파일은 **관리자 권한 없이** 사용자 계정에 설치되는 NSIS 패키지(약 28.5 MiB)입니다.
-STEP/IGES 가져오기용 OpenCascade 라이브러리와 Visual C++ 런타임이 들어 있습니다.
+자체 포함 Windows 설치 파일은 **관리자 권한 없이** 사용자 계정에 설치되는 NSIS 패키지(보관된 빌드 기준 약 266.6 MiB)입니다.
+OpenCascade, Visual C++ 런타임, Node.js와 AI 의존성이 들어 있습니다. 이전 CAD 전용 패키지는 더 작았습니다. [설치 파일 검증 기록](docs/dev/windows-installer.md)을 보세요.
 설치 파일을 만드는 방법은 [`docs/dev/frontend.md`](docs/dev/frontend.md)의 "Windows 설치 패키지" 절을 보세요.
 
 GPU 기능에는 WebGPU/Vulkan 또는 DX12를 지원하는 그래픽 카드가 필요합니다. GPU가 없으면 CPU로 계산합니다.
@@ -301,7 +301,7 @@ result = simrep.fly(field, "ions.ion")          # 이온 비행
 | 경로 | 내용 |
 |---|---|
 | `crates/` | Rust 계산 코어 11개 크레이트(솔버, 비행, 파일 입출력, GEM/Lua, 메시, CAD, CLI, Python) |
-| `app/` | 데스크톱 앱(Tauri 2 + React + WebGPU) |
+| `app/` | 데스크톱 앱(Tauri 2 + React + WebGPU, WebGL2 폴백) |
 | `docs/` | 설계 문서와 검증 기록. 시작점은 [`docs/PLAN.md`](docs/PLAN.md), 구현된 방정식 명세는 [`docs/spec/equations.md`](docs/spec/equations.md) |
 | `bench/` | SIMION과의 속도·정확도 비교 기록 |
 | `docs/report/` | 최종 기술 보고서(DOCX/PDF), 그림, 출처 장부 |

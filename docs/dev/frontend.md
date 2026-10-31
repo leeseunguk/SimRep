@@ -1,6 +1,6 @@
 # 프런트엔드(데스크톱 앱) 개발 가이드
 
-GUI는 Tauri 2 + React + TypeScript(Vite)다. 3D 뷰는 WebGPU로 그린다.
+GUI는 Tauri 2 + React + TypeScript(Vite)다. 3D 뷰는 WebGPU로 그리고, 어댑터가 없으면 WebGL2로 폴백한다.
 
 | 경로 | 내용 |
 |---|---|
@@ -53,8 +53,10 @@ cargo run --manifest-path \\wsl.localhost\Ubuntu\home\<user>\SimRep\app\src-taur
 같은 일을 WSL 터미널에서 Windows 툴체인으로 실행하려면:
 
 ```bash
-CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target' WSLENV=CARGO_TARGET_DIR \
-  /mnt/c/Users/<user>/.cargo/bin/cargo.exe run \
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+CARGO_TARGET_DIR="${WIN_HOME}\simrep-app-target" WSLENV=CARGO_TARGET_DIR \
+  "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe run \
   --manifest-path '\\wsl.localhost\Ubuntu\home\<user>\SimRep\app\src-tauri\Cargo.toml' < /dev/null
 ```
 
@@ -85,7 +87,7 @@ npm run tauri dev               # beforeDevCommand가 Vite를 띄우고 cargo ru
 
 **NSIS를 쓰는 이유**: Tauri의 NSIS 번들은 `installMode: "currentUser"`로 관리자 권한 없이 `%LOCALAPPDATA%\SimRep`에 설치하고 제거 정보도 HKCU에만 쓴다. Tauri의 WiX(MSI) 번들은 컴퓨터 전체 설치(Program Files, HKLM, UAC 승격)라 "시스템에 아무것도 남기지 않는다"는 조건에 맞지 않는다. 설치 언어는 영어/한국어.
 
-설치 파일은 `cad` 기능을 켠 release 빌드다. 구성:
+아래는 2026-10-24의 **과거 CAD 전용 패키지 검증 기록**이다. Node.js와 AI 의존성을 포함하는 현재 자체 포함 패키지의 빌드 절차와 크기는 [Windows 설치 가이드](windows-installer.md)를 따른다. 현재 배포 빌드에서는 고지 검사를 생략하지 않는다. 당시 구성:
 
 | 파일 | 역할 |
 |---|---|
@@ -99,17 +101,19 @@ OCCT 7.7.0 묶음(2026-10-24): OCCT 툴킷 30개 + tbb 2 + FreeImage + FreeType 
 빌드(WSL에서, Windows Node로 Tauri CLI 실행). Tauri CLI 2.12.4 Windows 패키지는 `npm pack @tauri-apps/cli@2.12.4 @tauri-apps/cli-win32-x64-msvc@2.12.4`를 `%USERPROFILE%\simrep-tauri-cli\node_modules\@tauri-apps\`에 풀어 둔다(WSL의 `node_modules`에는 Linux 바이너리만 있음). CLI는 `TAURI_APP_PATH`/`TAURI_FRONTEND_PATH`로 WSL 소스를 가리키게 해서 `/mnt/c`에서 실행하고, Windows npm은 UNC 현재 폴더에서 못 돌므로 `beforeBuildCommand`를 비우는 설정(`{"build":{"beforeBuildCommand":""}}`, 저장소 밖 파일)을 겹치고 `dist/`는 WSL에서 먼저 만든다.
 
 ```bash
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 (cd app && npm run build)
 s="$(wslpath -w tools/win/stage-occt.ps1)"; d="$(wslpath -w app/src-tauri)"
 (cd /mnt/c && timeout 600 powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$s" -Dest "$d\bundle-occt" < /dev/null)
-export TAURI_APP_PATH="$d" TAURI_FRONTEND_PATH="$(wslpath -w app)" CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target-p6cad' \
-  OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc' OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib'
+export TAURI_APP_PATH="$d" TAURI_FRONTEND_PATH="$(wslpath -w app)" CARGO_TARGET_DIR="${WIN_HOME}\simrep-app-target-p6cad" \
+  OCCT_INCLUDE_DIR="${WIN_HOME}\occt\opencascade-7.7.0\inc" OCCT_LIB_DIR="${WIN_HOME}\occt\opencascade-7.7.0\win64\vc14\lib"
 export WSLENV=TAURI_APP_PATH:TAURI_FRONTEND_PATH:CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR
-cd /mnt/c && timeout 3000 '/mnt/c/Program Files/nodejs/node.exe' '%USERPROFILE%\simrep-tauri-cli\node_modules\@tauri-apps\cli\tauri.js' build \
-  --features cad --bundles nsis --config "$d\tauri.cad.conf.json" --config '%USERPROFILE%\simrep-tauri-cli\no-before-build.conf.json' < /dev/null
+cd /mnt/c && timeout 3000 '/mnt/c/Program Files/nodejs/node.exe' "${WIN_HOME}\simrep-tauri-cli\node_modules\@tauri-apps\cli\tauri.js" build \
+  --features cad --bundles nsis --config "$d\tauri.cad.conf.json" --config "${WIN_HOME}\simrep-tauri-cli\no-before-build.conf.json" < /dev/null
 ```
 
-결과: `<CARGO_TARGET_DIR>\release\bundle\nsis\SimRep_0.1.0_x64-setup.exe`, **29,873,560 B (28.49 MiB)**, 경고 0. NSIS 도구는 `%LOCALAPPDATA%\tauri\NSIS`에 받아 둔 것을 쓴다.
+과거 CAD 전용 빌드의 결과: `<CARGO_TARGET_DIR>\release\bundle\nsis\SimRep_0.1.0_x64-setup.exe`, **29,873,560 B (28.49 MiB)**, 경고 0. NSIS 도구는 `%LOCALAPPDATA%\tauri\NSIS`에 받아 둔 것을 쓴다.
 
 확인(2026-10-24, 이 PC, 일반 사용자 권한, 상태 기록: `%USERPROFILE%\simrep-gui-test\phase6-release\state-*.txt`, 스크립트 `install-test.ps1`):
 
@@ -200,11 +204,13 @@ app/src-tauri/
 - Windows 빌드는 `docs/dev/windows-occt.md`의 SDK(OCCT 7.7.0)로:
 
   ```bash
-  CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target-p4cad' \
-  OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc' \
-  OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib' \
+  WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+  WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+  CARGO_TARGET_DIR="${WIN_HOME}\simrep-app-target-p4cad" \
+  OCCT_INCLUDE_DIR="${WIN_HOME}\occt\opencascade-7.7.0\inc" \
+  OCCT_LIB_DIR="${WIN_HOME}\occt\opencascade-7.7.0\win64\vc14\lib" \
   WSLENV=CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR \
-    /mnt/c/Users/<user>/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
+    "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
   ```
 
 - OCCT DLL은 **지연 로드**한다(`build.rs`의 `/DELAYLOAD:TK*.dll` + `delayimp.lib`). 그래서 DLL이 없어도 앱은 뜨고, 첫 CAD 요청 때 `src/cad.rs`가 SDK를 찾아 env.bat/custom.bat과 같은 폴더(`<CASROOT>\win64\vc14\bin`과 옆의 서드파티 `<이름>\bin`, openvr은 `bin\win64`)를 이 프로세스의 PATH 앞에 넣고 툴킷 20개를 미리 불러 본다. 못 찾거나 못 불러오면 찾아본 곳을 담은 `cadUnavailable` 오류가 된다. 찾는 순서: `SIMREP_OCCT_DIR`(CASROOT 또는 DLL 폴더) → `CASROOT` → 실행 파일 옆 `occt\`(배포 시 DLL을 여기 넣는다) → 빌드할 때의 `OCCT_LIB_DIR` → `%USERPROFILE%\occt\opencascade-7.7.0`. 배포할 때는 OCCT DLL과 LGPL 고지(docs/step-import.md)를 함께 둔다. Linux는 시스템 OCCT를 그냥 링크한다.

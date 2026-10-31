@@ -287,11 +287,13 @@ is test-only for PA interoperability.
 ## Validation and performance
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo test -p simrep-mesh
 cargo run --release -p simrep-mesh --example mesh_bench
 cargo run --release -p simrep-mesh --example simion_compare -- \
   '/mnt/c/Program Files/SIMION-2024/examples/geometry/two_cylinder-1.stl' \
-  '/mnt/c/Users/<user>/simrep-mesh-oracle/mesh-point.pa#' 0 10 10
+  "${WIN_HOME_WSL}/simrep-mesh-oracle/mesh-point.pa#" 0 10 10
 ```
 
 Tests compare cube, sphere and torus membership and SDF to analytic formulas,
@@ -342,11 +344,13 @@ fractional-surface refine or a flight trajectory.
 One reproduction command (create the output directory first):
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 gem="$(wslpath -w tools/simion-oracle/mesh.gem)"
 s="$(wslpath -w tools/win/winproc.ps1)"
 (cd /mnt/c && timeout 30 '/mnt/c/Program Files/SIMION-2024/simion.exe' \
   --nogui --noprompt gem2pa "$gem" \
-  '%USERPROFILE%/simrep-mesh-oracle/mesh-point.pa#' < /dev/null)
+  "${WIN_HOME}/simrep-mesh-oracle/mesh-point.pa#" < /dev/null)
 (cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive \
   -ExecutionPolicy Bypass -File "$s" cleanup < /dev/null)
 ```

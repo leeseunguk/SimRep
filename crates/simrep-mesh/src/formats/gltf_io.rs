@@ -165,7 +165,11 @@ fn decode_uri(uri: &str) -> io::Result<String> {
 }
 
 pub(super) fn write(path: &Path, mesh: &Mesh) -> io::Result<()> {
-    write_with(path, mesh, io::BufWriter::new(fs::File::create(path)?))
+    // Encoding can reject finite f64 coordinates or an oversized GLB. Do not
+    // truncate an existing export until all format validation has succeeded.
+    let mut bytes = Vec::new();
+    write_with(path, mesh, &mut bytes)?;
+    fs::write(path, bytes)
 }
 
 pub(super) fn write_with(path: &Path, mesh: &Mesh, mut file: impl Write) -> io::Result<()> {
@@ -220,7 +224,7 @@ pub(super) fn write_with(path: &Path, mesh: &Mesh, mut file: impl Write) -> io::
     }
     let document = json!({
         "asset":{"version":"2.0","generator":"simrep-mesh"},
-        "scene":0,"scenes":[{"nodes":(0..nodes.len()).collect::<Vec<_>>()}],
+        "scene":0,"scenes":[{"nodes":(0..nodes.len()).collect::<Vec<_>>() }],
         "nodes":nodes,"meshes":meshes,"buffers":[buffer_json],"bufferViews":views,"accessors":accessors
     });
     let mut json_bytes = serde_json::to_vec(&document)?;

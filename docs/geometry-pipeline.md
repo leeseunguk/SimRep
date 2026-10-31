@@ -411,10 +411,12 @@ The terminal files are `cli-v2-flight.csv`, `cli-v2-global-flight.csv`, and
 default-sampling comparison with:
 
 ```sh
-Q=/mnt/c/Users/<user>/simrep-oracle/_quad_cut
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+Q="${WIN_HOME_WSL}"/simrep-oracle/_quad_cut
 target/release/simrep fly --device cpu --global-cubic \
   --pa "$Q/cli-v2.pa0" --cuts "$Q/cli-v2.cuts.json" \
-  --particles /mnt/c/Users/<user>/simrep-oracle/_quad_gpu/particles.ion \
+  --particles "${WIN_HOME_WSL}"/simrep-oracle/_quad_gpu/particles.ion \
   --voltage 1=2.5,2=-2.5,3=0 --bounds=0,-18,-18,60,18,18 \
   --tolerance 1e-11 --max-step-us 0.025 --output "$Q/cli-v2-global-flight.csv"
 python3 "$Q/compare_quadrupole.py" \
@@ -433,14 +435,16 @@ The reference's separately measured physical 4x/8x RMS difference remains
 0.000696157 mm; it is a converged numerical reference, not an analytic solution.
 
 ```sh
-Q=/mnt/c/Users/<user>/simrep-oracle/_quad_cut
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+Q="${WIN_HOME_WSL}"/simrep-oracle/_quad_cut
 mkdir -p target/cuts-v3
 RAYON_NUM_THREADS=16 target/release/simrep refine-geometry "$Q/quadrupole.gem" \
   --electrode 1=1:2.5 --electrode 2=2:-2.5 --electrode 3=3:0 \
   --tolerance 1e-12 --out target/cuts-v3/quadrupole
 RAYON_NUM_THREADS=16 target/release/simrep fly --device cpu \
   --pa target/cuts-v3/quadrupole.pa0 --cuts target/cuts-v3/quadrupole.cuts.json \
-  --particles /mnt/c/Users/<user>/simrep-oracle/_quad_gpu/particles.ion \
+  --particles "${WIN_HOME_WSL}"/simrep-oracle/_quad_gpu/particles.ion \
   --voltage 1=2.5,2=-2.5,3=0 --bounds=0,-18,-18,60,18,18 \
   --tolerance 1e-11 --max-step-us 0.025 --output target/cuts-v3/quadrupole.csv
 python3 "$Q/compare_quadrupole.py" "$Q/physical-8-global.csv" \
@@ -658,6 +662,8 @@ zero-change analytic acceptance above applies to the GEM route, while the
 mesh validation is matched to the imported triangle geometry.
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 target/release/simrep export geometry target/cuts-v3/quadrupole.pa# \
   target/cuts-v3/quadrupole.stl
 RAYON_NUM_THREADS=16 target/release/simrep refine-geometry \
@@ -671,7 +677,7 @@ RAYON_NUM_THREADS=16 target/release/examples/cuts_trace target/cuts-v3/mesh \
   --output target/cuts-v3/mesh-trace
 RAYON_NUM_THREADS=16 target/release/simrep fly --device cpu \
   --pa target/cuts-v3/mesh.pa0 --cuts target/cuts-v3/mesh.cuts.json \
-  --particles /mnt/c/Users/<user>/simrep-oracle/_quad_gpu/particles.ion \
+  --particles "${WIN_HOME_WSL}"/simrep-oracle/_quad_gpu/particles.ion \
   --voltage 1=2.5,2=-2.5,3=0 --origin=0,-18,-18 \
   --bounds=0,-18,-18,60,18,18 --tolerance 1e-11 --max-step-us 0.025 \
   --output target/cuts-v3/mesh.csv
@@ -756,12 +762,14 @@ Exact commands, run from the repository root after the documented
 `$Q/quadrupole.gem`):
 
 ```sh
-Q=/mnt/c/Users/<user>/simrep-oracle/_quad_cut
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+Q="${WIN_HOME_WSL}"/simrep-oracle/_quad_cut
 # per leg: --cuts <stem>.cuts.json or --no-cuts (add --nearest-node-collisions
 # for the harness convention on the einzel pair)
 RAYON_NUM_THREADS=16 target/release/simrep fly --device cpu \
   --pa target/qa-fly/quadrupole.pa0 --cuts target/qa-fly/quadrupole.cuts.json \
-  --particles /mnt/c/Users/<user>/simrep-oracle/_quad_gpu/particles.ion \
+  --particles "${WIN_HOME_WSL}"/simrep-oracle/_quad_gpu/particles.ion \
   --voltage 1=2.5,2=-2.5,3=0 --bounds=0,-18,-18,60,18,18 \
   --tolerance 1e-11 --max-step-us 0.025 --output target/qa-fly/qcuts-1.csv
 RAYON_NUM_THREADS=16 target/release/simrep fly --device cpu \

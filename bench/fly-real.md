@@ -67,8 +67,10 @@ through the real PA to x=291 mm.
 Commands were run serially, without other benchmarks running:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo build --release -p simrep-cli
-P=/mnt/c/Users/<user>/simrep-oracle/_benchfly
+P="${WIN_HOME_WSL}"/simrep-oracle/_benchfly
 target/release/simrep fly --device cpu --pa "$P/einzel.pa0" \
   --particles "$P/einzel_10000.ion" --voltage 1=0,2=110,3=0 \
   --bounds=-101,-19,-19,291,19,19 --output target/fly-real/native-10000.csv
@@ -640,6 +642,8 @@ consoles and zero stopped orphan consoles. The process counts are appended to
 ### Reproduction and staged evidence
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo build --release -p simrep-cli --examples
 RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence original 1 --clearance
 RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence original 1 --timing
@@ -653,7 +657,7 @@ RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence node-local-8
 RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence node-local-4 16
 RAYON_NUM_THREADS=16 target/release/examples/quadrupole_convergence physical 1 --timing
 python3 tools/simion-oracle/collision_rf_tof.py
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE="${WIN_HOME_WSL}"/simrep-oracle/physics-validation-20261023 \
   RAYON_NUM_THREADS=16 cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 ```
 
@@ -748,13 +752,15 @@ are under `%USERPROFILE%\simrep-oracle\_real_einzel`, `_real_original`,
 and `_real_plane`. Large raw logs are deliberately not committed.
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 python3 tools/simion-oracle/compare_fly.py compare \
-  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/reference-100000.txt \
+  "${WIN_HOME_WSL}"/simrep-oracle/_real_einzel/reference-100000.txt \
   target/fly-real/native-100000.csv
 cargo run --release -p simrep-cli --example einzel_clearance -- \
   "$P/einzel.pa0" "$P/einzel_100000.ion" target/fly-real/clearance.csv
 python3 tools/simion-oracle/compare_fly.py classify \
-  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/reference-100000.txt \
+  "${WIN_HOME_WSL}"/simrep-oracle/_real_einzel/reference-100000.txt \
   target/fly-real/native-100000.csv target/fly-real/clearance.csv
 cargo run --release -p simrep-cli --example einzel_convergence
 ```

@@ -157,15 +157,17 @@ Build the Windows example using the foreground recipe later in this document,
 adding `--features simrep-fly/precision-study`. Then run from `/mnt/c`:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 p="$PWD/tools/simion-oracle/gpu_precision_study.py"
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
+  --native "${WIN_HOME_WSL}"/simrep-target/release/examples/rf_tof.exe \
   --mode native --mode constant < /dev/null)
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
+  --native "${WIN_HOME_WSL}"/simrep-target/release/examples/rf_tof.exe \
   --mode native --max-step 0.2 --tolerance 1e-11 --tag=-step02 < /dev/null)
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
+  --native "${WIN_HOME_WSL}"/simrep-target/release/examples/rf_tof.exe \
   --mode native --case rf_mirror --case rf_square_wave \
   --max-step 0.2 --tolerance 1e-8 --tag=-rf-speed < /dev/null)
 ```
@@ -188,8 +190,10 @@ measured crossover and the separate initialization-cost note.
 Large-beam reproduction adds `--copies` to the study command:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 (cd /mnt/c && timeout 45 python3 "$p" \
-  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
+  --native "${WIN_HOME_WSL}"/simrep-target/release/examples/rf_tof.exe \
   --mode native --case tof --copies 250000 \
   --max-step 0.2 --tolerance 1e-11 --tag=-batched-1000000 < /dev/null)
 ```
@@ -434,6 +438,8 @@ lose RF phase even though the two-float TOF accumulator remains accurate.
 ## Reproduction and evidence
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
@@ -449,10 +455,10 @@ python3 tools/simion-oracle/rf_tof_measure.py \
 # Build using the Windows recipe in docs/dev/windows-gpu.md, then:
 p="$PWD/tools/simion-oracle/rf_tof_measure.py"
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
+  --native "${WIN_HOME_WSL}"/simrep-target/release/examples/rf_tof.exe \
   --device gpu --output gpu-cold-specialized.json < /dev/null)
 (cd /mnt/c && timeout 55 python3 "$p" \
-  --native /mnt/c/Users/<user>/simrep-target/release/examples/rf_tof.exe \
+  --native "${WIN_HOME_WSL}"/simrep-target/release/examples/rf_tof.exe \
   --device gpu --grid-study < /dev/null)
 
 python3 tools/simion-oracle/rf_tof_report.py

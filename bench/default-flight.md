@@ -415,6 +415,8 @@ was not removed or rerun with another seed.
 ## Reproduction and integration boundary
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo build --release -p simrep-cli --examples --bin simrep
 python3 bench/default_flight.py target/release/simrep \
   target/default-flight/new --rf-example target/release/examples/rf_tof --repeats 5
@@ -425,7 +427,7 @@ python3 bench/default_flight_sweep.py target/default-flight/sweep.log \
 python3 bench/default_flight_sweep.py target/default-flight/api-cli.log \
   --defaults-only --cli-field --paired-cli target/release/simrep
 SIMREP_DEFAULTS_ONLY=1 \
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE="${WIN_HOME_WSL}"/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 ```
 

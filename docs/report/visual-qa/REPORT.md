@@ -883,6 +883,6 @@ process counts: cmd.exe 4, conhost.exe 25, node.exe 4, powershell.exe 1
 orphan conhost: 0
 busy conhost (>50% of a core): 4   (pre-existing, other sessions' wsl.exe shells, same pids as before the work)
   pid 26152 cpu 98% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- $REPO
-  pid 52060 / 29192 / 56704 cpu 98% parent wsl.exe (33024) ... /mnt/d/Private/Opera_test ...
+  pid 52060 / 29192 / 56704 cpu 98% parent wsl.exe (33024) ... /path/to/unrelated-workspace ...
 stopped orphan conhost: 0
 ```

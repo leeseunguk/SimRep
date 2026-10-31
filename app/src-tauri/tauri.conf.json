@@ -28,7 +28,9 @@
   },
   "bundle": {
     "active": true,
+    "licenseFile": "../../LICENSE",
     "resources": {
+      "../../LICENSE": "LICENSE",
       "../../ai/*.mjs": "ai/",
       "../../ai/auth/": "ai/auth/",
       "../../ai/providers/": "ai/providers/",

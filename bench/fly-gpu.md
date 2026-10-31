@@ -335,13 +335,15 @@ counters; a measured kernel profile remains needed for the 70 ms target.
 Reproduce from the repository root, following `docs/dev/windows-gpu.md`:
 
 ```bash
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
-export SIMREP_GPU_LIVE_BENCH='%USERPROFILE%\simrep-gui-test'
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target"
+export SIMREP_GPU_LIVE_BENCH="${WIN_HOME}\simrep-gui-test"
 export WSLENV=CARGO_TARGET_DIR:SIMREP_GPU_LIVE_BENCH:SIMREP_GPU_PREVIEW
 set -o pipefail
 cd /mnt/c
-timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe test \
+timeout 900 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe test \
   --manifest-path "$manifest" -p simrep-fly --release --lib live_refly_benchmark \
   -- --nocapture --test-threads=1 < /dev/null 2>&1 | tr -d '\r'
 # Repeat with SIMREP_GPU_PREVIEW=1 for the explicit app precision.
@@ -1009,13 +1011,15 @@ per-ion scaling: `N * 7.88 / 1024`. The raw record is
 The revised rule explicitly allows extrapolation for impractical large runs.
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 python3 tools/simion-oracle/generate_einzel_beam.py \
-  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/auto-1024.ion --ions 1024
+  "${WIN_HOME_WSL}"/simrep-oracle/_real_einzel/auto-1024.ion --ions 1024
 p="$PWD/tools/simion-oracle/einzel_compute_reference.py"
 (cd /mnt/c && timeout 45 python3 "$p" \
-  --particles /mnt/c/Users/<user>/simrep-oracle/_real_einzel/auto-1024.ion \
+  --particles "${WIN_HOME_WSL}"/simrep-oracle/_real_einzel/auto-1024.ion \
   --ions 1024 \
-  --output /mnt/c/Users/<user>/simrep-oracle/_real_einzel/einzel-strict-compute-1024.json \
+  --output "${WIN_HOME_WSL}"/simrep-oracle/_real_einzel/einzel-strict-compute-1024.json \
   < /dev/null)
 ```
 
@@ -1191,7 +1195,9 @@ and `fly-gpu-differences.csv` (the 0.05 us run).
 Reproduce without touching the reference:
 
 ```sh
-P=/mnt/c/Users/<user>/simrep-oracle
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+P="${WIN_HOME_WSL}"/simrep-oracle
 R=$REPO/target/fly-real
 python3 tools/simion-oracle/compare_gpu_fly.py \
   --cpu "$R/boundary-original.csv" \
@@ -1262,11 +1268,13 @@ Build from WSL with the Windows process in the foreground, closed stdin,
 a timeout and C-drive working directory:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target"
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR"
 set -o pipefail
-(cd /mnt/c && timeout 55 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
+(cd /mnt/c && timeout 55 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build \
   --release -p simrep-cli --manifest-path "$manifest" \
   < /dev/null 2>&1 | tr -d '\r')
 ```
@@ -1274,20 +1282,24 @@ set -o pipefail
 Generate only the new million-ion beam:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 python3 tools/simion-oracle/generate_einzel_beam.py \
-  /mnt/c/Users/<user>/simrep-oracle/_real_einzel/fly-gpu-1000000.ion \
+  "${WIN_HOME_WSL}"/simrep-oracle/_real_einzel/fly-gpu-1000000.ion \
   --ions 1000000
 ```
 
 For 10k/100k, use the original ION files; for 1M use the generated file:
 
 ```sh
-ions=%USERPROFILE%/simrep-oracle/_benchfly/einzel_10000.ion
-out=%USERPROFILE%/simrep-oracle/_real_einzel/fly-gpu-10000.csv
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+ions="${WIN_HOME}"/simrep-oracle/_benchfly/einzel_10000.ion
+out="${WIN_HOME}"/simrep-oracle/_real_einzel/fly-gpu-10000.csv
 (cd /mnt/c && /usr/bin/time -f 'process_wall_s: %e' timeout 45 \
-  /mnt/c/Users/<user>/simrep-target/release/simrep.exe fly \
+  "${WIN_HOME_WSL}"/simrep-target/release/simrep.exe fly \
   --device gpu --backend vulkan \
-  --pa %USERPROFILE%/simrep-oracle/_benchfly/einzel.pa0 \
+  --pa "${WIN_HOME}"/simrep-oracle/_benchfly/einzel.pa0 \
   --particles "$ions" --voltage 1=0,2=110,3=0 \
   --bounds=-101,-19,-19,291,19,19 --output "$out" \
   < /dev/null 2>&1 | tr -d '\r')

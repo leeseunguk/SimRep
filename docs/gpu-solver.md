@@ -238,14 +238,16 @@ Reproduction from the repository root, keeping Windows subprocesses in the
 foreground with closed stdin and a C-drive working directory:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target"
 export WSLENV="$WSLENV:CARGO_TARGET_DIR"
 set -o pipefail
-(cd /mnt/c && timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
+(cd /mnt/c && timeout 900 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build \
   --release -p simrep-cli --manifest-path "$manifest" </dev/null 2>&1 | tr -d '\r')
 for n in 128 256 539; do
-  (cd /mnt/c && timeout 300 /mnt/c/Users/<user>/simrep-target/release/simrep.exe \
+  (cd /mnt/c && timeout 300 "${WIN_HOME_WSL}"/simrep-target/release/simrep.exe \
     refine-bench --device gpu --backend vulkan --n "$n" </dev/null 2>&1 | tr -d '\r')
 done
 ```

@@ -314,7 +314,7 @@ void main() {
   float v01 = texel(i0.x, i0.y + 1).r;
   float v11 = texel(i0.x + 1, i0.y + 1).r;
   float value = mix(mix(v00, v10, f.x), mix(v01, v11, f.x), f.y) * sgn;
-  vec2 near = texel(int(floor(g.x + 0.5)), int(floor(g.y + 0.5)));
+  vec2 near = texel(int(roundEven(g.x)), int(roundEven(g.y)));
 
   float stepV = slice.range.z;
   float level = value / max(stepV, 1e-30);

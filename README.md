@@ -157,8 +157,8 @@ Choose a template or open a SIMION file, then follow **geometry → field solve 
 
 ### Installation (Windows)
 
-The Windows NSIS installer (about 28.5 MiB) installs per user **without administrator privileges**.
-It includes OpenCascade for STEP/IGES import and the Visual C++ runtime.
+The self-contained Windows NSIS installer (about 266.6 MiB in the retained build) installs per user **without administrator privileges**.
+It includes OpenCascade, the Visual C++ runtime, Node.js and the AI dependencies. The older CAD-only package was smaller; see the [installer evidence](docs/dev/windows-installer.md).
 See the Windows installer section in [frontend documentation](docs/dev/frontend.md) for build instructions.
 
 GPU features require a graphics card supporting WebGPU/Vulkan or DX12. Without a GPU, computation uses the CPU.
@@ -300,7 +300,7 @@ See the [CLI-to-Python mapping](docs/python.md).
 | Path | Contents |
 |---|---|
 | `crates/` | 11 Rust core crates: solvers, flight, file I/O, GEM/Lua, mesh, CAD, CLI, Python |
-| `app/` | Desktop app (Tauri 2 + React + WebGPU) |
+| `app/` | Desktop app (Tauri 2 + React + WebGPU with WebGL2 fallback) |
 | `docs/` | Design and validation; start with [plan](docs/PLAN.md) and [implemented equations](docs/spec/equations.md) |
 | `bench/` | SIMION speed and accuracy comparisons |
 | `docs/report/` | Technical report (DOCX/PDF), figures, and source ledger |

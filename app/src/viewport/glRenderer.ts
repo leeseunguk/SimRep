@@ -37,8 +37,10 @@ type Depth = { func: number; write: boolean };
 class GlProgram {
   readonly program: WebGLProgram;
   constructor(gl: WebGL2RenderingContext, label: string, src: GlProgramSource, block: string | null) {
+    const shaders: WebGLShader[] = [];
     const compile = (type: number, code: string) => {
       const s = gl.createShader(type)!;
+      shaders.push(s);
       gl.shaderSource(s, code);
       gl.compileShader(s);
       if (!gl.getShaderParameter(s, gl.COMPILE_STATUS) && !gl.isContextLost())
@@ -46,19 +48,24 @@ class GlProgram {
       return s;
     };
     const p = gl.createProgram()!;
-    const vs = compile(gl.VERTEX_SHADER, src.vs);
-    const fs = compile(gl.FRAGMENT_SHADER, src.fs);
-    gl.attachShader(p, vs);
-    gl.attachShader(p, fs);
-    gl.linkProgram(p);
-    gl.deleteShader(vs);
-    gl.deleteShader(fs);
-    if (!gl.getProgramParameter(p, gl.LINK_STATUS) && !gl.isContextLost()) throw new Error(`WebGL2 ${label} program: ${gl.getProgramInfoLog(p)}`);
-    const frame = gl.getUniformBlockIndex(p, "Frame");
-    if (frame !== gl.INVALID_INDEX) gl.uniformBlockBinding(p, frame, FRAME_BINDING);
-    if (block) {
-      const i = gl.getUniformBlockIndex(p, block);
-      if (i !== gl.INVALID_INDEX) gl.uniformBlockBinding(p, i, BLOCK_BINDING);
+    try {
+      const vs = compile(gl.VERTEX_SHADER, src.vs);
+      const fs = compile(gl.FRAGMENT_SHADER, src.fs);
+      gl.attachShader(p, vs);
+      gl.attachShader(p, fs);
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS) && !gl.isContextLost()) throw new Error(`WebGL2 ${label} program: ${gl.getProgramInfoLog(p)}`);
+      const frame = gl.getUniformBlockIndex(p, "Frame");
+      if (frame !== gl.INVALID_INDEX) gl.uniformBlockBinding(p, frame, FRAME_BINDING);
+      if (block) {
+        const i = gl.getUniformBlockIndex(p, block);
+        if (i !== gl.INVALID_INDEX) gl.uniformBlockBinding(p, i, BLOCK_BINDING);
+      }
+    } catch (error) {
+      gl.deleteProgram(p);
+      throw error;
+    } finally {
+      for (const shader of shaders) gl.deleteShader(shader);
     }
     this.program = p;
   }
@@ -438,6 +445,7 @@ export class WebGl2Renderer extends RendererBase {
   protected readonly layers: { pa: GlPaLayer; trajectories: GlTrajectoryLayer };
   private readonly c: GlContext;
   private readonly programs: Record<"mesh" | "grid" | "axis" | "bench", GlProgram>;
+  private readonly ownedPrograms: GlProgram[] = [];
   private readonly objects = new Map<string, GlObject>();
   private readonly objectData = new Float32Array(OBJECT_FLOATS);
   private readonly benchData = new Float32Array(BENCH_UNIFORM_FLOATS);
@@ -473,26 +481,37 @@ export class WebGl2Renderer extends RendererBase {
     const clip = gl.getExtension("EXT_clip_control") as ClipControl | null;
     if (clip) clip.clipControlEXT(clip.LOWER_LEFT_EXT, clip.ZERO_TO_ONE_EXT);
     const src = glShaders(clip !== null);
+    const program = (label: string, source: GlProgramSource, block: string | null) => {
+      const p = new GlProgram(gl, label, source, block);
+      this.ownedPrograms.push(p);
+      return p;
+    };
 
     this.c = new GlContext(gl);
-    this.programs = {
-      mesh: new GlProgram(gl, "mesh", src.mesh, "Object"),
-      grid: new GlProgram(gl, "grid", src.grid, null),
-      axis: new GlProgram(gl, "axis", src.axis, null),
-      bench: new GlProgram(gl, "bench", src.bench, "Bench"),
-    };
-    const slice = new GlProgram(gl, "pa-slice", src.slice, "Slice");
-    gl.useProgram(slice.program);
-    gl.uniform1i(gl.getUniformLocation(slice.program, "data"), 0);
-    this.layers = {
-      pa: new GlPaLayer(this.c, new GlProgram(gl, "pa-surface", src.paSurface, "Pa"), slice, this.maxTextureSize),
-      trajectories: new GlTrajectoryLayer(this.c, {
-        line: new GlProgram(gl, "trajectory-lines", src.line, "Traj"),
-        splat: new GlProgram(gl, "trajectory-splats", src.splat, "Traj"),
-        thick: new GlProgram(gl, "trajectory-highlight", src.thick, "Traj"),
-        ring: new GlProgram(gl, "trajectory-highlight-end", src.ring, "Traj"),
-      }),
-    };
+    try {
+      this.programs = {
+        mesh: program("mesh", src.mesh, "Object"),
+        grid: program("grid", src.grid, null),
+        axis: program("axis", src.axis, null),
+        bench: program("bench", src.bench, "Bench"),
+      };
+      const slice = program("pa-slice", src.slice, "Slice");
+      gl.useProgram(slice.program);
+      gl.uniform1i(gl.getUniformLocation(slice.program, "data"), 0);
+      this.layers = {
+        pa: new GlPaLayer(this.c, program("pa-surface", src.paSurface, "Pa"), slice, this.maxTextureSize),
+        trajectories: new GlTrajectoryLayer(this.c, {
+          line: program("trajectory-lines", src.line, "Traj"),
+          splat: program("trajectory-splats", src.splat, "Traj"),
+          thick: program("trajectory-highlight", src.thick, "Traj"),
+          ring: program("trajectory-highlight-end", src.ring, "Traj"),
+        }),
+      };
+    } catch (error) {
+      for (const p of this.ownedPrograms) gl.deleteProgram(p.program);
+      canvas.removeEventListener("webglcontextlost", this.onLost);
+      throw error;
+    }
 
     this.frameUbo = gl.createBuffer()!;
     gl.bindBuffer(gl.UNIFORM_BUFFER, this.frameUbo);
@@ -599,7 +618,8 @@ export class WebGl2Renderer extends RendererBase {
     gl.deleteBuffer(this.frameUbo);
     gl.deleteVertexArray(this.emptyVao);
     this.c.destroy();
-    for (const p of Object.values(this.programs)) gl.deleteProgram(p.program);
+    for (const p of this.ownedPrograms) gl.deleteProgram(p.program);
+    this.ownedPrograms.length = 0;
     // The context stays alive: a remount (React StrictMode) takes the same canvas context again.
   }
 

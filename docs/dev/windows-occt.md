@@ -41,11 +41,13 @@ From WSL, with the installer already downloaded into a new empty
 `%USERPROFILE%\occt-download\`:
 
 ```bash
-cd /mnt/c/Users/<user>/occt-download
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+cd "${WIN_HOME_WSL}"/occt-download
 curl -fSL -o innoextract-1.9-windows.zip \
   https://github.com/dscharrer/innoextract/releases/download/1.9/innoextract-1.9-windows.zip
 cd /mnt/c && timeout 60 powershell.exe -NoProfile -NonInteractive -Command \
-  'Expand-Archive -Force %USERPROFILE%\occt-download\innoextract-1.9-windows.zip %USERPROFILE%\occt-download\innoextract-1.9-windows' </dev/null
+  'Expand-Archive -Force $env:USERPROFILE\occt-download\innoextract-1.9-windows.zip $env:USERPROFILE\occt-download\innoextract-1.9-windows' </dev/null
 ```
 
 Then extract the SDK subset into `%USERPROFILE%\occt` (payload files live
@@ -53,8 +55,10 @@ under an `app\` prefix inside the installer; the `-I` patterns must use
 **backslashes** on Windows - forward slashes silently match nothing):
 
 ```bash
-cd /mnt/c && timeout 900 /mnt/c/Users/<user>/occt-download/innoextract-1.9-windows/innoextract.exe \
-  -d '%USERPROFILE%\occt' \
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+cd /mnt/c && timeout 900 "${WIN_HOME_WSL}"/occt-download/innoextract-1.9-windows/innoextract.exe \
+  -d "${WIN_HOME}\occt" \
   -I 'app\opencascade-7.7.0\env.bat' -I 'app\opencascade-7.7.0\custom.bat' \
   -I 'app\opencascade-7.7.0\draw.bat' -I 'app\opencascade-7.7.0\genconf.bat' \
   -I 'app\opencascade-7.7.0\genproj.bat' -I 'app\opencascade-7.7.0\msvc.bat' \
@@ -66,10 +70,10 @@ cd /mnt/c && timeout 900 /mnt/c/Users/<user>/occt-download/innoextract-1.9-windo
   -I 'app\freetype-2.5.5-vc14-64' -I 'app\freeimage-3.17.0-vc14-64' \
   -I 'app\tbb_2021.5-vc14-64' -I 'app\openvr-1.14.15-64' \
   -I 'app\ffmpeg-3.3.4-64' -I 'app\rapidjson-1.1.0' -I 'app\draco-1.4.1-vc14-64' \
-  '%USERPROFILE%\occt-download\opencascade-7.7.0-vc14-64.exe' </dev/null
+  "${WIN_HOME}\occt-download\opencascade-7.7.0-vc14-64.exe" </dev/null
 # Move app\* up so the layout matches a normal install:
 cd /mnt/c && timeout 300 powershell.exe -NoProfile -NonInteractive -Command \
-  'Get-ChildItem %USERPROFILE%\occt\app -Directory | Move-Item -Destination %USERPROFILE%\occt; Remove-Item %USERPROFILE%\occt\app' </dev/null
+  'Get-ChildItem $env:USERPROFILE\occt\app -Directory | Move-Item -Destination $env:USERPROFILE\occt; Remove-Item $env:USERPROFILE\occt\app' </dev/null
 ```
 
 This skips `doc/`, `tests/`, `samples/`, `adm/`, `dox/`, `tools/` and the Qt,
@@ -93,19 +97,21 @@ The build script reads `OCCT_INCLUDE_DIR` and `OCCT_LIB_DIR` as Windows
 paths; forwarding them with WSLENV passes them verbatim (no `/p` flag).
 
 ```bash
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target-cad'
-export OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc'
-export OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib'
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target-cad"
+export OCCT_INCLUDE_DIR="${WIN_HOME}\occt\opencascade-7.7.0\inc"
+export OCCT_LIB_DIR="${WIN_HOME}\occt\opencascade-7.7.0\win64\vc14\lib"
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR"
 
 cd /path/to/simrep/repo
 MANIFEST="$(wslpath -w "$PWD/Cargo.toml")"
 cd /mnt/c
-timeout 1800 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
+timeout 1800 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build \
   --manifest-path "$MANIFEST" \
   -p simrep-cad --features occt </dev/null 2>&1 | tr -d '\r'
 
-timeout 1800 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
+timeout 1800 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build \
   --manifest-path "$MANIFEST" \
   -p simrep-cli --features cad </dev/null 2>&1 | tr -d '\r'
 ```

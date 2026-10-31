@@ -14,29 +14,31 @@ at `%USERPROFILE%\.cargo\bin\cargo.exe`. Build artifacts stay on C: rather
 than the slow `\\wsl.localhost\...` filesystem.
 
 ```bash
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo build && cargo test
 
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target"
 # WSLENV explicitly forwards this variable to Windows. Do not use /p:
 # CARGO_TARGET_DIR is already a Windows path.
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR"
 set -o pipefail
 
-timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
+timeout 900 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build \
   --manifest-path "$(wslpath -w "$PWD/Cargo.toml")" \
   </dev/null 2>&1 | tr -d '\r'
 
-timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-info \
+timeout 120 "${WIN_HOME_WSL}"/simrep-target/debug/simrep.exe gpu-info \
   --backend dx12 </dev/null 2>&1 | tr -d '\r'
-timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-info \
+timeout 120 "${WIN_HOME_WSL}"/simrep-target/debug/simrep.exe gpu-info \
   --backend vulkan </dev/null 2>&1 | tr -d '\r'
 
-timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-smoke \
+timeout 120 "${WIN_HOME_WSL}"/simrep-target/debug/simrep.exe gpu-smoke \
   --backend dx12 </dev/null 2>&1 | tr -d '\r'
-timeout 120 /mnt/c/Users/<user>/simrep-target/debug/simrep.exe gpu-smoke \
+timeout 120 "${WIN_HOME_WSL}"/simrep-target/debug/simrep.exe gpu-smoke \
   --backend vulkan </dev/null 2>&1 | tr -d '\r'
 
-timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe test -p simrep-solve \
+timeout 900 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe test -p simrep-solve \
   --manifest-path "$(wslpath -w "$PWD/Cargo.toml")" \
   </dev/null 2>&1 | tr -d '\r'
 ```

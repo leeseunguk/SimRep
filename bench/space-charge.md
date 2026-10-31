@@ -586,10 +586,12 @@ each native/SIMION error is measured against those same references.
 Reproduce using the captured launches and archived independent references:
 
 ```sh
-ROOT=/mnt/c/Users/<user>/simrep-oracle/beam-convergence
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+ROOT="${WIN_HOME_WSL}"/simrep-oracle/beam-convergence
 CASE=repulsion1
 OPENBLAS_NUM_THREADS=1 python3 tools/simion-oracle/beam_reference.py \
-  --case /mnt/c/Users/<user>/simrep-oracle/beam-endpoints/$CASE \
+  --case "${WIN_HOME_WSL}"/simrep-oracle/beam-endpoints/$CASE \
   --reference-cache "$ROOT/robust/$CASE" \
   --output "$ROOT/replay/$CASE" --native target/release/simrep \
   --native-steps 0 --baseline-fraction 0 --trials 3 --repeat
@@ -598,7 +600,7 @@ OPENBLAS_NUM_THREADS=1 python3 tools/simion-oracle/beam_reference.py \
 # Tighter contexts: --native-steps 1.25e-5 --baseline-fraction 1 (repulsion1)
 # or --native-steps 1e-6 --baseline-fraction .05 (mixed).
 python3 tools/simion-oracle/beam_simion_refine.py \
-  --case /mnt/c/Users/<user>/simrep-oracle/beam-endpoints/$CASE \
+  --case "${WIN_HOME_WSL}"/simrep-oracle/beam-endpoints/$CASE \
   --output "$ROOT/replay-simion/$CASE/trial-1" --steps 0
 # Repeat into trial-2/trial-3; --steps 1e-4 reproduces the inactive-hook control.
 ```

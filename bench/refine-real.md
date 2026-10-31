@@ -52,21 +52,23 @@ Files are encoded by `simrep-io`, not a separate CLI format writer.
 Reproduction, after making separate working copies:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo build --release -p simrep-cli
 RAYON_NUM_THREADS=16 /usr/bin/time -p target/release/simrep refine \
   '/tmp/simrep-refine-cpu/_bench3d/sc3d_x2.pa#' --tolerance 1e-12
 
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target"
 export WSLENV="${WSLENV:+$WSLENV:}CARGO_TARGET_DIR"
 set -o pipefail
-timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build --release -p simrep-cli \
+timeout 900 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build --release -p simrep-cli \
   --manifest-path "$(wslpath -w "$PWD/Cargo.toml")" </dev/null 2>&1 | tr -d '\r'
-/usr/bin/time -p timeout 180 /mnt/c/Users/<user>/simrep-target/release/simrep.exe \
-  refine '%USERPROFILE%\simrep-refine-gpu\_bench3d\sc3d_x2.pa#' \
+/usr/bin/time -p timeout 180 "${WIN_HOME_WSL}"/simrep-target/release/simrep.exe \
+  refine "${WIN_HOME}\simrep-refine-gpu\_bench3d\sc3d_x2.pa#" \
   --device gpu --backend vulkan --tolerance 1e-12 </dev/null 2>&1 | tr -d '\r'
 
 timeout 260 python3 tools/simion-oracle/run_oracle.py _bench3d --refine \
-  --work-dir /mnt/c/Users/<user>/simrep-refine-reference/tight/_bench3d \
+  --work-dir "${WIN_HOME_WSL}"/simrep-refine-reference/tight/_bench3d \
   --refine-args='--convergence 1e-7' --timeout 180 </dev/null
 python3 tools/simion-oracle/compare_pa.py generated.pa500 oracle.pa500
 ```

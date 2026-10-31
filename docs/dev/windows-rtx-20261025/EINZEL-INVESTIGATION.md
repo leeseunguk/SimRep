@@ -187,13 +187,15 @@ Raw logs/CSVs are retained outside Git under
 Reproduce the bounded resident control:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 manifest="$(wslpath -w "$PWD/Cargo.toml")"
-export CARGO_TARGET_DIR='%USERPROFILE%\simrep-target'
-export SIMREP_GPU_REAL_EINZEL='%USERPROFILE%\simrep-oracle'
+export CARGO_TARGET_DIR="${WIN_HOME}\simrep-target"
+export SIMREP_GPU_REAL_EINZEL="${WIN_HOME}\simrep-oracle"
 export WSLENV=CARGO_TARGET_DIR:SIMREP_GPU_REAL_EINZEL:SIMREP_GPU_REAL_CAP:SIMREP_GPU_REAL_GENERAL:SIMREP_GPU_REAL_NEAREST:SIMREP_GPU_REAL_DIRECT
 set -o pipefail
 cd /mnt/c
-timeout 180 /mnt/c/Users/<user>/.cargo/bin/cargo.exe test \
+timeout 180 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe test \
   --manifest-path "$manifest" -p simrep-fly --release --lib \
   real_einzel_dispatch_benchmark -- --ignored --nocapture --test-threads=1 \
   </dev/null 2>&1 | tr -d '\r'
@@ -251,10 +253,10 @@ matlab-mcp-server-windows-x64.exe     1
 orphan conhost: 0
 busy conhost (>50% of a core): 6
   pid 26152 cpu 100% parent wsl.exe (49640) wsl.exe -d Ubuntu --exec sh -s -- $REPO
-  pid 52060 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
-  pid 29192 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
-  pid 56704 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
-  pid 69860 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
-  pid 5832 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/mnt/d/Private/Opera_test' && export PATH=\"$HOME/.local/bin:$PA
+  pid 52060 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/path/to/unrelated-workspace' && export PATH=\"$HOME/.local/bin:$PA
+  pid 29192 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/path/to/unrelated-workspace' && export PATH=\"$HOME/.local/bin:$PA
+  pid 56704 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/path/to/unrelated-workspace' && export PATH=\"$HOME/.local/bin:$PA
+  pid 69860 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/path/to/unrelated-workspace' && export PATH=\"$HOME/.local/bin:$PA
+  pid 5832 cpu 100% parent wsl.exe (33024) wsl.exe -d Ubuntu --exec sh -c "cd '/path/to/unrelated-workspace' && export PATH=\"$HOME/.local/bin:$PA
 stopped orphan conhost: 0
 ```

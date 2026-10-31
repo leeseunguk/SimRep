@@ -76,7 +76,11 @@ local OCCT SDK binaries; retain the SDK's provenance with release evidence.
 
 The generated `licenses/THIRD_PARTY_NOTICES_INSTALLER.txt` and matching JSON
 inventory are installed with `licenses/THIRD_PARTY.md`; they are build outputs,
-not committed inputs. The JSON records package name/version/SPDX expression,
+not committed inputs. The first-party PolyForm licence, including its Required
+Notice, ships separately as `LICENSE`, is included verbatim in the notice map,
+and supplies the installer licence page. The packaging checker rejects a missing
+first-party resource or licence-page mapping.
+The JSON records package name/version/SPDX expression,
 payload location, notice source, size and SHA-256. `node ai/license-check.mjs`
 uses the same full-text npm check; `node tools/win/installer-notices.mjs --check`
 compares the entire output with the current payload. Maintainers can refresh
@@ -111,11 +115,19 @@ through `WSLENV`. Keep app/build processes inside a bounded foreground call and
 terminate only stuck task-owned trees with `taskkill /T /F`.
 `tools/win/winproc.ps1 cleanup` reports and removes orphan conhosts, never live user jobs.
 
+## Retained self-contained installer
+
+The retained `50f8b24` notice-fix installer is **279,525,321 bytes (266.6 MiB)**,
+SHA-256 `86068d92f14e26d3c0877b968b59e6203e05473c320ba6176aab7ad581b49b26`.
+Its size and digest were rechecked on October 31, 2026. This measures the
+self-contained package with Node.js and AI dependencies, not the historical
+CAD-only package described in the frontend development log. It predates these
+review fixes and does not certify a newly built installer or its licence files.
 
 ### Attribution notes
 
 - `proxy-agent-negotiate@1.1.0` ships no licence file, and its upstream package directory
-  (`TooTallNate/proxy-agents/packages/negotiate` at 065d1ffc) contains none either. Its
+  (`TooTallNate/proxy-agents/packages/negotiate` at b7e5f7cc) contains none either. Its
   `package.json` declares `MIT` with author Nathan Rajlich, and every sibling package in the
   same monorepo carries the identical MIT text "Copyright (c) 2013 Nathan Rajlich". The
   installer therefore ships the sibling `packages/proxy-agent/LICENSE` pinned by commit. This

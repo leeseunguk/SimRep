@@ -229,23 +229,25 @@ invocation verified on Windows 11 (venv at `%USERPROFILE%\simrep-pyvenv`,
 Python 3.12.10, maturin 1.15.0; cargo.exe in `%USERPROFILE%\.cargo\bin`):
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 # Every Windows exe launched from WSL needs stdin closed (< /dev/null),
 # a timeout, and a /mnt/c cwd. Env vars crossing into Windows need WSLENV;
 # suffix /p translates a WSL path value to a Windows path.
 export WSLENV="CARGO/p:CARGO_TARGET_DIR/p"
-export CARGO=/mnt/c/Users/<user>/.cargo/bin/cargo.exe
-export CARGO_TARGET_DIR=/mnt/c/Users/<user>/simrep-target-py
+export CARGO="${WIN_HOME_WSL}"/.cargo/bin/cargo.exe
+export CARGO_TARGET_DIR="${WIN_HOME_WSL}"/simrep-target-py
 (cd /mnt/c && timeout 1500 \
-  /mnt/c/Users/<user>/simrep-pyvenv/Scripts/maturin.exe build --release \
+  "${WIN_HOME_WSL}"/simrep-pyvenv/Scripts/maturin.exe build --release \
   --manifest-path '\\wsl.localhost\Ubuntu\home\<user>\SimRep\crates\simrep-py\Cargo.toml' \
-  -o '%USERPROFILE%\simrep-wheels' < /dev/null)
+  -o "${WIN_HOME}\simrep-wheels" < /dev/null)
 # cargo.exe and maturin.exe accept the \\wsl.localhost UNC path directly;
 # no Windows-side checkout is needed. Observed build time: 4 min 19 s on
 # a 16-core Ryzen 5950X with dependencies already compiled.
-(cd /mnt/c && timeout 120 /mnt/c/Users/<user>/simrep-pyvenv/Scripts/python.exe \
+(cd /mnt/c && timeout 120 "${WIN_HOME_WSL}"/simrep-pyvenv/Scripts/python.exe \
   -m pip install --force-reinstall --no-deps \
-  '%USERPROFILE%\simrep-wheels\simrep-0.1.0-cp310-abi3-win_amd64.whl' < /dev/null)
-(cd /mnt/c && timeout 30 /mnt/c/Users/<user>/simrep-pyvenv/Scripts/python.exe \
+  "${WIN_HOME}\simrep-wheels\simrep-0.1.0-cp310-abi3-win_amd64.whl" < /dev/null)
+(cd /mnt/c && timeout 30 "${WIN_HOME_WSL}"/simrep-pyvenv/Scripts/python.exe \
   -c "import simrep; print(simrep.__file__)" < /dev/null)
 ```
 
@@ -254,13 +256,15 @@ through `WSLENV` as a literal string (no `/p`, the value is already a
 Windows path):
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 export WSLENV="CARGO/p:CARGO_TARGET_DIR/p:SIMREP_BIN"
-export SIMREP_BIN='%USERPROFILE%\simrep-target-py\release\simrep.exe'
-(cd /mnt/c && timeout 900 /mnt/c/Users/<user>/.cargo/bin/cargo.exe build \
+export SIMREP_BIN="${WIN_HOME}\simrep-target-py\release\simrep.exe"
+(cd /mnt/c && timeout 900 "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build \
   --release -p simrep-cli \
   --manifest-path '\\wsl.localhost\Ubuntu\home\<user>\SimRep\Cargo.toml' < /dev/null)
 # simrep-cli build with warm deps: ~1 min.
-(cd /mnt/c && timeout 900 /mnt/c/Users/<user>/simrep-pyvenv/Scripts/python.exe \
+(cd /mnt/c && timeout 900 "${WIN_HOME_WSL}"/simrep-pyvenv/Scripts/python.exe \
   -m pytest '\\wsl.localhost\Ubuntu\home\<user>\SimRep\crates\simrep-py\tests' \
   -q < /dev/null)
 # Without WSLENV the SIMREP_BIN variable silently does

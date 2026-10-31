@@ -149,9 +149,18 @@ function nativeNotices() {
   return records
 }
 
+export function firstPartyNotice(base = root) {
+  const config = readJson(path.join(base, 'app/src-tauri/tauri.conf.json'))
+  if (config.bundle.resources['../../LICENSE'] !== 'LICENSE' || config.bundle.licenseFile !== '../../LICENSE') {
+    throw new Error('First-party LICENSE must ship as LICENSE and be the installer licence page')
+  }
+  return { kind: 'first-party', name: 'SimRep', version: config.version, license: 'PolyForm-Noncommercial-1.0.0', location: 'LICENSE', texts: [{ source: 'LICENSE', text: readNotice(path.join(base, 'LICENSE')) }] }
+}
+
 export function generate() {
   const src = sources()
   const records = [
+    firstPartyNotice(),
     ...npmNotices(path.join(root, 'ai/node_modules'), 'ai/node_modules', src),
     ...npmNotices(path.join(root, 'app/node_modules'), 'frontend/node_modules', src),
     ...cargoNotices(path.join(root, 'crates/simrep-cli/Cargo.toml'), 'cad', src),

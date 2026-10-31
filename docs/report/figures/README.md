@@ -36,17 +36,19 @@ matplotlib numpy scipy pillow` (확인한 버전: matplotlib 3.11.2, numpy 2.5.4
 `docs/dev/frontend.md`의 "Windows 앱을 스크립트로 조작하기 (CDP)" 절과 같은 방식이다.
 
 ```bash
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 # 1) 빌드 (STEP 가져오기 때문에 cad 기능 필요)
-CARGO_TARGET_DIR='%USERPROFILE%\simrep-app-target-fig' \
-OCCT_INCLUDE_DIR='%USERPROFILE%\occt\opencascade-7.7.0\inc' OCCT_LIB_DIR='%USERPROFILE%\occt\opencascade-7.7.0\win64\vc14\lib' \
+CARGO_TARGET_DIR="${WIN_HOME}\simrep-app-target-fig" \
+OCCT_INCLUDE_DIR="${WIN_HOME}\occt\opencascade-7.7.0\inc" OCCT_LIB_DIR="${WIN_HOME}\occt\opencascade-7.7.0\win64\vc14\lib" \
 WSLENV=CARGO_TARGET_DIR:OCCT_INCLUDE_DIR:OCCT_LIB_DIR \
-  /mnt/c/Users/<user>/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
+  "${WIN_HOME_WSL}"/.cargo/bin/cargo.exe build --manifest-path "$(wslpath -w app/src-tauri/Cargo.toml)" --features cad < /dev/null
 # 2) Vite (WSL)과 앱 (원격 디버깅 포트 9333)
 (cd app && node_modules/.bin/vite) &
 cd /mnt/c && WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333 WSLENV=WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS/w \
-  /mnt/c/Users/<user>/simrep-app-target-fig/debug/simrep-app.exe < /dev/null &
-# 3) cdp.mjs와 app/*.js를 %USERPROFILE%\simrep-gui-test\report-figs\ 로 복사한 뒤 Windows node로 실행
-cd /mnt/c/Users/<user>/simrep-gui-test/report-figs
+  "${WIN_HOME_WSL}"/simrep-app-target-fig/debug/simrep-app.exe < /dev/null &
+# 3) cdp.mjs와 app/*.js를 "${WIN_HOME}"\simrep-gui-test\report-figs\ 로 복사한 뒤 Windows node로 실행
+cd "${WIN_HOME_WSL}"/simrep-gui-test/report-figs
 METRICS=1280x800 WSLENV=METRICS '/mnt/c/Program Files/nodejs/node.exe' cdp.mjs eval einzel.js '{"count":1000,"draw":300}'
 METRICS=1280x800 WSLENV=METRICS '/mnt/c/Program Files/nodejs/node.exe' cdp.mjs shot 'C:\...\F01-raw.png'
 # 끝나면: taskkill.exe /IM simrep-app.exe /T /F

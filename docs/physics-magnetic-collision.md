@@ -256,6 +256,8 @@ An electric PA is optional for purely magnetic or field-free collision runs.
 adjustments still require PA0. Existing voltage run files remain valid.
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 simrep fly --particles ions.ion --magnetic-pa magnet.pa0 \
   --bounds=-200,-40,-40,430,40,40 --nonrelativistic
 
@@ -268,7 +270,7 @@ simrep fly --particles ions.ion --collision hs1 --seed 813 \
   --duration-us 50 --allow-time-limit --output hs1.csv
 
 simrep fly --particles ions.ion --collision sds --seed 813 \
-  --mbmr /mnt/c/Users/<user>/simrep-oracle/collision_sds/mbmr.dat \
+  --mbmr "${WIN_HOME_WSL}"/simrep-oracle/collision_sds/mbmr.dat \
   --gas-diameter-nm 0.366 --temperature-k 273.15 \
   --duration-us 50 --allow-time-limit --output sds.csv
 ```
@@ -543,16 +545,18 @@ Reproduce the profiling and matched-reference gate after preparing the
 foreground SIMION artifacts:
 
 ```sh
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
+SIMREP_PHYSICS_ORACLE="${WIN_HOME_WSL}"/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 # Optional: limit the profiling test to sector_3dp.
 SIMREP_MAGNETIC_CASE=sector_3dp \
-SIMREP_PHYSICS_ORACLE=/mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023 \
+SIMREP_PHYSICS_ORACLE="${WIN_HOME_WSL}"/simrep-oracle/physics-validation-20261023 \
   cargo test --release -p simrep-fly --test magnetic_performance -- --nocapture
 
 RAYON_NUM_THREADS=16 target/release/simrep fly --device cpu \
-  --particles /mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023/sector_3dp/ions.ion \
-  --run-file /mnt/c/Users/<user>/simrep-oracle/physics-validation-20261023/sector_3dp/run.json \
+  --particles "${WIN_HOME_WSL}"/simrep-oracle/physics-validation-20261023/sector_3dp/ions.ion \
+  --run-file "${WIN_HOME_WSL}"/simrep-oracle/physics-validation-20261023/sector_3dp/run.json \
   --bounds=-11,-156,-156,11,156,156 --duration-us 10000 \
   --nonrelativistic --max-step-us 1 --tolerance 1e-10 --output /tmp/sector-3dp.csv
 ```
@@ -565,6 +569,8 @@ still reproduces the original 0.02 us baseline, not the tuned sweep.
 Build and reproduce:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 cargo build --release -p simrep-cli
 cargo build --release -p simrep-fly --example physics_probe
 python3 tools/simion-oracle/physics_validate.py --only magnetic --stage prepare
@@ -572,7 +578,7 @@ python3 tools/simion-oracle/physics_validate.py --only magnetic --stage native
 python3 tools/simion-oracle/physics_validate.py --only collision --ions 4096
 python3 tools/simion-oracle/physics_validate.py --check-replay
 target/release/examples/physics_probe mobility
-SIMREP_MBMR=/mnt/c/Users/<user>/simrep-oracle/collision_sds/mbmr.dat \
+SIMREP_MBMR="${WIN_HOME_WSL}"/simrep-oracle/collision_sds/mbmr.dat \
   cargo test --workspace
 ```
 

@@ -45,9 +45,11 @@ Fly is effectively single-threaded: `--num-threads 1` makes no difference.
 All from `cd /mnt/c`, `< /dev/null`, foreground with `timeout`, via the harness:
 
 ```sh
+WIN_HOME="$(cd /mnt/c && timeout 30 powershell.exe -NoProfile -NonInteractive -Command '$env:USERPROFILE' </dev/null | tr -d '\r')"
+WIN_HOME_WSL="$(wslpath -u "$WIN_HOME")"
 R=tools/simion-oracle/run_oracle.py
 
-# performance_tests examples (copied fresh to %USERPROFILE%\simrep-oracle\<example>)
+# performance_tests examples (copied fresh to "${WIN_HOME}"\simrep-oracle\<example>)
 python3 $R performance_tests/6_cylindrical_pa_tests --work-dir <w> --refine --fly big_pa_cylinder.iob
 python3 $R performance_tests/6_cylindrical_pa_tests --work-dir <w> --refine --num-threads 1
 python3 $R performance_tests/8_rf_tests             --refine --fly rf_mirror.iob

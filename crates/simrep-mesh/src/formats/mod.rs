@@ -86,7 +86,14 @@ pub fn write_mesh(path: impl AsRef<Path>, mesh: &Mesh) -> io::Result<()> {
     mesh.validate()?;
     let path = path.as_ref();
     match extension(path)?.as_str() {
-        "stl" | "obj" => mesh.write_to(path, BufWriter::new(File::create(path)?)),
+        "stl" => {
+            // Float32 conversion can fail even for a valid finite-f64 mesh.
+            // Finish encoding before touching the destination.
+            let mut bytes = Vec::new();
+            mesh.write_to(path, &mut bytes)?;
+            std::fs::write(path, bytes)
+        }
+        "obj" => mesh.write_to(path, BufWriter::new(File::create(path)?)),
         "gltf" | "glb" => gltf_io::write(path, mesh),
         "usda" => crate::write_usda(path, Some(mesh), &[]),
         other => Err(invalid(format!(

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
-import { npmNotices } from '../../tools/win/installer-notices.mjs'
+import { firstPartyNotice, npmNotices } from '../../tools/win/installer-notices.mjs'
 
 const upstreamLicense = readFileSync(new URL('../../tools/win/notice-sources/standardwebhooks-license.txt', import.meta.url), 'utf8')
 
@@ -32,15 +32,19 @@ test('version-mapped standardwebhooks preserves upstream copyright, not metadata
   assert.equal(notice.license, 'MIT')
   assert.equal(notice.texts[0].text, upstreamLicense)
   assert.match(notice.texts[0].text, /Copyright \(c\) 2023 Svix/)
-  assert.ok(!('fallback' in notice))
+  assert.equal(notice.texts[0].source, 'https://raw.githubusercontent.com/standard-webhooks/standard-webhooks/b4d2c14fc5b4ccff3ff271e3b087dff812254c59/libraries/LICENSE')
   const updated = fixture(t, { name: 'standardwebhooks', version: '1.1.2', author: 'Standard Webhooks' })
   assert.throws(() => npmNotices(updated.root), /No full licence text: standardwebhooks@1\.1\.2/)
 })
 
-test('installed dependencies have no fallback records', () => {
+test('installed dependencies have attributed, nonempty source notices', () => {
   const packages = npmNotices(fileURLToPath(new URL('../node_modules', import.meta.url)))
   assert.ok(packages.length > 0)
-  assert.ok(packages.every(pkg => !('fallback' in pkg)))
+  for (const pkg of packages) {
+    assert.ok(pkg.name && pkg.version && pkg.license, pkg.location)
+    assert.ok(pkg.texts.length > 0, pkg.location)
+    for (const file of pkg.texts) assert.ok(file.source && file.text.trim().length > 0, pkg.location)
+  }
 })
 
 test('legacy dual-licence separators become SPDX OR expressions preserving shipped texts', t => {
@@ -84,5 +88,20 @@ test('nested dependency instances are not skipped and all notice files survive',
   assert.equal(packages.length, 2)
   assert.ok(packages[0].texts.some(file => file.source.endsWith('/NOTICE')))
   assert.equal(packages[1].texts[0].text, upstreamLicense)
-  assert.ok(packages.every(pkg => !('fallback' in pkg)))
+  assert.ok(packages[0].texts.some(file => file.source.endsWith('/LICENSE') && file.text === upstreamLicense))
+})
+
+test('first-party installer notice is exactly the shipped root licence', () => {
+  const notice = firstPartyNotice()
+  assert.equal(notice.kind, 'first-party')
+  assert.equal(notice.location, 'LICENSE')
+  assert.equal(notice.license, 'PolyForm-Noncommercial-1.0.0')
+  assert.deepEqual(notice.texts, [{ source: 'LICENSE', text: readFileSync(new URL('../../LICENSE', import.meta.url), 'utf8') }])
+})
+
+test('first-party packaging check rejects an omitted licence resource', t => {
+  const { root } = fixture(t, {})
+  mkdirSync(path.join(root, 'app/src-tauri'), { recursive: true })
+  writeFileSync(path.join(root, 'app/src-tauri/tauri.conf.json'), JSON.stringify({ bundle: { licenseFile: '../../LICENSE', resources: {} } }))
+  assert.throws(() => firstPartyNotice(root), /First-party LICENSE must ship/)
 })
