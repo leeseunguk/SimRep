@@ -2,7 +2,7 @@
 name = "cad-fixtures"
 version = "0.1.0"
 edition = "2024"
-license = "UNLICENSED"
+license = "PolyForm-Noncommercial-1.0.0"
 publish = false
 description = "Dev tool (not shipped): writes the simrep-cad fixture shapes as STEP and IGES and reads them back."
 

@@ -331,5 +331,6 @@ SIMION is a product of Scientific Instrument Services.
 
 ## License
 
-This is currently a private repository without a public license (`license = "UNLICENSED"` in `Cargo.toml`).
-OpenCascade, used for STEP/IGES import, is LGPL 2.1 with an exception; notices ship with the installer.
+SimRep is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE) (`PolyForm-Noncommercial-1.0.0`): you may use, modify and share it for any noncommercial purpose, including personal study, research and use by educational, public research or charitable organizations. Commercial use is not licensed.
+Parts adapted from Iteration-CFD are under the Prosperity Public License 3.0.0 (also noncommercial); see [licenses/THIRD_PARTY.md](licenses/THIRD_PARTY.md).
+OpenCascade, used for STEP/IGES import, is LGPL 2.1 with an exception; it and all other bundled third-party components keep their own licences, and their notices ship with the installer.

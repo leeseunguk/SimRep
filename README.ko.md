@@ -332,5 +332,6 @@ SIMION은 Scientific Instrument Services의 제품입니다.
 
 ## 라이선스
 
-현재 공개 라이선스가 정해지지 않은 비공개 저장소입니다(`Cargo.toml`의 `license = "UNLICENSED"`).
-STEP/IGES 가져오기에 쓰는 OpenCascade는 LGPL 2.1(예외 조항 포함)이며, 고지는 설치 패키지에 함께 들어갑니다.
+SimRep은 [PolyForm Noncommercial License 1.0.0](LICENSE)(`PolyForm-Noncommercial-1.0.0`)을 따릅니다. 비상업 목적이라면 개인 학습, 연구, 교육·공공 연구·자선 기관에서의 사용을 포함해 자유롭게 쓰고, 고치고, 공유할 수 있습니다. 상업적 이용은 허용되지 않습니다.
+Iteration-CFD에서 가져온 부분은 Prosperity Public License 3.0.0(역시 비상업)을 따릅니다. [licenses/THIRD_PARTY.md](licenses/THIRD_PARTY.md)를 참고하세요.
+STEP/IGES 가져오기에 쓰는 OpenCascade는 LGPL 2.1(예외 조항 포함)입니다. OpenCascade를 비롯해 함께 들어가는 외부 구성 요소는 각자의 라이선스를 따르며, 고지는 설치 패키지에 함께 들어갑니다.

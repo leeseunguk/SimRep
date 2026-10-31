@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
-license = "UNLICENSED"
+license = "PolyForm-Noncommercial-1.0.0"
 
 [workspace.dependencies]
 simrep-core = { path = "crates/simrep-core" }

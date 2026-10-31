@@ -3,7 +3,7 @@ name = "simrep-app"
 version = "0.1.0"
 description = "SimRep desktop shell (Tauri 2). UI lives in ../ (Vite + React)."
 edition = "2024"
-license = "UNLICENSED"
+license = "PolyForm-Noncommercial-1.0.0"
 publish = false
 
 # Standalone workspace: keeps the Tauri/WebView dependency tree out of the root
