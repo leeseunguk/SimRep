@@ -1,4 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { allows } from "../host";
 import { Box, Check, CircleAlert, FolderOpen, Grid3x3, Loader2, Play, Sparkles, Wand2, Wrench, X, Zap } from "lucide-react";
 import { formatBytes, useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -439,9 +440,11 @@ function RefineStep({ w }: { w: WizardState }) {
           </span>
         </Field>
         <div className={sim.row}>
-          <Button size="sm" icon={<FolderOpen />} onClick={() => void chooseFolder()} disabled={started}>
-            {t("refine.folder.change")}
-          </Button>
+          {allows("folders") && (
+            <Button size="sm" icon={<FolderOpen />} onClick={() => void chooseFolder()} disabled={started}>
+              {t("refine.folder.change")}
+            </Button>
+          )}
         </div>
         <Field label={t("wizard.stem")}>
           <input className={inputs.input} value={w.stem} disabled={started} aria-label={t("wizard.stem")} onChange={(e) => set({ stem: e.target.value })} />

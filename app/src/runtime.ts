@@ -1,4 +1,5 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
+import { host } from "./host";
 import { refusalLine, refusals } from "./refusals";
 import { computeDevice, reasonMessage } from "./scene/backend";
 import { useApp } from "./state/store";
@@ -13,6 +14,9 @@ interface BackendInfo {
 /** Detects the Tauri shell and checks the IPC round trip to the native core. */
 export async function connectRuntime() {
   const app = useApp.getState();
+  // Another build of this UI (host.ts) brings its own backend start-up.
+  const connect = host()?.connect;
+  if (connect) return connect();
   if (!isTauri()) {
     app.log("info", { key: "log.appStarted", params: { runtime: { key: "status.runtime.browser" } } });
     return;

@@ -19,6 +19,15 @@ const numberFormats: Record<Lang, Intl.NumberFormat> = {
   ko: new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 3 }),
 };
 
+/**
+ * Adds (or, for its own wording, replaces) messages for a host build of this UI (host.ts). Both
+ * languages are required, so every text exists in Korean and English.
+ */
+export function addMessages(extra: { en: Record<string, string>; ko: Record<string, string> }): void {
+  Object.assign(dictionaries.en, extra.en);
+  Object.assign(dictionaries.ko, extra.ko);
+}
+
 export function translate(lang: Lang, key: MessageKey, params?: MessageParams): string {
   const template = dictionaries[lang][key];
   if (!params) return template;

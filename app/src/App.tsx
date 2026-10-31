@@ -16,6 +16,7 @@ import { Tour } from "./components/Tour";
 import { Toaster } from "./components/Toaster";
 import { pickAndOpen, TopBar } from "./components/TopBar";
 import { translate, useI18n } from "./i18n";
+import { allows } from "./host";
 import { connectRuntime } from "./runtime";
 import { objectName } from "./scene/names";
 import { redo, undo } from "./state/history";
@@ -73,7 +74,7 @@ export function App() {
     if (started) return; // StrictMode mounts twice in dev
     started = true;
     initProjects();
-    initTour(isTauri());
+    initTour(isTauri() && allows("tour"));
     void connectRuntime();
   }, []);
 

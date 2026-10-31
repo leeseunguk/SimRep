@@ -2,7 +2,9 @@ import { useRef, type CSSProperties } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ArrowLeft, Clock, FileStack, FolderOpen, GraduationCap, History, LifeBuoy, Trash2, X } from "lucide-react";
+import { allows, host, unavailable } from "../host";
 import { useI18n } from "../i18n";
+import { RefusalNotice } from "./SimulationSections";
 import { ACCEPT_ATTRIBUTE, FORMATS } from "../scene/formats";
 import { importFiles } from "../scene/importFiles";
 import { TEMPLATES, type TemplateDef } from "../scene/templates";
@@ -33,6 +35,8 @@ export function StartScreen() {
   const desktop = isTauri();
   const tourOffer = useTour((s) => s.mode === "offer");
   const fileInput = useRef<HTMLInputElement>(null);
+  const templatesOff = unavailable("templates");
+  const HostPanel = host()?.StartPanel;
   const when = (ms: number) =>
     new Intl.DateTimeFormat(lang === "ko" ? "ko-KR" : "en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(ms));
 
@@ -70,13 +74,19 @@ export function StartScreen() {
             <h2 className={styles.sectionTitle}>{t("start.templates")}</h2>
             <div className={styles.grid}>
               {TEMPLATES.map((def, i) => (
-                <TemplateCard key={def.id} def={def} index={i} disabled={!desktop} />
+                <TemplateCard key={def.id} def={def} index={i} disabled={!desktop || templatesOff !== null} />
               ))}
             </div>
             {!desktop && <p className={styles.note}>{t("template.desktopOnly")}</p>}
+            {desktop && templatesOff && (
+              <div className={styles.note}>
+                <RefusalNotice refusal={templatesOff} />
+              </div>
+            )}
           </section>
 
           <aside className={styles.side}>
+            {HostPanel && <HostPanel />}
             {tourOffer && <TourOffer inline />}
             {recovery && (
               <div className={styles.recovery} role="status">
@@ -120,7 +130,7 @@ export function StartScreen() {
               />
             </div>
             <p className={styles.dropHint}>{t("start.dropHint")}</p>
-            {desktop && (
+            {desktop && allows("tour") && (
               <Button variant="ghost" icon={<GraduationCap />} className={styles.wide} title={t("tour.openTitle")} onClick={() => useTour.getState().start()}>
                 {t("tour.open")}
               </Button>

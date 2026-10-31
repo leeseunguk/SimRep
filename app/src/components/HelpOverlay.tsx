@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { GraduationCap, Keyboard, X } from "lucide-react";
+import { allows } from "../host";
 import { useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useApp } from "../state/store";
@@ -106,7 +107,7 @@ export function HelpOverlay() {
         </div>
         <div className={styles.footer}>
           <p className={styles.footerText}>{t("help.footer")}</p>
-          {isTauri() && (
+          {isTauri() && allows("tour") && (
             <Button size="sm" variant="primary" icon={<GraduationCap />} title={t("tour.openTitle")} onClick={() => useTour.getState().start()}>
               {t("tour.open")}
             </Button>

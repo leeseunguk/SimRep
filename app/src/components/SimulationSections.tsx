@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Box, Check, Cpu, FileInput, FolderOpen, Maximize2, Play, RotateCcw, Shapes, Sparkles, TriangleAlert, X, Zap } from "lucide-react";
+import { allows, unavailable } from "../host";
 import { useI18n, type Message, type MessageKey, type MessageParams } from "../i18n";
 import { refusalLine, refusals, type Refusal } from "../refusals";
 import { Chart } from "../results/plot/ChartView";
@@ -103,12 +104,21 @@ export function Notice({ tone = "info", title, body, children }: { tone?: "info"
 /** A refusal as a notice: what happened as the title, why and what to do as the body. */
 export function RefusalNotice({ refusal, tone = "info" }: { refusal: Refusal; tone?: "info" | "warning" }) {
   const { tm } = useI18n();
-  return <Notice tone={tone} title={tm(refusal.what)} body={tm(refusal.why)} />;
+  return (
+    <Notice tone={tone} title={tm(refusal.what)} body={tm(refusal.why)}>
+      {refusal.link && (
+        <a className={styles.noticeLink} href={refusal.link.href} target="_blank" rel="noreferrer">
+          {tm(refusal.link.label)}
+        </a>
+      )}
+    </Notice>
+  );
 }
 
 /** Refine device choices (refine section and import wizard). */
 export function deviceOptions(autoLabel: string) {
-  return REFINE_DEVICES.map((d) => ({
+  // A host without GPU compute (host.ts) offers only the CPU.
+  return REFINE_DEVICES.filter((d) => d !== "gpu" || allows("gpu")).map((d) => ({
     value: d,
     label: d === "auto" ? autoLabel : d.toUpperCase(),
     icon: d === "gpu" ? <Zap /> : d === "cpu" ? <Cpu /> : undefined,
@@ -139,7 +149,8 @@ function ResidualChart({ r }: { r: RefineState }) {
 
 function RefineSection({ o, canRefine }: { o: PaObject; canRefine: boolean }) {
   const { t, tm, num } = useI18n();
-  const desktop = simulationAvailable();
+  const off = unavailable("refine");
+  const desktop = simulationAvailable() && !off;
   const [device, setDevice] = useState<RefineDevice>("auto");
   const [targets, setTargets] = useState<RefineTargets | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -176,7 +187,7 @@ function RefineSection({ o, canRefine }: { o: PaObject; canRefine: boolean }) {
   return (
     <Section title={t("refine.title")}>
       {!desktop ? (
-        <RefusalNotice refusal={refusals.desktopOnly()} />
+        <RefusalNotice refusal={off ?? refusals.desktopOnly()} />
       ) : running && r ? (
         <RefineProgress r={r} onCancel={() => cancelRefine(o.id)} />
       ) : (
@@ -200,9 +211,11 @@ function RefineSection({ o, canRefine }: { o: PaObject; canRefine: boolean }) {
                 </span>
               </Field>
               <div className={styles.row}>
-                <Button size="sm" icon={<FolderOpen />} onClick={() => void chooseFolder()}>
-                  {t("refine.folder.change")}
-                </Button>
+                {allows("folders") && (
+                  <Button size="sm" icon={<FolderOpen />} onClick={() => void chooseFolder()}>
+                    {t("refine.folder.change")}
+                  </Button>
+                )}
                 {o.outputDir && (
                   <Button size="sm" variant="ghost" icon={<RotateCcw />} onClick={() => useApp.getState().updatePa(o.id, () => ({ outputDir: null }))}>
                     {t("refine.folder.reset")}
@@ -363,10 +376,11 @@ function VoltagesSection({ o }: { o: PaObject }) {
   const { t, num } = useI18n();
   const fast = o.fast;
   const electrodes = paElectrodes(o);
+  const off = unavailable("voltages");
   return (
     <Section title={t("volts.title")}>
-      {!simulationAvailable() ? (
-        <RefusalNotice refusal={refusals.desktopOnly()} />
+      {!simulationAvailable() || off ? (
+        <RefusalNotice refusal={off ?? refusals.desktopOnly()} />
       ) : fast?.state !== "ready" ? (
         <Notice tone="warning" title={t("volts.missing.title")} body={t("volts.missing.body", { detail: fast?.detail ?? "" })} />
       ) : (
@@ -445,7 +459,7 @@ export function edgeStops(o: PaObject): { count: number; faces: Face[] } {
 }
 
 function WorkbenchSection({ o }: { o: PaObject }) {
-  const { t, num } = useI18n();
+  const { t, tm, num } = useI18n();
   const s = o.source;
   const bench = s.bench;
   const place = bench.placement;
@@ -491,7 +505,7 @@ function WorkbenchSection({ o }: { o: PaObject }) {
         </div>
       )}
       <div className={styles.row}>
-        <Button size="sm" icon={<FileInput />} onClick={() => void openIob()} disabled={!simulationAvailable()}>
+        <Button size="sm" icon={<FileInput />} onClick={() => void openIob()} disabled={!simulationAvailable() || !allows("iob")} title={unavailable("iob") ? tm(unavailable("iob")!.why) : undefined}>
           {t("bench.iob")}
         </Button>
       </div>

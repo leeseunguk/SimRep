@@ -147,7 +147,8 @@ export type ComputeStatus =
   | { state: "gpu"; name: string; initMs: number }
   | { state: "cpu"; name: string; reason: Message };
 
-export type Runtime = { kind: "browser" } | { kind: "tauri"; version?: string };
+/** `web`: a host build of this UI with its own backend (host.ts). */
+export type Runtime = { kind: "browser" } | { kind: "tauri"; version?: string } | { kind: "web"; version?: string };
 
 export type ViewCommand =
   | { type: "preset"; view: ViewPreset; fit?: boolean }

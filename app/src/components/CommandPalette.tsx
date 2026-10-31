@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
+import { allows } from "../host";
 import { Command } from "lucide-react";
 import { useI18n } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -38,7 +39,7 @@ export function CommandPalette() {
   const commands: Cmd[] = useMemo(
     () => [
       { id: "exportReport", label: "palette.cmd.exportReport", enabled: hasContent, run: () => useReportDialog.getState().show() },
-      { id: "exportData", label: "palette.cmd.exportData", enabled: !!target && isTauri(), run: () => target && useExport.getState().open(target) },
+      { id: "exportData", label: "palette.cmd.exportData", enabled: !!target && isTauri() && allows("exportData"), run: () => target && useExport.getState().open(target) },
       {
         id: "open",
         label: "palette.cmd.open",

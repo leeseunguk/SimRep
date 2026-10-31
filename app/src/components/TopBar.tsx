@@ -3,6 +3,7 @@ import { isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Bot, ChevronDown, CircleHelp, Database, Download, FileText, FolderOpen, House, Monitor, Moon, Redo2, Save, Sun, Undo2, UserRound } from "lucide-react";
 import { openPanel, openSettings, useAi } from "../ai/store";
+import { allows, host } from "../host";
 import { useI18n } from "../i18n";
 import { ACCEPT_ATTRIBUTE, FORMATS } from "../scene/formats";
 import { importFiles } from "../scene/importFiles";
@@ -178,7 +179,8 @@ function ExportMenu({ target, hasContent }: { target: string | null; hasContent:
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
-  const dataOk = !!target && isTauri();
+  const dataOk = !!target && isTauri() && allows("exportData");
+  const Extra = host()?.ExportMenuItems;
   return (
     <div ref={wrap} className={styles.menuWrap} data-testid="topbar-export">
       <Button icon={<Download />} title={t("topbar.exportMenu")} aria-haspopup="menu" aria-expanded={open} disabled={!hasContent} onClick={() => setOpen(!open)}>
@@ -219,6 +221,7 @@ function ExportMenu({ target, hasContent }: { target: string | null; hasContent:
               <span className={styles.menuSub}>{t("topbar.export.reportSub")}</span>
             </span>
           </button>
+          {Extra && <Extra close={() => setOpen(false)} />}
         </div>
       )}
     </div>

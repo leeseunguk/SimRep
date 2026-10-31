@@ -107,6 +107,16 @@
   user-select: text;
 }
 
+.noticeLink {
+  display: inline-block;
+  margin-top: var(--space-1);
+  color: var(--color-accent-text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .confirm {
   display: flex;
   flex-direction: column;

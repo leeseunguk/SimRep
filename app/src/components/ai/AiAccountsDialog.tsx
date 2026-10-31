@@ -7,6 +7,7 @@ import { accountKind, providerState, providerSummary, type DeviceCode, type Prov
 import type { Account, Provider } from "../../ai/protocol";
 import { providerIds, providerInfo } from "../../ai/providers";
 import { dismissWelcome, openSettings, signIn, signOut, useAi } from "../../ai/store";
+import { allows, unavailable } from "../../host";
 import { refusals } from "../../refusals";
 import { Button } from "../ui/Button";
 import { AiNotice, ManageUsageLink } from "./AiNotice";
@@ -36,8 +37,8 @@ export function AiAccountsDialog() {
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, []);
-  const desktop = isTauri();
-  const blocked = refusals.aiDesktopOnly();
+  const desktop = isTauri() && allows("ai");
+  const blocked = unavailable("ai") ?? refusals.aiDesktopOnly();
 
   return (
     <div className={dialog.scrim} onClick={close}>

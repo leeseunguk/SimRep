@@ -1,4 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core";
+import { unavailable } from "../host";
 import type { Message } from "../i18n";
 import { quietly } from "../state/history";
 import { useApp, type PaObject, type RefineState } from "../state/store";
@@ -298,6 +299,8 @@ export function flyRequest(o: PaObject): FlyRequest {
 /** Why an array cannot be flown yet (null = ready). */
 export function flyBlocker(o: PaObject): Message | null {
   if (!simulationAvailable()) return { key: "sim.desktopOnly" };
+  const off = unavailable("fly");
+  if (off) return off.why;
   if (o.formatId === "paHash") return { key: "fly.blocked.unrefined" };
   if (o.info.field !== "electrostatic") return { key: "fly.blocked.magnetic" };
   if (o.refine?.status === "running" || o.refine?.status === "starting") return { key: "fly.blocked.refining" };

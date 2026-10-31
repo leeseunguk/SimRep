@@ -1,4 +1,5 @@
 import { AppWindow, BarChart3, Cpu, Globe, ScrollText, Zap } from "lucide-react";
+import { host } from "../host";
 import { useI18n } from "../i18n";
 import { sceneTriangles, useApp } from "../state/store";
 import { useResults } from "../results/store";
@@ -31,6 +32,7 @@ export function StatusBar() {
         : gpu.state === "lost"
           ? t("status.webgpu.lost")
           : t("status.webgpu.unavailable");
+  const HostItems = host()?.StatusItems;
   const gpuTitle = gpu.state === "unavailable" || gpu.state === "lost" ? gpu.reason : gpuText;
 
   return (
@@ -39,18 +41,22 @@ export function StatusBar() {
         <span className={styles.dot} data-state={gpu.state} />
         {gpuText}
       </span>
-      {runtime.kind === "tauri" && (
+      {HostItems ? (
+        <HostItems />
+      ) : runtime.kind === "tauri" && (
         <span className={styles.item} title={computeTitle} data-compute={compute.state}>
           {compute.state === "gpu" ? <Zap aria-hidden /> : <Cpu aria-hidden />}
           {computeText}
         </span>
       )}
-      <span className={styles.item}>
-        {runtime.kind === "tauri" ? <AppWindow aria-hidden /> : <Globe aria-hidden />}
-        {runtime.kind === "tauri"
-          ? t("status.runtime.tauri", { version: runtime.version ?? "…" })
-          : t("status.runtime.browser")}
-      </span>
+      {!HostItems && (
+        <span className={styles.item}>
+          {runtime.kind === "tauri" ? <AppWindow aria-hidden /> : <Globe aria-hidden />}
+          {runtime.kind === "tauri"
+            ? t("status.runtime.tauri", { version: runtime.version ?? "…" })
+            : t("status.runtime.browser")}
+        </span>
+      )}
       <span className={styles.spacer} />
       <span className={styles.item}>{t("status.objects", { count: objects.length })}</span>
       <span className={`${styles.item} tnum`}>{t("status.triangles", { count: triangles })}</span>

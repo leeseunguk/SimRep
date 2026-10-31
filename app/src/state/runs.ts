@@ -202,7 +202,7 @@ async function buildRecord(o: PaObject, request: FlyRequest, flight: Flight, vel
   const settings: RunSettings = {
     inputs,
     executed: { ...h.executed, deviceName: h.device.name, fallback: h.fallback?.code ?? null },
-    simrepVersion: app.runtime.kind === "tauri" ? (app.runtime.version ?? null) : null,
+    simrepVersion: app.runtime.kind !== "browser" ? (app.runtime.version ?? null) : null,
     computeMs: h.flyMs,
   };
   const { capMb } = useRuns.getState().config;

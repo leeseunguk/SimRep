@@ -16,6 +16,7 @@ import {
 } from "../scene/pa";
 import { electrodeName, paElectrodes, type PaElectrode } from "../scene/electrodes";
 import { objectName } from "../scene/names";
+import { allows } from "../host";
 import { simulationAvailable } from "../scene/simulation";
 import { SimulationSections, VoltageControl } from "./SimulationSections";
 import {
@@ -532,7 +533,7 @@ function ElectrodeProperties({ o, e }: { o: PaObject; e: PaElectrode }) {
         )}
       </Section>
       <Section title={t("props.section.potential")}>
-        {e.kind === "adjustable" && simulationAvailable() ? (
+        {e.kind === "adjustable" && simulationAvailable() && allows("voltages") ? (
           <VoltageControl o={o} electrode={e} label={t("props.voltage")} />
         ) : e.voltage !== null ? (
           <Field label={t("props.voltage")}>

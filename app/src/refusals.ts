@@ -12,6 +12,8 @@ import { isExpired } from "./ai/accounts";
 export interface Refusal {
   what: Message;
   why: Message;
+  /** Where to go instead (a host build, host.ts: e.g. the desktop installer). */
+  link?: { href: string; label: Message };
 }
 
 /**

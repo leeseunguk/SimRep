@@ -1,4 +1,5 @@
 import { formatBytes, type Message } from "../i18n";
+import { unavailable } from "../host";
 import { refusals } from "../refusals";
 import { newId, useApp, type MeshObject, type PaObject } from "../state/store";
 import { pathInfo, readFile, type PathInfo } from "./backend";
@@ -109,8 +110,17 @@ async function importOne({ name, size, file, entry, toasts = true }: { name: str
     return null;
   }
 
+  // A host build (host.ts) may lack CAD import, the geometry wizard or workbenches: say why, add
+  // nothing. An STL then still opens as a mesh to look at.
+  const off = format.id === "step" || format.id === "iges" ? (unavailable("cad") ?? unavailable("wizard")) : format.wizard ? unavailable("wizard") : format.id === "iob" ? unavailable("iob") : null;
+  if (off && format.id !== "stl") {
+    app.log("warning", { key: "refusal.line", params: { what: off.what, why: off.why } });
+    app.toast("info", off.what, off.why);
+    return null;
+  }
+
   // Desktop: geometry goes through the import wizard, workbenches open their arrays.
-  if (entry && format.wizard) {
+  if (entry && format.wizard && !off) {
     await openWizard(entry);
     return null;
   }

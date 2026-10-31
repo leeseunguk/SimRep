@@ -9,6 +9,7 @@ import { toChatState, type SavedChat } from "../../ai/history";
 import type { Provider } from "../../ai/protocol";
 import { providerIds, providerInfo } from "../../ai/providers";
 import { allowAllInChat, answerApproval, approvalModeOf, cancel, continueChat, deleteSavedChat, newChat, openHistory, openPanel, openSettings, refreshHistory, send, setApproval, setProvider, useAi, viewChat, workspaceOf } from "../../ai/store";
+import { allows, unavailable } from "../../host";
 import { refusals } from "../../refusals";
 import { useApp } from "../../state/store";
 import { Button } from "../ui/Button";
@@ -62,7 +63,7 @@ export function AiPanel() {
   const [draft, setDraft] = useState("");
   const list = useRef<HTMLOListElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
-  const desktop = isTauri();
+  const desktop = isTauri() && allows("ai");
 
   // The previous-chats list follows the open project.
   useEffect(() => {
@@ -101,7 +102,7 @@ export function AiPanel() {
     setDraft(t(key));
     input.current?.focus();
   };
-  const blocked = refusals.aiDesktopOnly();
+  const blocked = unavailable("ai") ?? refusals.aiDesktopOnly();
   const using = !active ? null : accountKind(active) === "apiKey" ? t("ai.panel.usingApiKey", { provider: info.label }) : info.usingLabel ? t(info.usingLabel) : t("ai.panel.usingAccount", { account: active.label });
   const last = chat.items.at(-1);
   const streaming = chat.running && last?.kind === "assistant" ? last.id : null;
