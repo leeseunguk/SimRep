@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Bot, ChevronDown, CircleHelp, Database, Download, FileText, FolderOpen, House, Monitor, Moon, Redo2, Save, Sun, Undo2, UserRound } from "lucide-react";
+import { Bot, ChevronDown, CircleHelp, Database, Download, Ellipsis, FileText, FolderOpen, House, Monitor, Moon, PanelLeft, PanelRight, Redo2, Save, Sun, Undo2, UserRound } from "lucide-react";
 import { openPanel, openSettings, useAi } from "../ai/store";
 import { allows, host } from "../host";
 import { useI18n } from "../i18n";
@@ -10,6 +10,7 @@ import { importFiles } from "../scene/importFiles";
 import { redo, undo } from "../state/history";
 import { openPaths, PROJECT_EXTENSION, projectTitle, saveProject, showStart } from "../state/project";
 import { useApp, type Lang, type ThemePref } from "../state/store";
+import { useLayout } from "../state/layout";
 import { useExport } from "../state/exportDialog";
 import { useReportDialog } from "../state/reportDialog";
 import { useWizard } from "../state/wizard";
@@ -55,6 +56,95 @@ export function TopBar() {
   const fileInput = useRef<HTMLInputElement>(null);
   const aiOpen = useAi((s) => s.panelOpen);
   const name = projectTitle(project, lang);
+  const mode = useLayout((s) => s.mode);
+  const drawer = useLayout((s) => s.drawer);
+  const openFile = () => void pickAndOpen(t("topbar.openTitle"), t("topbar.openFilter"), t("topbar.openAll"), fileInput.current);
+  const fileField = (
+    <input
+      ref={fileInput}
+      type="file"
+      multiple
+      accept={ACCEPT_ATTRIBUTE}
+      hidden
+      onChange={(e) => {
+        if (e.target.files) {
+          useApp.getState().setHome(false);
+          void importFiles(Array.from(e.target.files));
+        }
+        e.target.value = "";
+      }}
+    />
+  );
+  const langControl = (
+    <SegmentedControl<Lang>
+      ariaLabel={t("topbar.language")}
+      value={lang}
+      onChange={setLang}
+      options={[
+        { value: "ko", label: "한국어", title: "한국어" },
+        { value: "en", label: "English", title: "English" },
+      ]}
+    />
+  );
+  const themeControl = (
+    <SegmentedControl<ThemePref>
+      ariaLabel={t("topbar.theme")}
+      value={themePref}
+      onChange={setThemePref}
+      options={[
+        { value: "light", label: <span className="visually-hidden">{t("topbar.theme.light")}</span>, icon: <Sun />, title: t("topbar.theme.light") },
+        { value: "dark", label: <span className="visually-hidden">{t("topbar.theme.dark")}</span>, icon: <Moon />, title: t("topbar.theme.dark") },
+        { value: "system", label: <span className="visually-hidden">{t("topbar.theme.system")}</span>, icon: <Monitor />, title: t("topbar.theme.system") },
+      ]}
+    />
+  );
+
+  // Tablet and phone: a condensed bar; the rest of the actions live in the More menu.
+  if (mode !== "desktop") {
+    const tablet = mode === "tablet";
+    return (
+      <header className={styles.topbar} data-compact={mode}>
+        <div className={styles.brand}>
+          <Logo className={styles.logo} />
+          {tablet && <span className={styles.wordmark}>{t("app.name")}</span>}
+        </div>
+        {tablet && (
+          <>
+            <Button variant="ghost" iconOnly icon={<PanelLeft />} active={drawer === "scene"} aria-label={t("layout.scenePanel")} title={t("layout.scenePanel")} onClick={() => useLayout.getState().toggleDrawer("scene")} data-testid="drawer-scene" />
+            <Button variant="ghost" iconOnly icon={<PanelRight />} active={drawer === "simulation"} aria-label={t("layout.propsPanel")} title={t("layout.propsPanel")} onClick={() => useLayout.getState().toggleDrawer("simulation")} data-testid="drawer-simulation" />
+          </>
+        )}
+        <div className={styles.project}>
+          <span className={styles.projectLine}>
+            <span className={styles.projectName} title={project.path ?? name}>
+              {name}
+            </span>
+            {dirty && <span className={styles.dirty} title={t("topbar.unsaved")} aria-label={t("topbar.unsaved")} />}
+          </span>
+        </div>
+        <div className={styles.spacer} />
+        <Button variant="ghost" iconOnly icon={<House />} data-tour="home" active={home} aria-label={t("topbar.home")} title={t("topbar.home")} onClick={showStart} />
+        {tablet && (
+          <>
+            <Button variant="ghost" iconOnly icon={<Undo2 />} disabled={!history.undo} aria-label={t("topbar.undo")} title={t("topbar.undo")} onClick={undo} />
+            <Button variant="ghost" iconOnly icon={<Redo2 />} disabled={!history.redo} aria-label={t("topbar.redo")} title={t("topbar.redo")} onClick={redo} />
+            <Button variant={hasContent || wizardOpen ? "secondary" : "primary"} icon={<FolderOpen />} title={t("topbar.openTitle")} onClick={openFile}>
+              {t("topbar.open")}
+            </Button>
+          </>
+        )}
+        <MoreMenu
+          phone={!tablet}
+          hasContent={hasContent}
+          exportTarget={exportTarget}
+          onOpen={openFile}
+          lang={langControl}
+          theme={themeControl}
+        />
+        {fileField}
+      </header>
+    );
+  }
 
   return (
     <header className={styles.topbar}>
@@ -222,6 +312,89 @@ function ExportMenu({ target, hasContent }: { target: string | null; hasContent:
             </span>
           </button>
           {Extra && <Extra close={() => setOpen(false)} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Tablet / phone: the top bar actions that do not fit (open on a phone, save, export, assistant, language, theme, help). */
+function MoreMenu({
+  phone,
+  hasContent,
+  exportTarget,
+  onOpen,
+  lang,
+  theme,
+}: {
+  phone: boolean;
+  hasContent: boolean;
+  exportTarget: string | null;
+  onOpen(): void;
+  lang: ReactNode;
+  theme: ReactNode;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const history = useApp((s) => s.history);
+  const home = useApp((s) => s.home);
+  const aiOpen = useAi((s) => s.panelOpen);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const dataOk = !!exportTarget && isTauri() && allows("exportData");
+  const Extra = host()?.ExportMenuItems;
+  /** A menu action: closes the menu, then runs. */
+  const item = (icon: ReactNode, label: string, run: () => void, opts: { disabled?: boolean; testId?: string; pressed?: boolean } = {}) => (
+    <button
+      type="button"
+      className={styles.menuItem}
+      disabled={opts.disabled}
+      aria-pressed={opts.pressed}
+      data-testid={opts.testId}
+      onClick={() => {
+        setOpen(false);
+        run();
+      }}
+    >
+      {icon}
+      <span className={styles.menuText}>{label}</span>
+    </button>
+  );
+  return (
+    <div ref={wrap} className={styles.menuWrap}>
+      <Button variant="ghost" iconOnly icon={<Ellipsis />} aria-label={t("topbar.more")} title={t("topbar.more")} aria-expanded={open} onClick={() => setOpen(!open)} data-testid="topbar-more" />
+      {open && (
+        <div className={`${styles.menu} ${styles.moreMenu}`} aria-label={t("topbar.more")} data-testid="topbar-more-menu">
+          {phone && (
+            <>
+              {item(<FolderOpen aria-hidden />, t("topbar.open"), onOpen)}
+              {item(<Undo2 aria-hidden />, t("topbar.undo"), undo, { disabled: !history.undo })}
+              {item(<Redo2 aria-hidden />, t("topbar.redo"), redo, { disabled: !history.redo })}
+            </>
+          )}
+          {item(<Save aria-hidden />, t("topbar.save"), () => void saveProject(), { disabled: !hasContent })}
+          {item(<Database aria-hidden />, t("topbar.export.data"), () => exportTarget && useExport.getState().open(exportTarget), { disabled: !hasContent || !dataOk })}
+          {item(<FileText aria-hidden />, t("topbar.export.report"), () => useReportDialog.getState().show(), { disabled: !hasContent })}
+          {Extra && <Extra close={() => setOpen(false)} />}
+          {item(<Bot aria-hidden />, t("topbar.ai"), () => openPanel(!aiOpen), { disabled: home, pressed: aiOpen, testId: "ai-toggle" })}
+          {item(<UserRound aria-hidden />, t("topbar.aiAccounts"), () => openSettings(true), { testId: "ai-accounts-open" })}
+          {item(<CircleHelp aria-hidden />, t("topbar.help"), () => useApp.getState().setHelpOpen(true))}
+          <div className={styles.menuControls}>
+            {lang}
+            {theme}
+          </div>
         </div>
       )}
     </div>

@@ -38,3 +38,121 @@
 .right > :first-child {
   flex: 1;
 }
+
+/* ----------------------------------------------------------------- responsive (state/layout.ts) */
+
+/* Tablet (600-1023 px): the 3D view takes the whole width; the side panels open as drawers over it. */
+:global(html[data-layout="tablet"]) .app {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:global(html[data-layout="tablet"]) .left,
+:global(html[data-layout="tablet"]) .center,
+:global(html[data-layout="tablet"]) .right {
+  grid-column: 1;
+}
+
+:global(html[data-layout="tablet"]) .left,
+:global(html[data-layout="tablet"]) .right {
+  z-index: var(--z-drawer);
+  /* The view keeps at least half of the width beside an open drawer. */
+  width: min(var(--panel-right-w), 50vw);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-lg);
+}
+
+:global(html[data-layout="tablet"]) .left {
+  justify-self: start;
+  width: min(var(--panel-left-w), 50vw);
+  border-right: var(--border-w) solid var(--color-border);
+}
+
+:global(html[data-layout="tablet"]) .right {
+  justify-self: end;
+  border-left: var(--border-w) solid var(--color-border);
+}
+
+/* Phone (< 600 px): one column. The 3D view on top, the panel tabs and the selected panel below. */
+:global(html[data-layout="phone"]) .app {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--topbar-h) var(--phone-viewport-h) auto minmax(0, 1fr) auto auto;
+}
+
+:global(html[data-layout="phone"]) .center {
+  grid-row: 2;
+  grid-column: 1;
+}
+
+:global(html[data-layout="phone"]) .left,
+:global(html[data-layout="phone"]) .right,
+.phoneResults {
+  grid-row: 4;
+  grid-column: 1;
+}
+
+.phoneResults {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.phoneResults > :first-child {
+  flex: 1;
+}
+
+:global(html[data-layout="tablet"]) [data-shown="false"],
+:global(html[data-layout="phone"]) [data-shown="false"] {
+  display: none;
+}
+
+.phoneTabs {
+  display: flex;
+  grid-row: 3;
+  grid-column: 1;
+  border-top: var(--border-w) solid var(--color-border);
+  border-bottom: var(--border-w) solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.phoneTab {
+  position: relative;
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+  height: var(--touch-min);
+  padding: 0 var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.phoneTab svg {
+  flex: none;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.phoneTab[aria-selected="true"] {
+  color: var(--color-text);
+}
+
+.phoneTab[aria-selected="true"]::after {
+  position: absolute;
+  right: var(--space-3);
+  bottom: 0;
+  left: var(--space-3);
+  height: var(--focus-ring-w);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  content: "";
+}
+
+.phoneTab:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}

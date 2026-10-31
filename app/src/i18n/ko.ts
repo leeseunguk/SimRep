@@ -1462,4 +1462,11 @@ export const ko: Record<MessageKey, string> = {
   "palette.cmd.help": "단축키",
   "palette.disabled": "지금은 쓸 수 없음",
   "help.palette": "명령 팔레트",
+  "layout.scenePanel": "장면 패널",
+  "layout.propsPanel": "속성 패널",
+  "layout.tabs": "패널",
+  "layout.tab.scene": "장면",
+  "layout.tab.simulation": "시뮬레이션",
+  "layout.tab.results": "결과",
+  "topbar.more": "더 보기",
 };

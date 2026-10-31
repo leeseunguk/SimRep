@@ -3,6 +3,7 @@ import { host } from "../host";
 import { useI18n } from "../i18n";
 import { sceneTriangles, useApp } from "../state/store";
 import { useResults } from "../results/store";
+import { useLayout } from "../state/layout";
 import { rendererName } from "../viewport/rendererBase";
 import styles from "./StatusBar.module.css";
 
@@ -52,13 +53,13 @@ export function StatusBar() {
       {HostItems ? (
         <HostItems />
       ) : runtime.kind === "tauri" && (
-        <span className={styles.item} title={computeTitle} data-compute={compute.state}>
+        <span className={`${styles.item} ${styles.phoneHidden}`} title={computeTitle} data-compute={compute.state}>
           {compute.state === "gpu" ? <Zap aria-hidden /> : <Cpu aria-hidden />}
           {computeText}
         </span>
       )}
       {!HostItems && (
-        <span className={styles.item}>
+        <span className={`${styles.item} ${styles.lowPriority}`}>
           {runtime.kind === "tauri" ? <AppWindow aria-hidden /> : <Globe aria-hidden />}
           {runtime.kind === "tauri"
             ? t("status.runtime.tauri", { version: runtime.version ?? "…" })
@@ -66,17 +67,23 @@ export function StatusBar() {
         </span>
       )}
       <span className={styles.spacer} />
-      <span className={styles.item}>{t("status.objects", { count: objects.length })}</span>
-      <span className={`${styles.item} tnum`}>{t("status.triangles", { count: triangles })}</span>
-      {ions > 0 && <span className={`${styles.item} tnum`}>{t("status.trajectories", { count: ions })}</span>}
-      <span className={styles.item}>{t("status.unitsMm")}</span>
+      <span className={`${styles.item} ${styles.lowPriority}`}>{t("status.objects", { count: objects.length })}</span>
+      <span className={`${styles.item} ${styles.lowPriority} tnum`}>{t("status.triangles", { count: triangles })}</span>
+      {ions > 0 && <span className={`${styles.item} ${styles.phoneHidden} tnum`}>{t("status.trajectories", { count: ions })}</span>}
+      <span className={`${styles.item} ${styles.lowPriority}`}>{t("status.unitsMm")}</span>
       {flown && (
         <button
           type="button"
           className={styles.logButton}
           aria-pressed={resultsOpen}
           title={t("status.resultsTitle")}
-          onClick={() => useResults.getState().setOpen(!resultsOpen)}
+          onClick={() => {
+            // Phone: results live in their own tab under the 3D view.
+            if (useLayout.getState().mode === "phone") {
+              useResults.getState().setOpen(true);
+              useLayout.getState().setTab("results");
+            } else useResults.getState().setOpen(!resultsOpen);
+          }}
         >
           <BarChart3 aria-hidden />
           {t("status.results")}

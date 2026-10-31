@@ -85,3 +85,8 @@
   padding: var(--space-2) var(--space-3);
   color: var(--color-text-subtle);
 }
+
+:global(html[data-layout="phone"]) .drawer {
+  grid-row: 5;
+  height: min(var(--logdrawer-h), 30vh);
+}

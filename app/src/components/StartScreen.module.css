@@ -342,3 +342,42 @@
     padding-block: var(--space-1-5);
   }
 }
+
+/* Phone and tablet (state/layout.ts): one column, the template cards one or two per row. */
+:global(html[data-layout="phone"]) .start {
+  grid-row: 2 / 6;
+}
+
+:global(html[data-layout="tablet"]) .columns,
+:global(html[data-layout="phone"]) .columns {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:global(html[data-layout="tablet"]) .inner {
+  padding: var(--space-6) var(--space-5) var(--space-8);
+}
+
+:global(html[data-layout="phone"]) .inner {
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+
+:global(html[data-layout="phone"]) .head {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+:global(html[data-layout="phone"]) .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:global(html[data-layout="tablet"]) .recentForget,
+:global(html[data-layout="phone"]) .recentForget {
+  width: var(--touch-min);
+  opacity: 1;
+}
+
+:global(html[data-layout="tablet"]) .recentOpen,
+:global(html[data-layout="phone"]) .recentOpen {
+  min-height: var(--touch-min);
+}

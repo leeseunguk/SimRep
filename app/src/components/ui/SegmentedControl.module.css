@@ -53,3 +53,10 @@
   width: var(--icon-sm);
   height: var(--icon-sm);
 }
+
+/* Tablet / phone (state/layout.ts): every segment is a full touch target. */
+:global(html[data-layout="tablet"]) .segment,
+:global(html[data-layout="phone"]) .segment {
+  min-width: var(--touch-min);
+  height: var(--touch-min);
+}

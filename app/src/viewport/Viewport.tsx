@@ -18,6 +18,7 @@ import { useResults } from "../results/store";
 import { useWizard } from "../state/wizard";
 import type { Bounds } from "../scene/mesh";
 import { registerCamera, registerCapture } from "./viewState";
+import { pinchStep, type Point } from "./touch";
 import { ViewportToolbar } from "./ViewportToolbar";
 import { WebGpuFallback } from "./WebGpuFallback";
 import styles from "./Viewport.module.css";
@@ -145,7 +146,9 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
   const [hover, setHover] = useState<{ x: number; y: number; flipX: boolean; flipY: boolean; hit: ProbeHit } | null>(null);
   const projection = useApp((s) => s.projection);
   const gridVisible = useApp((s) => s.gridVisible);
-  const drag = useRef<{ x: number; y: number; startX: number; startY: number; mode: "orbit" | "pan"; moved: boolean } | null>(null);
+  const drag = useRef<{ x: number; y: number; startX: number; startY: number; mode: "orbit" | "pan" | "pinch"; moved: boolean } | null>(null);
+  // Touch: the fingers on the canvas (one orbits, two pinch-zoom and pan).
+  const touches = useRef(new Map<number, Point>());
 
   const sync = useCallback(() => {
     const r = rendererRef.current;
@@ -382,6 +385,15 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
     if (!rendererRef.current) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     e.currentTarget.focus();
+    if (e.pointerType === "touch") {
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      // A second finger turns the gesture into a pinch (never a click).
+      if (touches.current.size >= 2) {
+        setHover(null);
+        drag.current = { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, mode: "pinch", moved: true };
+        return;
+      }
+    }
     const pan = e.button === 1 || e.button === 2 || (e.button === 0 && e.shiftKey);
     drag.current = { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, mode: pan ? "pan" : "orbit", moved: false };
   };
@@ -389,7 +401,22 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const d = drag.current;
     const r = rendererRef.current;
-    if (r && !d) {
+    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
+      const before = [...touches.current.values()].slice(0, 2) as [Point, Point];
+      touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (d?.mode === "pinch") {
+        if (r && touches.current.size >= 2) {
+          const s = pinchStep(before, [...touches.current.values()].slice(0, 2) as [Point, Point]);
+          const rect = e.currentTarget.getBoundingClientRect();
+          r.camera.pan(s.pan.x, s.pan.y, rect.height);
+          const [nx, ny] = toNdc({ clientX: s.mid.x, clientY: s.mid.y });
+          r.camera.zoomAt(s.zoom, nx, ny, r.aspect());
+          r.requestRender();
+        }
+        return;
+      }
+    }
+    if (r && !d && e.pointerType !== "touch") {
       const [nx, ny] = toNdc(e);
       const hit = r.probe(nx, ny);
       const rect = e.currentTarget.getBoundingClientRect();
@@ -418,7 +445,9 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
   };
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    touches.current.delete(e.pointerId);
     const d = drag.current;
+    // Lifting one finger of a pinch ends the gesture; the other finger does nothing until lifted.
     drag.current = null;
     if (!d || d.moved || e.button !== 0) return;
     // An ion (end point or drawn path) wins over the array it flew through: open its plots.
@@ -455,7 +484,10 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => (drag.current = null)}
+        onPointerCancel={(e) => {
+          touches.current.delete(e.pointerId);
+          drag.current = null;
+        }}
         onPointerLeave={() => setHover(null)}
         onDoubleClick={onDoubleClick}
         onContextMenu={(e) => e.preventDefault()}

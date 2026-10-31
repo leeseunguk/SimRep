@@ -106,3 +106,26 @@
     gap: var(--space-3);
   }
 }
+
+/* Tablet / phone: the renderer and the results / log buttons stay; scene counts and units give way. */
+:global(html[data-layout="phone"]) .statusbar {
+  grid-row: 6;
+  gap: var(--space-2);
+}
+
+:global(html[data-layout="tablet"]) .statusbar,
+:global(html[data-layout="phone"]) .statusbar {
+  padding-left: var(--space-2);
+}
+
+:global(html[data-layout="tablet"]) .lowPriority,
+:global(html[data-layout="phone"]) .lowPriority,
+:global(html[data-layout="phone"]) .phoneHidden {
+  display: none;
+}
+
+:global(html[data-layout="tablet"]) .logButton,
+:global(html[data-layout="phone"]) .logButton {
+  flex: none;
+  height: var(--touch-min);
+}

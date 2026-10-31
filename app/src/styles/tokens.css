@@ -125,6 +125,8 @@
 
   /* Layers */
   --z-viewport-overlay: 10;
+  /* Tablet drawers (state/layout.ts) over the 3D view. */
+  --z-drawer: 30;
   --z-resizer: 20;
   --z-start: 50;
   --z-tour: 140;
@@ -206,6 +208,25 @@
     --panel-ai-w: 440px;
     --dialog-ai-w: 800px;
   }
+}
+
+/* Tablet and phone layouts (state/layout.ts, <html data-layout>): touch-sized controls, at least
+   44 px, and a taller top and status bar for them. The desktop layout (>= 1024 px) is unchanged. */
+:root[data-layout="tablet"],
+:root[data-layout="phone"] {
+  --touch-min: 44px;
+  --control-h-sm: 44px;
+  --control-h-md: 44px;
+  --control-h-lg: 44px;
+  --topbar-h: 56px;
+  --statusbar-h: 44px;
+  --table-row-h: 44px;
+}
+
+:root[data-layout="phone"] {
+  /* The 3D view's share of a phone screen; the panels scroll below it. */
+  --phone-viewport-h: 45vh;
+  --results-h: 100%;
 }
 
 /* ---------------------------------------------------------------- dark: graphite + ion amber */

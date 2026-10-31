@@ -178,3 +178,19 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Tablet / phone: dialogs use the whole width of the screen. */
+:global(html[data-layout="tablet"]) .scrim,
+:global(html[data-layout="phone"]) .scrim {
+  padding: var(--space-3);
+}
+
+:global(html[data-layout="phone"]) .dialog {
+  padding: var(--space-4);
+}
+
+:global(html[data-layout="tablet"]) .close,
+:global(html[data-layout="phone"]) .close {
+  width: var(--touch-min);
+  height: var(--touch-min);
+}

@@ -1461,6 +1461,13 @@ export const en = {
   "palette.cmd.help": "Keyboard shortcuts",
   "palette.disabled": "not available now",
   "help.palette": "Command palette",
+  "layout.scenePanel": "Scene panel",
+  "layout.propsPanel": "Properties panel",
+  "layout.tabs": "Panels",
+  "layout.tab.scene": "Scene",
+  "layout.tab.simulation": "Simulation",
+  "layout.tab.results": "Results",
+  "topbar.more": "More",
 } as const;
 
 export type MessageKey = keyof typeof en;

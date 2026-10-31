@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { DropOverlay } from "./components/DropOverlay";
 import { CommandPalette } from "./components/CommandPalette";
@@ -33,6 +33,8 @@ import styles from "./App.module.css";
 import { AiAccountsDialog } from "./components/ai/AiAccountsDialog";
 import { AiPanel } from "./components/ai/AiPanel";
 import { useAi } from "./ai/store";
+import { layoutFor, shownTab, useLayout, type PhoneTab } from "./state/layout";
+import { Layers, SlidersHorizontal, BarChart3 } from "lucide-react";
 
 // Plots, table and exports load with the first flight result (own chunk).
 const ResultsPanel = lazy(() => import("./results/ResultsPanel").then((m) => ({ default: m.ResultsPanel })));
@@ -61,6 +63,26 @@ export function App() {
   const aiSettings = useAi((s) => s.settingsOpen);
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
   const [rightWidth, setRightWidth] = useState<number | null>(null);
+  const mode = useLayout((s) => s.mode);
+  const drawer = useLayout((s) => s.drawer);
+  const phoneTab = useLayout((s) => shownTab(s.tab, hasResults));
+
+  // Responsive layout (state/layout.ts): the stylesheets key on <html data-layout>.
+  useLayoutEffect(() => {
+    document.documentElement.dataset.layout = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    const onResize = () => useLayout.getState().setMode(layoutFor(window.innerWidth));
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // The wizard and the assistant open in the right column: bring it into view on a tablet or phone.
+  useEffect(() => {
+    if (wizard || aiPanel) useLayout.getState().show("simulation");
+  }, [wizard, aiPanel]);
 
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -140,26 +162,37 @@ export function App() {
     ...(aiPanel && !wizard && { "--panel-right-w": `max(${rightWidth ?? 0}px, var(--panel-ai-w))` }),
   } as CSSProperties;
 
+  const desktop = mode === "desktop";
+  const phone = mode === "phone";
+  // Tablet: closed drawers are hidden. Phone: only the selected tab's panel is shown.
+  const leftShown = desktop || (phone ? phoneTab === "scene" : drawer === "scene");
+  const rightShown = desktop || (phone ? phoneTab === "simulation" : drawer === "simulation");
+  const results = hasResults && (
+    <Suspense fallback={null}>
+      <ResultsPanel />
+    </Suspense>
+  );
+
   return (
     <div className={styles.app} style={layout}>
       <TopBar />
-      <div className={styles.left}>
+      <div className={styles.left} data-shown={leftShown}>
         <SceneTree />
-        <PanelResizer edge="right" onResize={setLeftWidth} label={t("tree.title")} />
+        {desktop && <PanelResizer edge="right" onResize={setLeftWidth} label={t("tree.title")} />}
         {/* Notifications stack over the bottom of the scene panel, never over the 3D view. */}
-        <Toaster />
+        {desktop && <Toaster />}
       </div>
       <main className={styles.center} inert={home}>
         <Viewport theme={theme} />
-        {hasResults && (
-          <Suspense fallback={null}>
-            <ResultsPanel />
-          </Suspense>
-        )}
+        {!phone && results}
+        {/* Tablet and phone: the side panels can be hidden, so notifications use the 3D view's bottom. */}
+        {!desktop && <Toaster />}
       </main>
-      <div className={styles.right} inert={home}>
+      {phone && <PhoneTabs tab={phoneTab} hasResults={hasResults} />}
+      {phone && phoneTab === "results" && <div className={styles.phoneResults}>{results}</div>}
+      <div className={styles.right} data-shown={rightShown} inert={home}>
         {wizard ? <ImportWizard /> : aiPanel ? <AiPanel /> : <PropertiesPanel />}
-        <PanelResizer edge="left" onResize={setRightWidth} label={aiPanel && !wizard ? t("ai.panel.title") : t("props.title")} />
+        {desktop && <PanelResizer edge="left" onResize={setRightWidth} label={aiPanel && !wizard ? t("ai.panel.title") : t("props.title")} />}
       </div>
       {home && <StartScreen />}
       <Tour />
@@ -172,6 +205,40 @@ export function App() {
       {palette && <CommandPalette />}
       {aiSettings && <AiAccountsDialog />}
       <BusyOverlay />
+    </div>
+  );
+}
+
+const PHONE_TABS: { id: PhoneTab; key: "layout.tab.scene" | "layout.tab.simulation" | "layout.tab.results"; icon: ReactNode }[] = [
+  { id: "scene", key: "layout.tab.scene", icon: <Layers aria-hidden /> },
+  { id: "simulation", key: "layout.tab.simulation", icon: <SlidersHorizontal aria-hidden /> },
+  { id: "results", key: "layout.tab.results", icon: <BarChart3 aria-hidden /> },
+];
+
+/** Phone: the panels under the 3D view, one at a time. */
+function PhoneTabs({ tab, hasResults }: { tab: PhoneTab; hasResults: boolean }) {
+  const { t } = useI18n();
+  const home = useApp((s) => s.home);
+  return (
+    <div className={styles.phoneTabs} role="tablist" aria-label={t("layout.tabs")} inert={home} data-testid="phone-tabs">
+      {PHONE_TABS.map(({ id, key, icon }) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          className={styles.phoneTab}
+          aria-selected={tab === id}
+          disabled={id === "results" && !hasResults}
+          data-testid={`phone-tab-${id}`}
+          onClick={() => {
+            useLayout.getState().setTab(id);
+            if (id === "results") useResults.getState().setOpen(true);
+          }}
+        >
+          {icon}
+          {t(key)}
+        </button>
+      ))}
     </div>
   );
 }
