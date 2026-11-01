@@ -34,6 +34,8 @@ export function StatusBar() {
         : gpu.state === "lost"
           ? t("status.renderer.lost", { api: rendererName(gpu.api) })
           : t("status.webgpu.unavailable");
+  const phone = useLayout((s) => s.mode === "phone");
+  const gpuShort = phone && (gpu.state === "ready" || gpu.state === "lost") ? rendererName(gpu.api) : null;
   const HostItems = host()?.StatusItems;
   const gpuTitle =
     gpu.state === "unavailable" || gpu.state === "lost"
@@ -48,10 +50,15 @@ export function StatusBar() {
     <footer className={styles.statusbar}>
       <span className={styles.item} title={gpuTitle} data-testid="status-renderer" data-renderer={gpu.state === "ready" ? gpu.api : undefined}>
         <span className={styles.dot} data-state={gpu.state} />
-        {gpuText}
+        {/* Phone: the dot and the API name only ("WebGL2"); the full text stays for screen readers and in the title. */}
+        <span className={styles.phoneLong}>{gpuText}</span>
+        {gpuShort && <span aria-hidden>{gpuShort}</span>}
       </span>
       {HostItems ? (
-        <HostItems />
+        // The host's own items have no compact form: on a phone they give way to Results and Log.
+        <span className={styles.hostItems}>
+          <HostItems />
+        </span>
       ) : runtime.kind === "tauri" && (
         <span className={`${styles.item} ${styles.phoneHidden}`} title={computeTitle} data-compute={compute.state}>
           {compute.state === "gpu" ? <Zap aria-hidden /> : <Cpu aria-hidden />}

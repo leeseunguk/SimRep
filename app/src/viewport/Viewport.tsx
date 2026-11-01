@@ -16,6 +16,7 @@ import { SliceLegend } from "./SliceLegend";
 import type { Highlight, TrajectoryItem } from "./trajectoryLayer";
 import { useResults } from "../results/store";
 import { useWizard } from "../state/wizard";
+import { useLayout } from "../state/layout";
 import type { Bounds } from "../scene/mesh";
 import { registerCamera, registerCapture } from "./viewState";
 import { settleLayout } from "./layoutReady";
@@ -331,6 +332,14 @@ export function Viewport({ theme }: { theme: "light" | "dark" }) {
       setActivePreset(null);
     }
   }), [fit, applyPreset]);
+
+  // Phone: the first flight of a scene frames everything once (lens and trajectories fill the short view).
+  useEffect(() => useApp.subscribe((s, prev) => {
+    const flown = (objects: typeof s.objects) => objects.some((o) => o.kind === "pa" && o.flight.result !== null);
+    if (s.objects === prev.objects || useLayout.getState().mode !== "phone" || !flown(s.objects) || flown(prev.objects)) return;
+    // After the overlays have settled (their insets frame the scene).
+    requestAnimationFrame(() => fit());
+  }), [fit]);
 
   // Keyboard shortcuts (CAD-style view presets).
   useEffect(() => {

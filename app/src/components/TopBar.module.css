@@ -87,6 +87,15 @@
   flex: 1;
 }
 
+/* Language switch: each name stays on one line, sized to its text; the project name gives way instead. */
+.lang {
+  flex: none;
+}
+
+.lang > button {
+  white-space: nowrap;
+}
+
 @media (max-width: 1100px) {
   .tagline {
     display: none;

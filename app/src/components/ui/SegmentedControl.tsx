@@ -14,11 +14,13 @@ interface Props<T extends string> {
   onChange(value: T): void;
   ariaLabel: string;
   size?: "sm" | "md";
+  /** Extra class on the group (e.g. layout rules of the caller). */
+  className?: string;
 }
 
-export function SegmentedControl<T extends string>({ options, value, onChange, ariaLabel, size = "sm" }: Props<T>) {
+export function SegmentedControl<T extends string>({ options, value, onChange, ariaLabel, size = "sm", className }: Props<T>) {
   return (
-    <div className={`${styles.group} ${styles[size]}`} role="radiogroup" aria-label={ariaLabel}>
+    <div className={`${styles.group} ${styles[size]}${className ? ` ${className}` : ""}`} role="radiogroup" aria-label={ariaLabel}>
       {options.map((o) => (
         <button
           key={o.value}

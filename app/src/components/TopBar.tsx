@@ -79,6 +79,7 @@ export function TopBar() {
   const langControl = (
     <SegmentedControl<Lang>
       ariaLabel={t("topbar.language")}
+      className={styles.lang}
       value={lang}
       onChange={setLang}
       options={[
@@ -224,6 +225,7 @@ export function TopBar() {
       <div className={styles.divider} />
       <SegmentedControl<Lang>
         ariaLabel={t("topbar.language")}
+        className={styles.lang}
         value={lang}
         onChange={setLang}
         options={[

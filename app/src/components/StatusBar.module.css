@@ -62,6 +62,11 @@
   flex: 1;
 }
 
+.hostItems {
+  display: contents;
+}
+
+
 .logButton {
   display: inline-flex;
   align-items: center;
@@ -128,4 +133,23 @@
 :global(html[data-layout="phone"]) .logButton {
   flex: none;
   height: var(--touch-min);
+}
+
+/* Phone: only items that fit whole. The renderer shows its dot and API name; host items give way. */
+:global(html[data-layout="phone"]) .hostItems {
+  display: none;
+}
+
+:global(html[data-layout="phone"]) .phoneLong {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:global(html[data-layout="phone"]) .item {
+  position: relative;
+  flex: none;
 }

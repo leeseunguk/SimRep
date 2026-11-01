@@ -389,6 +389,56 @@
   pointer-events: none;
 }
 
+/* Phone: the legend is a small button in the bottom-right corner that opens upwards. */
+.legend[data-compact] {
+  top: auto;
+  bottom: var(--space-3);
+  max-height: calc(100% - var(--control-h-md) - var(--space-3) * 3);
+  padding: var(--space-0-5);
+  overflow: hidden;
+  transform: none;
+  pointer-events: auto;
+}
+
+.legend[data-compact] > :not(button) {
+  margin-right: var(--space-2);
+  margin-left: var(--space-2);
+}
+
+.legendToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  height: var(--touch-min);
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.legendSwatch {
+  flex: none;
+  width: var(--legend-bar-w);
+  height: var(--space-4);
+  border-radius: var(--radius-xs);
+  background: linear-gradient(to top, var(--vp-field-0), var(--vp-field-2), var(--vp-field-4));
+}
+
+.legendChevron {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  color: var(--color-text-subtle);
+  transition: rotate var(--dur-fast) var(--ease-out);
+}
+
+.legendToggle[aria-expanded="true"] .legendChevron {
+  rotate: 180deg;
+}
+
 @media (max-width: 1180px) {
   .hint {
     display: none;

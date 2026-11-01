@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
-import { Check, Copy, KeyRound, LockKeyhole, LogOut, MoreHorizontal, RefreshCw, UserRound, X } from "lucide-react";
+import { Check, Copy, Download, KeyRound, LockKeyhole, LogOut, MoreHorizontal, RefreshCw, UserRound, X } from "lucide-react";
 import { useI18n } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { accountKind, providerState, providerSummary, type DeviceCode, type ProviderSummary } from "../../ai/accounts";
@@ -16,6 +16,9 @@ import { clock, useNow } from "./time";
 import dialog from "../Dialog.module.css";
 import inputs from "../ui/inputs.module.css";
 import styles from "./Ai.module.css";
+
+/** Desktop download page, offered where the assistant is unavailable (browser host or preview). */
+const DESKTOP_DOWNLOAD_URL = "https://github.com/leeseunguk/SimRep/releases/latest";
 
 /** Settings > AI accounts: one card per provider (sign-in, plan status, accounts), privacy line. */
 export function AiAccountsDialog() {
@@ -52,15 +55,22 @@ export function AiAccountsDialog() {
             <X aria-hidden />
           </button>
         </header>
-        <p id="ai-accounts-intro" className={styles.intro}>
-          {t("ai.settings.intro")}
-        </p>
+        {/* Sign-in and token wording only where signing in is possible (not in a browser host or preview). */}
+        {desktop && (
+          <p id="ai-accounts-intro" className={styles.intro}>
+            {t("ai.settings.intro")}
+          </p>
+        )}
         <div className={styles.accountsBody}>
           {!desktop ? (
-            <div className={styles.notice} data-tone="warning" role="status">
+            <div id="ai-accounts-intro" className={styles.notice} data-tone="warning" role="status">
               <div className={styles.noticeText}>
                 <p className={styles.noticeTitle}>{tm(blocked.what)}</p>
                 <p className={styles.noticeBody}>{tm(blocked.why)}</p>
+                <a className={styles.downloadLink} href={DESKTOP_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" data-testid="ai-desktop-download">
+                  <Download aria-hidden />
+                  {t("ai.settings.desktopDownload")}
+                </a>
               </div>
             </div>
           ) : !loaded ? (
@@ -92,10 +102,12 @@ export function AiAccountsDialog() {
             </>
           )}
         </div>
-        <p className={styles.privacy}>
-          <LockKeyhole aria-hidden />
-          {t("ai.settings.privacy")}
-        </p>
+        {desktop && (
+          <p className={styles.privacy}>
+            <LockKeyhole aria-hidden />
+            {t("ai.settings.privacy")}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -52,3 +52,21 @@
   background: var(--color-accent-soft);
   color: var(--color-accent-text);
 }
+
+/* Phone: one row of 44 px icon buttons and a view menu. */
+.compact .tool {
+  justify-content: center;
+  width: var(--touch-min);
+  padding: 0;
+}
+
+.viewSelect {
+  height: var(--control-h-md);
+  padding-left: var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}

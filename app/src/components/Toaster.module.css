@@ -109,3 +109,9 @@
   width: var(--touch-min);
   height: var(--touch-min);
 }
+
+/* Phone (App: anchored at the bottom of the panel row): a stack never grows up into the 3D view. */
+:global(html[data-layout="phone"]) .toaster {
+  max-height: 35vh;
+  overflow: hidden;
+}

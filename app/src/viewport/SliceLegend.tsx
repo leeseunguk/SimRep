@@ -1,7 +1,10 @@
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useI18n } from "../i18n";
 import { contourStep } from "../scene/pa";
 import { objectName } from "../scene/names";
 import { useApp, type PaObject, type SceneObject } from "../state/store";
+import { useLayout } from "../state/layout";
 import styles from "./Viewport.module.css";
 
 const shownSection = (o: SceneObject | undefined): o is PaObject => o?.kind === "pa" && o.visible && o.slice.visible;
@@ -13,6 +16,9 @@ export function SliceLegend() {
     const selected = s.objects.find((x) => x.id === s.selectedId);
     return shownSection(selected) ? selected : (s.objects.find(shownSection) ?? null);
   });
+  const phone = useLayout((s) => s.mode === "phone");
+  // Phone: collapsed to a small button until opened, so it does not cover the short 3D view.
+  const [open, setOpen] = useState(false);
   if (!o) return null;
   const { potentialMin: min, potentialMax: max } = o.info;
   const range = Math.max(max - min, 1e-9);
@@ -20,11 +26,34 @@ export function SliceLegend() {
   // A uniform field (e.g. every electrode at 0 V) has one value, not a scale.
   const ticks = max > min ? [max, (min + max) / 2, min] : [max];
   const step = contourStep(min, max, o.slice.density);
+  const toggle = phone && (
+    <button
+      type="button"
+      className={styles.legendToggle}
+      aria-expanded={open}
+      aria-label={t(open ? "viewport.legend.hide" : "viewport.legend.show")}
+      title={t(open ? "viewport.legend.hide" : "viewport.legend.show")}
+      onClick={() => setOpen(!open)}
+      data-testid="legend-toggle"
+    >
+      <i className={styles.legendSwatch} aria-hidden />
+      {t("viewport.legend.title")}
+      <ChevronDown className={styles.legendChevron} aria-hidden />
+    </button>
+  );
+  if (phone && !open)
+    return (
+      <div className={styles.legend} data-compact="" aria-label={t("viewport.legend.title")}>
+        {toggle}
+      </div>
+    );
   return (
-    <div className={styles.legend} aria-label={t("viewport.legend.title")} data-inset="right">
-      <p className={styles.legendTitle}>
-        {t("viewport.legend.title")} <span className={styles.legendUnit}>({t("units.V")})</span>
-      </p>
+    <div className={styles.legend} data-compact={phone ? "" : undefined} aria-label={t("viewport.legend.title")} data-inset="right">
+      {toggle || (
+        <p className={styles.legendTitle}>
+          {t("viewport.legend.title")} <span className={styles.legendUnit}>({t("units.V")})</span>
+        </p>
+      )}
       <p className={styles.legendName} title={objectName(o)}>
         {objectName(o)}
       </p>

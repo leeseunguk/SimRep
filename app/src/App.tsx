@@ -198,8 +198,8 @@ export function App() {
       <main className={styles.center} inert={covered}>
         <Viewport theme={theme} />
         {!phone && results}
-        {/* Tablet and phone: the side panels can be hidden, so notifications use the 3D view's bottom. */}
-        {!desktop && <Toaster />}
+        {/* Tablet: the side panels can be hidden, so notifications use the 3D view's bottom. */}
+        {mode === "tablet" && <Toaster />}
       </main>
       {phone && <PhoneTabs tab={phoneTab} hasResults={hasResults} inert={covered} />}
       {phone && left}
@@ -212,6 +212,13 @@ export function App() {
         {wizard ? <ImportWizard /> : aiPanel ? <AiPanel /> : <PropertiesPanel />}
         {desktop && <PanelResizer edge="left" onResize={setRightWidth} label={aiPanel && !wizard ? t("ai.panel.title") : t("props.title")} />}
       </div>
+      {/* Phone: notifications stack over the bottom of the panel area, above the status bar, never over the 3D view.
+          After the panels in the DOM, so Tab from a phone tab enters its panel first. */}
+      {phone && (
+        <div className={styles.phoneToasts}>
+          <Toaster />
+        </div>
+      )}
       {home && <StartScreen />}
       <Tour />
       {logOpen && <LogDrawer />}
