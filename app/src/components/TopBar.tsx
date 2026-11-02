@@ -154,13 +154,13 @@ export function TopBar() {
       <div className={styles.brand}>
         <Logo className={styles.logo} />
         <span className={styles.wordmark}>{t("app.name")}</span>
-        <span className={styles.tagline}>{t("app.tagline")}</span>
+        <span className={styles.tagline} data-testid="topbar-tagline">{t("app.tagline")}</span>
       </div>
       <div className={styles.divider} />
       <div className={styles.project}>
         <span className={styles.projectLabel}>{t("topbar.projectLabel")}</span>
         <span className={styles.projectLine}>
-          <span className={styles.projectName} title={project.path ?? name}>
+          <span className={styles.projectName} title={project.path ?? name} data-testid="project-name">
             {name}
           </span>
           {dirty && <span className={styles.dirty} title={t("topbar.unsaved")} aria-label={t("topbar.unsaved")} />}
@@ -197,10 +197,10 @@ export function TopBar() {
         title={`${t("topbar.openTitle")} (${MOD}+O)`}
         onClick={() => void pickAndOpen(t("topbar.openTitle"), t("topbar.openFilter"), t("topbar.openAll"), fileInput.current)}
       >
-        {t("topbar.open")}
+        <span className={styles.label}>{t("topbar.open")}</span>
       </Button>
       <Button icon={<Save />} title={`${t("topbar.saveTitle")} (${MOD}+S)`} disabled={!hasContent} onClick={() => void saveProject()}>
-        {t("topbar.save")}
+        <span className={styles.label}>{t("topbar.save")}</span>
       </Button>
       <ExportMenu target={exportTarget} hasContent={hasContent} />
       <input
@@ -219,7 +219,7 @@ export function TopBar() {
       />
       <div className={styles.divider} />
       <Button icon={<Bot />} active={aiOpen} disabled={home} title={t("topbar.aiTitle")} onClick={() => openPanel(!aiOpen)} data-testid="ai-toggle">
-        {t("topbar.ai")}
+        <span className={styles.label}>{t("topbar.ai")}</span>
       </Button>
       <Button variant="ghost" iconOnly icon={<UserRound />} aria-label={t("topbar.aiAccounts")} title={t("topbar.aiAccounts")} onClick={() => openSettings(true)} data-testid="ai-accounts-open" />
       <div className={styles.divider} />
@@ -278,7 +278,7 @@ function ExportMenu({ target, hasContent }: { target: string | null; hasContent:
   return (
     <div ref={wrap} className={styles.menuWrap} data-testid="topbar-export">
       <Button icon={<Download />} title={t("topbar.exportMenu")} aria-haspopup="menu" aria-expanded={open} disabled={!hasContent} onClick={() => setOpen(!open)}>
-        {t("topbar.export")}
+        <span className={styles.label}>{t("topbar.export")}</span>
         <ChevronDown className={styles.menuChevron} aria-hidden />
       </Button>
       {open && (

@@ -85,6 +85,81 @@ test.describe("top bar language switch", () => {
   }
 });
 
+// The project name in the desktop top bar: under 1366 px the tagline goes, so typical names show
+// in full; a name that still does not fit ends in an ellipsis and keeps its full text as the tooltip.
+test.describe("top bar project name", () => {
+  /** Renames the open project in the store (name: a file stem; nameKey: a template title; neither: untitled). */
+  const rename = (page: Page, meta: { name: string | null; nameKey: string | null }) =>
+    page.evaluate(async (m) => {
+      const url = "/src/state/store.ts";
+      const { useApp } = (await import(/* @vite-ignore */ url)) as typeof import("../src/state/store");
+      const project = useApp.getState().project;
+      useApp.setState({ project: { ...project, name: m.name, nameKey: m.nameKey as never } });
+    }, meta);
+  const measure = (page: Page) =>
+    page.getByTestId("project-name").evaluate((el) => ({ text: el.textContent ?? "", scroll: el.scrollWidth, client: el.clientWidth, title: el.getAttribute("title") }));
+  const header = (page: Page) =>
+    page.locator("header").first().evaluate((h) => {
+      const box = h.getBoundingClientRect();
+      const out = [...h.querySelectorAll<HTMLElement>("button, [role=radio]")]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && (r.left < box.left - 0.5 || r.right > box.right + 0.5 || r.top < box.top - 0.5 || r.bottom > box.bottom + 0.5)).length;
+      return { scroll: h.scrollWidth, client: h.clientWidth, out };
+    });
+
+  for (const lang of ["en", "ko"] as const) {
+    test(`typical names in full at 1024 / 1100 / 1280 / 1920, ${lang}`, async ({ page }) => {
+      await setup(page, lang);
+      const names = [
+        { meta: { name: null, nameKey: "template.einzel.title" }, text: lang === "en" ? "Einzel lens" : "아인젤 렌즈" },
+        { meta: { name: "Quadrupole", nameKey: null }, text: "Quadrupole" },
+        { meta: { name: null, nameKey: null }, text: lang === "en" ? "Untitled project" : "제목 없는 프로젝트" },
+      ];
+      for (const width of [1024, 1100, 1280, 1920]) {
+        await page.setViewportSize({ width, height: 800 });
+        if (width === 1024) await einzel(page);
+        // The tagline only from 1366 px; the logo and the name always.
+        await expect(page.getByTestId("topbar-tagline")).toBeVisible({ visible: width >= 1366 });
+        await expect(page.locator("header").first().getByText("SimRep", { exact: true })).toBeVisible();
+        // Under 1280 px the labelled actions show their icon only, keeping their names; nothing is squeezed.
+        for (const name of lang === "en" ? ["Open", "Save", "Export", "Assistant"] : ["열기", "저장", "내보내기", "어시스턴트"])
+          await expect(page.locator("header").first().getByRole("button", { name, exact: true })).toBeVisible();
+        const home = (await page.locator('header [data-tour="home"]').boundingBox())!;
+        expect(home.width, `${width}: start screen button squeezed`).toBeCloseTo(home.height, 0);
+        for (const { meta, text } of names) {
+          await rename(page, meta);
+          await expect(page.getByTestId("project-name")).toHaveText(text);
+          const m = await measure(page);
+          expect(m.scroll, `${width}: "${text}" truncated (${m.scroll} > ${m.client})`).toBeLessThanOrEqual(m.client);
+          for (const r of await lines(page, LANG_RADIOS)) expect(r.lines, `${width}: ${r.text} line count`).toBe(1);
+          const bar = await header(page);
+          expect(bar.scroll, `${width}: header overflows`).toBeLessThanOrEqual(bar.client);
+          expect(bar.out, `${width}: controls outside the header`).toBe(0);
+        }
+        await rename(page, names[0]!.meta);
+        if (width === 1100 || width === 1280) await page.locator("header").first().screenshot({ path: `${SHOTS}/topbar-${width}-${lang}.png` });
+      }
+    });
+
+    test(`a name too long to fit ends in an ellipsis with the full name as tooltip, 1024, ${lang}`, async ({ page }) => {
+      await setup(page, lang);
+      await page.setViewportSize({ width: 1024, height: 800 });
+      await einzel(page);
+      const long = "Einzel lens with three cylinders and a very long descriptive project name";
+      await rename(page, { name: long, nameKey: null });
+      await expect(page.getByTestId("project-name")).toHaveText(long);
+      const m = await measure(page);
+      expect(m.scroll, "long name is clipped").toBeGreaterThan(m.client);
+      expect(m.title).toBe(long);
+      expect(await page.getByTestId("project-name").evaluate((el) => getComputedStyle(el).textOverflow)).toBe("ellipsis");
+      for (const r of await lines(page, LANG_RADIOS)) expect(r.lines, `${r.text} line count`).toBe(1);
+      const bar = await header(page);
+      expect(bar.scroll, "header overflows").toBeLessThanOrEqual(bar.client);
+      expect(bar.out, "controls outside the header").toBe(0);
+    });
+  }
+});
+
 test.describe("phone 390x844", () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, reducedMotion: "reduce" });
 

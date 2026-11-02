@@ -96,9 +96,27 @@
   white-space: nowrap;
 }
 
-@media (max-width: 1100px) {
+/* Under 1366 px the tagline gives its width to the project name (logo and name stay). */
+@media (max-width: 1365.98px) {
   .tagline {
     display: none;
+  }
+}
+
+/* Under 1280 px the labelled actions (open, save, export, assistant) show their icon only; the
+   label stays as the accessible name and the title as the tooltip, so the project name fits. */
+@media (max-width: 1279.98px) {
+  .topbar {
+    gap: var(--space-2);
+  }
+
+  .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }
 
